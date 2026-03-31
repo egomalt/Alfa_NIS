@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script>
+        (function () {
+            var storageKey = "forum_theme";
+            var theme = "light";
+
+            try {
+                var savedTheme = localStorage.getItem(storageKey);
+                if (savedTheme === "dark" || savedTheme === "light") {
+                    theme = savedTheme;
+                } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+                    theme = "dark";
+                }
+            } catch (error) {
+                if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+                    theme = "dark";
+                }
+            }
+
+            document.documentElement.setAttribute("data-theme", theme);
+        })();
+    </script>
+    <title>Alfa Career</title>
+    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260331-1">
+    <script>
+        window.ALFA_APP_BOOTSTRAP = {
+            path: "{{ app_path|escapejs }}"
+        };
+    </script>
+    <script src="{% static 'main/theme.js' %}?v=20260331-1" defer></script>
+    <script src="{% static 'authorization/app.js' %}?v=20260331-1" defer></script>
+</head>
+<body class="app-runtime-body">
+    <div id="app"></div>
+</body>
+</html>
