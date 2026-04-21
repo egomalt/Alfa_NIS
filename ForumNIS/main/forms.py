@@ -7,28 +7,19 @@ from .models import Company
 def validate_company_username(raw_value):
     value = (raw_value or "").strip().lower()
     reserved = {"admin", "api", "authorization", "companies"}
-    format_message = "Имя пользователя может содержать только буквы, цифры, дефисы и символы подчёркивания."
+    format_message = "Имя пользователя может содержать только буквы, цифры, дефисы и символы подчёркивания"
 
     if not value:
-        raise forms.ValidationError("Введите имя пользователя.")
+        raise forms.ValidationError("Введите имя пользователя")
 
-    if " " in value:
-        raise forms.ValidationError(format_message)
-
-    if len(value) < 3:
-        raise forms.ValidationError("Имя пользователя должно содержать минимум 3 символа.")
-
-    if len(value) > 50:
-        raise forms.ValidationError("Имя пользователя не должно быть длиннее 50 символов.")
-
-    if not re.fullmatch(r"[a-z0-9_-]+", value):
+    if " " in value or len(value) < 3 or len(value) > 50 or not re.fullmatch(r"[a-z0-9_-]+", value):
         raise forms.ValidationError(format_message)
 
     if not value[0].isalnum() or not value[-1].isalnum():
-        raise forms.ValidationError("Имя пользователя должно начинаться и заканчиваться буквой или цифрой.")
+        raise forms.ValidationError("Имя пользователя должно начинаться и заканчиваться буквой или цифрой")
 
     if value in reserved:
-        raise forms.ValidationError("Это имя пользователя занято системным маршрутом.")
+        raise forms.ValidationError("Это имя пользователя уже занято")
 
     return value
 

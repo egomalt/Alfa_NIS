@@ -1,60 +1,60 @@
-(function () {
-    var storageKey = "forum_theme";
-    var root = document.documentElement;
+﻿(() => {
+    const STORAGE_KEY = 'forum_theme';
+    const ROOT = document.documentElement;
 
-    function updateThemeButtons(theme) {
-        document.querySelectorAll("[data-theme-toggle]").forEach(function (button) {
-            button.textContent = theme === "dark" ? "Светлая тема" : "Тёмная тема";
-        });
-    }
-
-    function applyTheme(theme) {
-        root.setAttribute("data-theme", theme);
+    const getInitialTheme = () => {
         try {
-            localStorage.setItem(storageKey, theme);
-        } catch (error) {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved === 'dark' || saved === 'light') {
+                return saved;
+            }
+        } catch (_error) {
+        }
+
+        return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    };
+
+    const updateThemeButtons = (theme) => {
+        const label = theme === 'dark' ? 'Светлая тема' : 'Тёмная тема';
+        document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
+            button.textContent = label;
+        });
+    };
+
+    const applyTheme = (theme) => {
+        ROOT.setAttribute('data-theme', theme);
+        try {
+            localStorage.setItem(STORAGE_KEY, theme);
+        } catch (_error) {
         }
 
         updateThemeButtons(theme);
+    };
+
+    if (!ROOT.getAttribute('data-theme')) {
+        ROOT.setAttribute('data-theme', getInitialTheme());
     }
 
-    function getInitialTheme() {
-        try {
-            var saved = localStorage.getItem(storageKey);
-            if (saved === "dark" || saved === "light") {
-                return saved;
-            }
-        } catch (error) {
-        }
-
-        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light";
-    }
-
-    if (!root.getAttribute("data-theme")) {
-        root.setAttribute("data-theme", getInitialTheme());
-    }
-
-    document.addEventListener("click", function (event) {
-        var button = event.target.closest("[data-theme-toggle]");
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-theme-toggle]');
         if (!button) {
             return;
         }
 
-        var nextTheme = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
-        applyTheme(nextTheme);
+        const current = ROOT.getAttribute('data-theme') || getInitialTheme();
+        applyTheme(current === 'dark' ? 'light' : 'dark');
     });
 
-    document.addEventListener("alfa:render", function () {
-        updateThemeButtons(root.getAttribute("data-theme") || getInitialTheme());
+    document.addEventListener('alfa:render', () => {
+        updateThemeButtons(ROOT.getAttribute('data-theme') || getInitialTheme());
     });
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", function () {
-            updateThemeButtons(root.getAttribute("data-theme") || getInitialTheme());
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            updateThemeButtons(ROOT.getAttribute('data-theme') || getInitialTheme());
         });
     } else {
-        updateThemeButtons(root.getAttribute("data-theme") || getInitialTheme());
+        updateThemeButtons(ROOT.getAttribute('data-theme') || getInitialTheme());
     }
 })();
+

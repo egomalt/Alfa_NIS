@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import Company
+from .models import UserRole
 
 
 @admin.register(Company)
@@ -77,3 +78,10 @@ class CompanyAdmin(admin.ModelAdmin):
     @admin.display(description="Статус")
     def verification_status(self, obj):
         return "Подтверждена" if obj.is_verified else "Не подтверждена"
+
+
+@admin.register(UserRole)
+class UserRoleAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role')
+    list_filter = ('role',)
+    search_fields = ('user__username', 'user__email')
