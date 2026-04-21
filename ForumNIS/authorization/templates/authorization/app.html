@@ -1,4 +1,4 @@
-{% load static %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -27,16 +27,19 @@
         })();
     </script>
     <title>Alfa Career</title>
-    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260331-1">
+    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260421-2">
     <script>
         window.ALFA_APP_BOOTSTRAP = {
             path: "{{ app_path|escapejs }}"
         };
     </script>
-    <script src="{% static 'main/theme.js' %}?v=20260331-1" defer></script>
-    <script src="{% static 'authorization/app.js' %}?v=20260331-1" defer></script>
+    <script src="{% static 'main/theme.js' %}?v=20260421-2" defer></script>
+    <script type="module" src="{% static 'authorization/app.js' %}?v=20260421-2"></script>
 </head>
 <body class="app-runtime-body">
     <div id="app"></div>
 </body>
 </html>
+
+
+

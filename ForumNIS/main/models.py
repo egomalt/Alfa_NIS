@@ -1,5 +1,9 @@
 from django.core.validators import FileExtensionValidator, RegexValidator
 from django.db import models
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class Company(models.Model):
@@ -53,3 +57,56 @@ class Company(models.Model):
     @property
     def is_verified(self):
         return bool(self.registration_document)
+
+
+# Модель ролей и вспомогательные константы/функции
+ROLE_GUEST = 'guest'
+ROLE_USER = 'user'
+ROLE_COMPANY = 'company'
+ROLE_MODERATOR = 'moderator'
+
+ROLE_CHOICES = [
+    (ROLE_GUEST, 'Гость'),
+    (ROLE_USER, 'Пользователь'),
+    (ROLE_COMPANY, 'Компания'),
+    (ROLE_MODERATOR, 'Модератор'),
+]
+
+
+class UserRole(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='userrole')
+    role = models.CharField(max_length=32, choices=ROLE_CHOICES, default=ROLE_USER)
+
+    class Meta:
+        verbose_name = 'Роль пользователя'
+        verbose_name_plural = 'Роли пользователей'
+
+    def __str__(self):
+        return f"{self.user.username}: {self.role}"
+
+
+# Гарантируем создание записи UserRole для каждого нового пользователя (по умолчанию роль = user)
+@receiver(post_save, sender=get_user_model())
+def create_user_role(sender, instance, created, **kwargs):
+    if created:
+        UserRole.objects.create(user=instance)
+
+
+def get_role_for_user(user):
+    """Возвращает строковое имя роли для объекта пользователя. Неаутентифицированные пользователи -> ROLE_GUEST."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return ROLE_GUEST
+    try:
+        return user.userrole.role
+    except UserRole.DoesNotExist:
+        return ROLE_USER
+
+
+# Добавляем удобное свойство `role` к модели User для доступа из шаблонов/кода
+User = get_user_model()
+if not hasattr(User, 'role'):
+    @property
+    def _role(self):
+        return get_role_for_user(self)
+
+    User.role = _role
