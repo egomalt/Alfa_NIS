@@ -57,7 +57,8 @@
 
                 <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
 
-                <form id="signup-form" method="post" action="/api/companies/" class="company-signup-form">
+                <form id="signup-form" method="post" action="/api/companies/" class="company-signup-form" data-api-form="register">
+                    {% csrf_token %}
                     <div class="field" data-field="name">
                         <label for="register-name">Отображаемое имя</label>
                         <input id="register-name" name="name" type="text" placeholder="Например, Alfa Career" required>
