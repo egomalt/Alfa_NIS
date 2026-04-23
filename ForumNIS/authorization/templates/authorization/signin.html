@@ -55,7 +55,8 @@
 
                 <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
 
-                <form id="signin-form" method="post" action="/api/login/" class="company-signup-form">
+                <form id="signin-form" method="post" action="/api/login/" class="company-signup-form" data-api-form="login">
+                    {% csrf_token %}
                     <div class="field" data-field="username">
                         <label for="login-username">Имя пользователя</label>
                         <input id="login-username" name="username" type="text" placeholder="alfa-career" required>
