@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script>
+        (function () {
+            var storageKey = 'forum_theme';
+            var theme = 'light';
+            try {
+                var savedTheme = localStorage.getItem(storageKey);
+                if (savedTheme === 'dark' || savedTheme === 'light') {
+                    theme = savedTheme;
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            } catch (error) {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <title>Alfa Career</title>
+    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260421-3">
+    <script>
+        window.ALFA_APP_BOOTSTRAP = {
+            path: "{{ app_path|escapejs }}",
+            page: "signin"
+        };
+    </script>
+    <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
+    <script type="module" src="{% static 'authorization/app.js' %}?v=20260421-3"></script>
+</head>
+<body class="app-runtime-body">
+    <div class="landing-layout single-card-layout">
+        <section class="landing-form-card standalone-card">
+            <div class="landing-form-inner">
+                <div class="landing-form-topbar">
+                    <div class="landing-top-actions">
+                        <a href="/authorization/signup/" class="mini-link-button">Регистрация</a>
+                    </div>
+                    <button type="button" class="theme-toggle" data-theme-toggle>Тёмная тема</button>
+                </div>
+
+                <div class="form-intro">
+                    <h2>Вход по имени пользователя</h2>
+                    <p>Введите имя пользователя компании, чтобы открыть кабинет и продолжить работу.</p>
+                </div>
+
+                <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
+
+                <form id="signin-form" method="post" action="/api/auth/signin/" class="company-signup-form" data-api-form="login">
+                    {% csrf_token %}
+                    <div class="field" data-field="username">
+                        <label for="login-username">Имя пользователя</label>
+                        <input id="login-username" name="username" type="text" placeholder="alfa-career" required>
+                        <ul class="errorlist" hidden></ul>
+                    </div>
+
+                    <button type="submit" class="dark-button full-width">Войти</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

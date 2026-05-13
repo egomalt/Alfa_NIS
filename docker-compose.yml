@@ -1,14 +1,106 @@
 services:
   db:
-    image: postgres:18
+    image: postgres:16
     volumes:
-      - pg_data:/var/lib/postgresql
+      - pg_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
     environment:
-      - POSTGRES_DB=nisdb
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: admin
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth_service:
+    build: ./auth_service
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./auth_service:/app
+      - media_data:/app/media
+    environment:
+      POSTGRES_DB: userProfile
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  cabinet_service:
+    build: ./cabinet_service
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py migrate --database=user_profile &&
+             python manage.py runserver 0.0.0.0:8001"
+    volumes:
+      - ./cabinet_service:/app
+      - media_data:/app/media
+    environment:
+      COMPANY_PROFILE_DB: companyProfile
+      USER_PROFILE_DB: userProfile
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  test_service:
+    build: ./test_service
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8002"
+    volumes:
+      - ./test_service:/app
+    environment:
+      POSTGRES_DB: test_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  main_page_service:
+    build: ./main_page_service
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8003"
+    volumes:
+      - ./main_page_service:/app
+    environment:
+      POSTGRES_DB: main_page_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - media_data:/media:ro
+    depends_on:
+      - auth_service
+      - cabinet_service
+      - main_page_service
+      - test_service
 
 volumes:
   pg_data:
+  media_data:

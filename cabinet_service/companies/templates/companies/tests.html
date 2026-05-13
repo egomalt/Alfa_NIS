@@ -1,0 +1,116 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script>
+        (function () {
+            var storageKey = 'forum_theme';
+            var theme = 'light';
+            try {
+                var savedTheme = localStorage.getItem(storageKey);
+                if (savedTheme === 'dark' || savedTheme === 'light') {
+                    theme = savedTheme;
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            } catch (error) {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <title>Alfa Career</title>
+    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260421-3">
+    <script>
+        window.ALFA_APP_BOOTSTRAP = {
+            path: "{{ app_path|escapejs }}",
+            companyUsername: "{% if company_username %}{{ company_username|escapejs }}{% endif %}",
+            page: "tests"
+        };
+    </script>
+    <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
+    <script type="module" src="{% static 'companies/app.js' %}?v=20260421-3"></script>
+</head>
+<body class="app-runtime-body">
+    <div class="dashboard-layout" id="company-dashboard">
+        <aside class="sidebar">
+            <a id="sidebar-brand" href="#" class="brand"><span class="brand-mark"></span><span>Alfa Career</span></a>
+            <nav class="sidebar-nav">
+                <a id="nav-profile" href="#" class="nav-item">Профиль компании</a>
+                <a id="nav-tests" href="#" class="nav-item active">Активные тесты</a>
+            </nav>
+            <div id="lock-card" class="lock-card" hidden>
+                <div class="lock-title">Доступ ограничен</div>
+                <p>Сначала загрузите PDF, чтобы открыть кабинет компании и раздел тестов.</p>
+                <a id="lock-add-file" href="#" class="dark-button">Добавить файл</a>
+            </div>
+        </aside>
+
+        <div class="main-area">
+            <header class="topbar">
+                <div class="search-shell"><div class="page-kicker">Кабинет компании</div></div>
+                <div class="topbar-actions">
+                    <button type="button" class="theme-toggle" data-theme-toggle>Тёмная тема</button>
+                    <div class="topbar-company">
+                        <img id="topbar-avatar" class="topbar-avatar" alt="" hidden>
+                        <span id="topbar-avatar-placeholder" class="topbar-avatar placeholder">A</span>
+                        <span id="topbar-company-name">Компания</span>
+                    </div>
+                </div>
+            </header>
+
+            <section class="tests-header">
+                <div>
+                    <h1>Тесты и оценки</h1>
+                    <p>Здесь отображается краткая информация по активным тестам и основным показателям компании.</p>
+                </div>
+                <a href="/constructor/" class="dark-button">Создать тест</a>
+            </section>
+
+            <div id="company-flash" class="app-alert" hidden></div>
+
+            <section class="stats-grid">
+                <div class="stat-box"><strong id="stat-total-tests">0</strong><span>Всего тестов</span></div>
+                <div class="stat-box"><strong id="stat-active-tests">0</strong><span>Активные тесты</span></div>
+                <div class="stat-box"><strong id="stat-submissions">0</strong><span>Всего прохождений</span></div>
+                <div class="stat-box"><strong id="stat-completion-rate">0%</strong><span>Процент завершения</span></div>
+            </section>
+
+            <section class="content-card section-card">
+                <div class="tests-table-header">
+                    <h2>Обзор активных тестов</h2>
+                    <span class="muted-note">Только просмотр</span>
+                </div>
+
+                <div id="tests-table-wrapper" class="table-wrapper" hidden>
+                    <table class="tests-table">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Тип</th>
+                                <th>Статус</th>
+                                <th>Доступ</th>
+                                <th>Задания</th>
+                                <th>Кандидаты</th>
+                                <th>Дата</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tests-table-body"></tbody>
+                    </table>
+                </div>
+
+                <div id="tests-empty" class="empty-state">
+                    <h3>Активных тестов пока нет</h3>
+                    <p>Когда вы добавите тестирования, здесь появится их краткий обзор и основные показатели.</p>
+                    <a href="/constructor/" class="dark-button">Создать первый тест</a>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>
