@@ -11,6 +11,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'authorization',
     'companies',
+    'company_catalog',
     'users',
     'tests.constructor',
     'tests.tests_app',

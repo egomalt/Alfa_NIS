@@ -4,6 +4,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
 from authorization.models import Account, ROLE_USER
+from core.utils import serialize_form_errors
 
 from .forms import CompanyProfileForm, CompanyVerificationForm
 from .models import Company
@@ -67,8 +68,35 @@ def _serialize_company(company):
     }
 
 
-def _serialize_form_errors(form):
-    return {field: errors.get_json_data() for field, errors in form.errors.items()}
+
+@require_GET
+def api_companies_list(request):
+    from django.db.models import Count
+    from tests.constructor.models import Test
+
+    companies = Company.objects.all().order_by('-created_at')
+    counts = (
+        Test.objects.filter(status=Test.STATUS_PUBLISHED)
+        .values('company_username')
+        .annotate(cnt=Count('id'))
+    )
+    published_counts = {row['company_username']: row['cnt'] for row in counts}
+
+    result = [
+        {
+            'username': c.username,
+            'name': c.name,
+            'avatar_url': c.avatar.url if c.avatar else '',
+            'is_verified': c.is_verified,
+            'industry': c.industry,
+            'city': c.city,
+            'tests_count': published_counts.get(c.username, 0),
+            'profile_url': f'/{c.username}/',
+        }
+        for c in companies
+    ]
+
+    return JsonResponse({'ok': True, 'companies': result})
 
 
 @require_GET
@@ -82,7 +110,7 @@ def api_company_profile(request, username):
     company = get_object_or_404(Company, username=username)
     form = CompanyProfileForm(request.POST, request.FILES, instance=company)
     if not form.is_valid():
-        return JsonResponse({'ok': False, 'errors': _serialize_form_errors(form)}, status=400)
+        return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
     company = form.save()
     return JsonResponse({'ok': True, 'company': _serialize_company(company)})
 
@@ -92,7 +120,7 @@ def api_company_verification(request, username):
     company = get_object_or_404(Company, username=username)
     form = CompanyVerificationForm(request.POST, request.FILES, instance=company)
     if not form.is_valid():
-        return JsonResponse({'ok': False, 'errors': _serialize_form_errors(form)}, status=400)
+        return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
     company = form.save()
     return JsonResponse({'ok': True, 'company': _serialize_company(company), 'next_url': f'/{company.username}/'})
 

@@ -1,5 +1,5 @@
 (() => {
-    const STORAGE_KEY = 'forum_theme';
+    const STORAGE_KEY = 'alfa_theme';
     const ROOT = document.documentElement;
 
     const getInitialTheme = () => {

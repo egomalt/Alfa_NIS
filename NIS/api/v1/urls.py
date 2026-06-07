@@ -19,6 +19,7 @@ urlpatterns = [
     path('candidates/<slug:username>/avatar/', user_views.api_candidate_avatar, name='v1_api_candidate_avatar'),
 
     # Companies
+    path('companies/',                              company_views.api_companies_list),
     path('companies/<slug:username>/',              company_views.api_company_detail),
     path('companies/<slug:username>/profile/',      company_views.api_company_profile),
     path('companies/<slug:username>/verification/', company_views.api_company_verification),
