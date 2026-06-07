@@ -2,30 +2,19 @@ import re
 
 from django import forms
 
+from core.utils import validate_username
 from .models import Company
 
 
-def validate_company_username(raw_value):
-    value = (raw_value or '').strip().lower()
-    reserved = {'admin', 'api', 'authorization', 'companies', 'constructor', 'tests', 'static', 'media'}
-    format_message = 'Имя пользователя может содержать только буквы, цифры, дефисы и символы подчёркивания.'
-
-    if not value:
-        raise forms.ValidationError('Введите имя пользователя.')
-
-    if ' ' in value or len(value) < 3 or len(value) > 50 or not re.fullmatch(r'[a-z0-9_-]+', value):
-        raise forms.ValidationError(format_message)
-
-    if not value[0].isalnum() or not value[-1].isalnum():
-        raise forms.ValidationError('Имя пользователя должно начинаться и заканчиваться буквой или цифрой.')
-
-    if value in reserved:
-        raise forms.ValidationError('Это имя пользователя уже занято.')
-
-    return value
+class PDFValidationMixin:
+    def clean_registration_document(self):
+        document = self.cleaned_data.get('registration_document')
+        if document and getattr(document, 'content_type', 'application/pdf') != 'application/pdf':
+            raise forms.ValidationError('Загрузите файл в формате PDF.')
+        return document
 
 
-class CompanyProfileForm(forms.ModelForm):
+class CompanyProfileForm(PDFValidationMixin, forms.ModelForm):
     class Meta:
         model = Company
         fields = [
@@ -35,13 +24,7 @@ class CompanyProfileForm(forms.ModelForm):
         ]
 
     def clean_username(self):
-        return validate_company_username(self.cleaned_data.get('username'))
-
-    def clean_registration_document(self):
-        document = self.cleaned_data.get('registration_document')
-        if document and getattr(document, 'content_type', 'application/pdf') != 'application/pdf':
-            raise forms.ValidationError('Загрузите файл в формате PDF.')
-        return document
+        return validate_username(self.cleaned_data.get('username'))
 
     def clean_company_size(self):
         value = (self.cleaned_data.get('company_size') or '').strip()
@@ -67,13 +50,7 @@ class CompanyProfileForm(forms.ModelForm):
         return value
 
 
-class CompanyVerificationForm(forms.ModelForm):
+class CompanyVerificationForm(PDFValidationMixin, forms.ModelForm):
     class Meta:
         model = Company
         fields = ['registration_document']
-
-    def clean_registration_document(self):
-        document = self.cleaned_data.get('registration_document')
-        if document and getattr(document, 'content_type', 'application/pdf') != 'application/pdf':
-            raise forms.ValidationError('Загрузите файл в формате PDF.')
-        return document

@@ -1,0 +1,188 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script>
+        (function () {
+            var storageKey = 'alfa_theme';
+            var theme = 'light';
+            try {
+                var savedTheme = localStorage.getItem(storageKey);
+                if (savedTheme === 'dark' || savedTheme === 'light') {
+                    theme = savedTheme;
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            } catch (e) {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <title>Компании — Alfa Career</title>
+    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260421-3">
+    <style>
+        .cl-layout { display: flex; flex-direction: column; min-height: 100vh; }
+        .cl-topbar { display: flex; align-items: center; gap: 12px; padding: 0 24px; height: 56px; border-bottom: 1px solid var(--line); background: var(--bg); flex-shrink: 0; }
+        .cl-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none; color: var(--text); }
+        .cl-topbar-spacer { flex: 1; }
+        .cl-topbar-btn { padding: 6px 14px; font-size: 0.82rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; text-decoration: none; transition: opacity .15s; }
+        .cl-topbar-btn:hover { opacity: 0.7; }
+
+        .cl-main { flex: 1; display: flex; justify-content: center; padding: 40px 20px; }
+        .cl-inner { width: 100%; max-width: 860px; }
+        .cl-heading { font-size: 1.5rem; font-weight: 700; margin: 0 0 8px; }
+        .cl-subheading { font-size: 0.88rem; color: var(--muted); margin: 0 0 28px; }
+
+        .cl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+        .cl-card { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 20px; text-decoration: none; color: var(--text); transition: box-shadow .15s, border-color .15s; }
+        .cl-card:hover { border-color: var(--text); box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+
+        .cl-card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .cl-avatar { width: 44px; height: 44px; border-radius: 10px; background: var(--surface-alt); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; color: var(--muted); overflow: hidden; flex-shrink: 0; }
+        .cl-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .cl-card-name { font-size: 0.95rem; font-weight: 700; line-height: 1.3; }
+        .cl-card-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+        .cl-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 12px; }
+        .cl-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.71rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+        .cl-badge-verified { background: rgba(37,99,235,.1); color: #2563eb; }
+        .cl-badge-tests { background: var(--surface-alt); color: var(--muted); border: 1px solid var(--line); }
+
+        .cl-empty { text-align: center; padding: 80px 0; color: var(--muted); font-size: 0.9rem; }
+        .cl-loading { text-align: center; padding: 80px 0; color: var(--muted); font-size: 0.9rem; }
+
+        .cl-nav { display: flex; align-items: center; gap: 8px; }
+        .cl-nav-link { padding: 6px 14px; font-size: 0.82rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); text-decoration: none; transition: opacity .15s; }
+        .cl-nav-link:hover { opacity: 0.7; }
+        .cl-avatar-btn { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); padding: 4px 8px 4px 4px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); transition: opacity .15s; }
+        .cl-avatar-btn:hover { opacity: 0.7; }
+        .cl-avatar-circle { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-alt); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: var(--muted); overflow: hidden; flex-shrink: 0; }
+        .cl-avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
+        .cl-avatar-name { font-size: 0.82rem; font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
+    <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
+    <script>
+        (() => {
+            function escHtml(s) {
+                return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+            function getInitial(name) { return (name || '?').trim()[0].toUpperCase(); }
+
+            async function initNav() {
+                const nav = document.getElementById('cl-nav');
+                if (!nav) return;
+                try {
+                    const res = await fetch('/api/v1/auth/me/');
+                    const data = await res.json();
+                    if (data.ok && data.account) {
+                        const a = data.account;
+                        const avatarInner = a.avatar
+                            ? `<img src="${escHtml(a.avatar)}" alt="">`
+                            : escHtml(getInitial(a.name));
+                        nav.innerHTML = `
+                            <a href="${escHtml(a.profile_url)}" class="cl-avatar-btn">
+                                <div class="cl-avatar-circle">${avatarInner}</div>
+                                <span class="cl-avatar-name">${escHtml(a.name || a.username)}</span>
+                            </a>
+                        `;
+                    }
+                } catch (_) {}
+            }
+
+            function testsLabel(n) {
+                if (n === 0) return 'Нет тестов';
+                const mod10 = n % 10, mod100 = n % 100;
+                if (mod100 >= 11 && mod100 <= 19) return `${n} тестов`;
+                if (mod10 === 1) return `${n} тест`;
+                if (mod10 >= 2 && mod10 <= 4) return `${n} теста`;
+                return `${n} тестов`;
+            }
+
+            function renderCard(c) {
+                const avatarHtml = c.avatar_url
+                    ? `<img src="${escHtml(c.avatar_url)}" alt="">`
+                    : escHtml(getInitial(c.name));
+
+                const metaParts = [c.industry, c.city].filter(Boolean);
+                const metaHtml = metaParts.length
+                    ? `<div class="cl-card-meta">${escHtml(metaParts.join(' · '))}</div>`
+                    : '';
+
+                const verifiedBadge = c.is_verified
+                    ? `<span class="cl-badge cl-badge-verified">✓ Верифицирована</span>`
+                    : '';
+
+                const testsBadge = `<span class="cl-badge cl-badge-tests">${escHtml(testsLabel(c.tests_count))}</span>`;
+
+                return `
+                    <a href="${escHtml(c.profile_url)}" class="cl-card">
+                        <div class="cl-card-top">
+                            <div class="cl-avatar">${avatarHtml}</div>
+                            <div>
+                                <div class="cl-card-name">${escHtml(c.name)}</div>
+                                ${metaHtml}
+                            </div>
+                        </div>
+                        <div class="cl-badges">
+                            ${verifiedBadge}
+                            ${testsBadge}
+                        </div>
+                    </a>
+                `;
+            }
+
+            async function init() {
+                const grid = document.getElementById('cl-grid');
+                if (!grid) return;
+                try {
+                    const res = await fetch('/api/v1/companies/');
+                    const data = await res.json();
+                    if (!data.ok || !data.companies.length) {
+                        grid.innerHTML = '<div class="cl-empty">Компаний пока нет</div>';
+                        return;
+                    }
+                    grid.innerHTML = data.companies.map(renderCard).join('');
+                } catch (e) {
+                    grid.innerHTML = '<div class="cl-empty">Не удалось загрузить список компаний</div>';
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => { init(); initNav(); });
+        })();
+    </script>
+</head>
+<body class="app-runtime-body">
+<div class="cl-layout">
+
+    <header class="cl-topbar">
+        <a href="/" class="cl-brand">
+            <span class="brand-mark"></span>
+            <span>Alfa Career</span>
+        </a>
+        <div class="cl-topbar-spacer"></div>
+        <nav class="cl-nav" id="cl-nav">
+            <a href="/authorization/signup/" class="cl-nav-link">Регистрация</a>
+            <a href="/authorization/signin/" class="cl-nav-link">Вход</a>
+        </nav>
+        <button type="button" class="theme-toggle cl-topbar-btn" data-theme-toggle>Тема</button>
+    </header>
+
+    <main class="cl-main">
+        <div class="cl-inner">
+            <h1 class="cl-heading">Компании</h1>
+            <p class="cl-subheading">Найдите компанию и пройдите их тесты</p>
+            <div class="cl-grid" id="cl-grid">
+                <div class="cl-loading">Загрузка…</div>
+            </div>
+        </div>
+    </main>
+
+</div>
+</body>
+</html>
