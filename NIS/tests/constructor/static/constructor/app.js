@@ -113,9 +113,9 @@
             const payload = serializeState();
             let data;
             if (state.testId) {
-                data = await apiFetch(`/api/tests/${state.testId}/`, { method: 'PUT', body: JSON.stringify(payload) });
+                data = await apiFetch(`/api/v1/tests/${state.testId}/`, { method: 'PUT', body: JSON.stringify(payload) });
             } else {
-                data = await apiFetch('/api/tests/create/', { method: 'POST', body: JSON.stringify(payload) });
+                data = await apiFetch('/api/v1/tests/create/', { method: 'POST', body: JSON.stringify(payload) });
             }
             patchSavedState(data.test);
             history.replaceState(null, '', `/constructor/${state.testId}/`);
@@ -590,7 +590,7 @@
             if (!state.testId) return;
             try {
                 setStatus('Публикация…');
-                await apiFetch(`/api/tests/${state.testId}/publish/`, { method: 'POST' });
+                await apiFetch(`/api/v1/tests/${state.testId}/publish/`, { method: 'POST' });
                 state.published = true;
                 setStatus('Опубликован');
                 syncSaveBtn();
@@ -603,7 +603,7 @@
         if (state.testId) {
             try {
                 setStatus('Загрузка…');
-                const data = await apiFetch(`/api/tests/${state.testId}/`);
+                const data = await apiFetch(`/api/v1/tests/${state.testId}/`);
                 applyTest(data.test);
                 syncBackLink();
                 setStatus(data.test.status === 'published' ? 'Опубликован' : 'Черновик');

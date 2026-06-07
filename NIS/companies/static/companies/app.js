@@ -214,7 +214,7 @@
 
         const verificationForm = document.getElementById('verification-form');
         if (verificationForm) {
-            verificationForm.setAttribute('action', `/api/companies/${company.username}/verification/`);
+            verificationForm.setAttribute('action', `/api/v1/companies/${company.username}/verification/`);
         }
 
         if (!company.is_verified) {
@@ -326,7 +326,7 @@
             return;
         }
 
-        form.action = `/api/companies/${company.username}/profile/`;
+        form.action = `/api/v1/companies/${company.username}/profile/`;
 
         const fields = {
             username: company.username || '',
@@ -467,12 +467,12 @@
     async function deleteTest(testId, username) {
         if (!confirm('Удалить тест? Это действие нельзя отменить.')) return;
         try {
-            await fetchJson(`/api/tests/${testId}/`, {
+            await fetchJson(`/api/v1/tests/${testId}/`, {
                 method: 'DELETE',
                 headers: { 'X-CSRFToken': getCsrfToken() },
                 credentials: 'same-origin',
             });
-            const payload = await fetchJson(`/api/companies/${username}/tests/`);
+            const payload = await fetchJson(`/api/v1/companies/${username}/tests/`);
             state.company = payload.company;
             state.tests = payload.tests || [];
             state.stats = payload.stats || null;
@@ -613,7 +613,7 @@
     }
 
     async function initProfilePage(username) {
-        const payload = await fetchJson(`/api/companies/${username}/`);
+        const payload = await fetchJson(`/api/v1/companies/${username}/`);
         state.company = payload.company;
 
         syncNavigation(state.company);
@@ -636,7 +636,7 @@
     }
 
     async function initTestsPage(username) {
-        const payload = await fetchJson(`/api/companies/${username}/tests/`);
+        const payload = await fetchJson(`/api/v1/companies/${username}/tests/`);
         state.company = payload.company;
         state.tests = payload.tests || [];
         state.stats = payload.stats || null;

@@ -260,7 +260,7 @@
 
         try {
             const previewParam = isPreview ? '?preview=1' : '';
-            const data = await apiFetch(`/api/tests/pages/${pageId}/run/${previewParam}`, {
+            const data = await apiFetch(`/api/v1/tests/pages/${pageId}/run/${previewParam}`, {
                 method: 'POST',
                 body: JSON.stringify({ code, language, sample_only: sampleOnly }),
             });
@@ -315,7 +315,7 @@
         if (btn) { btn.disabled = true; btn.textContent = 'Отправка…'; }
         try {
             const previewParam = isPreview ? '?preview=1' : '';
-            const data = await apiFetch(`/api/tests/${testId}/submit/${previewParam}`, {
+            const data = await apiFetch(`/api/v1/tests/${testId}/submit/${previewParam}`, {
                 method: 'POST',
                 body: JSON.stringify({ answers: state.answers }),
             });
@@ -396,7 +396,7 @@
         }
 
         try {
-            const data = await apiFetch(`/api/tests/${testId}/view/${previewParam}`);
+            const data = await apiFetch(`/api/v1/tests/${testId}/view/${previewParam}`);
             state.test = data.test;
             state.pages = data.pages;
 

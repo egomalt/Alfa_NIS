@@ -25,7 +25,7 @@
         })();
     </script>
     <title>Alfa Career</title>
-    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260421-3">
+    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260608-4">
     <script>
         window.ALFA_APP_BOOTSTRAP = {
             path: "{{ app_path|escapejs }}",
@@ -33,7 +33,7 @@
         };
     </script>
     <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
-    <script type="module" src="{% static 'authorization/app.js' %}?v=20260421-3"></script>
+    <script type="module" src="{% static 'authorization/app.js' %}?v=20260608-4"></script>
 </head>
 <body class="app-runtime-body">
     <div class="landing-layout single-card-layout">
@@ -53,7 +53,7 @@
 
                 <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
 
-                <form id="signin-form" method="post" action="/api/auth/signin/" class="company-signup-form" data-api-form="login">
+                <form id="signin-form" method="post" action="/api/v1/auth/signin/" class="company-signup-form" data-api-form="login">
                     {% csrf_token %}
                     <div class="field" data-field="username">
                         <label for="login-username">Имя пользователя</label>

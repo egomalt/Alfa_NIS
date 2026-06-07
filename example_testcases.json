@@ -1,0 +1,7 @@
+[
+  {"input": "3 5",  "expected": "8",  "is_sample": true},
+  {"input": "10 20","expected": "30", "is_sample": true},
+  {"input": "0 0",  "expected": "0",  "is_sample": false},
+  {"input": "-5 3", "expected": "-2", "is_sample": false},
+  {"input": "100 200", "expected": "300", "is_sample": false}
+]
