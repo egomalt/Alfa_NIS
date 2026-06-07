@@ -40,6 +40,7 @@
                 type: p.type,
                 title: p.title,
                 content: p.content,
+                page_meta: p.page_meta || {},
                 answers: (p.answers || []).map((a, j) => ({
                     ...(a.id ? { id: a.id } : {}),
                     text: a.text,
@@ -55,6 +56,9 @@
         state.title = test.title;
         state.description = test.description;
         state.published = test.status === 'published';
+        if (!state.companyUsername && test.company_username) {
+            state.companyUsername = test.company_username;
+        }
         state.pages = (test.pages || []).map(p => ({
             localId: uid(),
             id: p.id,
@@ -62,6 +66,7 @@
             type: p.type,
             title: p.title,
             content: p.content,
+            page_meta: p.page_meta || {},
             answers: (p.answers || []).map(a => ({
                 localId: uid(),
                 id: a.id,
@@ -167,7 +172,7 @@
 
     // ── Sidebar ────────────────────────────────────────────────────────────────
 
-    const PAGE_TYPE_LABELS = { text: 'Текст', quiz: 'Вопрос', input: 'Ввод' };
+    const PAGE_TYPE_LABELS = { text: 'Текст', quiz: 'Вопрос', input: 'Ввод', code: 'Код' };
 
     function renderSidebar() {
         const list = document.getElementById('cst-pages-list');
@@ -213,6 +218,7 @@
             if (page.type === 'text') renderTextEditor(inner, page);
             else if (page.type === 'quiz') renderQuizEditor(inner, page);
             else if (page.type === 'input') renderInputEditor(inner, page);
+            else if (page.type === 'code') renderCodeEditor(inner, page);
         }
     }
 
@@ -346,6 +352,140 @@
         });
     }
 
+    function renderCodeEditor(container, page) {
+        const meta = page.page_meta || {};
+        container.innerHTML = `
+            <span class="cst-type-badge">Задача с кодом</span>
+            <div class="cst-field">
+                <label class="cst-label">Условие задачи (Markdown)</label>
+                <textarea id="ed-code-content" class="cst-textarea" style="min-height:140px" placeholder="Описание задачи, входные/выходные данные...">${escHtml(page.content)}</textarea>
+            </div>
+            <div class="cst-field" data-field="title">
+                <label class="cst-label">Заголовок (необязательно)</label>
+                <input id="ed-code-title" class="cst-input" type="text" maxlength="500" placeholder="Название задачи" value="${escAttr(page.title)}">
+            </div>
+            <div class="cst-field">
+                <label class="cst-label">Язык</label>
+                <select id="ed-code-lang" class="cst-select">
+                    <option value="python" ${meta.language === 'python' ? 'selected' : ''}>Python 3</option>
+                    <option value="javascript" ${meta.language === 'javascript' ? 'selected' : ''}>JavaScript (Node)</option>
+                    <option value="cpp" ${meta.language === 'cpp' ? 'selected' : ''}>C++17</option>
+                </select>
+            </div>
+            <div class="cst-field">
+                <label class="cst-label">Стартовый код (выдаётся участнику)</label>
+                <textarea id="ed-starter-code" class="cst-textarea" style="min-height:100px;font-family:monospace;font-size:0.85rem" placeholder="# Введите стартовый код...">${escHtml(meta.starter_code || '')}</textarea>
+            </div>
+            <div class="cst-field">
+                <label class="cst-label">Ограничение времени (сек)</label>
+                <input id="ed-time-limit" class="cst-input" type="number" min="1" max="30" value="${escAttr(String(meta.time_limit || 5))}">
+            </div>
+            <div class="cst-field">
+                <label class="cst-label">Тест-кейсы</label>
+                <p class="cst-correct-hint">Образцы видны участнику при запуске. Скрытые — только для финальной проверки.</p>
+                <div id="ed-testcases"></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+                    <button type="button" id="ed-add-tc" class="cst-add-btn">+ Добавить тест-кейс</button>
+                    <label class="cst-add-btn" style="cursor:pointer">
+                        📁 Загрузить из файла (.json)
+                        <input type="file" id="ed-tc-file" accept=".json" hidden>
+                    </label>
+                    <a href="#" id="ed-tc-format-hint" style="font-size:0.75rem;color:var(--muted);align-self:center;text-decoration:none" title='Формат файла: [{"input":"3 5","expected":"8","is_sample":true}, ...]'>? формат файла</a>
+                </div>
+            </div>
+        `;
+
+        const syncMeta = () => {
+            page.page_meta = {
+                language: container.querySelector('#ed-code-lang').value,
+                starter_code: container.querySelector('#ed-starter-code').value,
+                time_limit: parseInt(container.querySelector('#ed-time-limit').value, 10) || 5,
+                test_cases: page.page_meta.test_cases || [],
+            };
+        };
+
+        container.querySelector('#ed-code-content').addEventListener('input', e => { page.content = e.target.value; syncMeta(); markDirty(); });
+        container.querySelector('#ed-code-title').addEventListener('input', e => { page.title = e.target.value; syncMeta(); markDirty(); renderSidebar(); });
+        container.querySelector('#ed-code-lang').addEventListener('change', () => { syncMeta(); markDirty(); });
+        container.querySelector('#ed-starter-code').addEventListener('input', () => { syncMeta(); markDirty(); });
+        container.querySelector('#ed-time-limit').addEventListener('input', () => { syncMeta(); markDirty(); });
+
+        renderTestCases(container, page);
+
+        container.querySelector('#ed-add-tc').addEventListener('click', () => {
+            page.page_meta.test_cases = page.page_meta.test_cases || [];
+            page.page_meta.test_cases.push({ input: '', expected: '', is_sample: false });
+            renderTestCases(container, page);
+            markDirty();
+        });
+
+        container.querySelector('#ed-tc-file').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const parsed = JSON.parse(ev.target.result);
+                    if (!Array.isArray(parsed)) throw new Error('Ожидается массив');
+                    page.page_meta.test_cases = parsed.map(tc => ({
+                        input: String(tc.input ?? ''),
+                        expected: String(tc.expected ?? ''),
+                        is_sample: Boolean(tc.is_sample),
+                    }));
+                    renderTestCases(container, page);
+                    markDirty();
+                    setStatus(`Загружено ${page.page_meta.test_cases.length} тест-кейсов`);
+                } catch (err) {
+                    alert(`Ошибка чтения файла: ${err.message}\n\nОжидается JSON-массив:\n[{"input":"3 5","expected":"8","is_sample":true}, ...]`);
+                }
+                e.target.value = '';
+            };
+            reader.readAsText(file);
+        });
+
+        container.querySelector('#ed-tc-format-hint').addEventListener('click', e => {
+            e.preventDefault();
+            alert('Формат файла — JSON-массив:\n\n[\n  {"input": "3 5",  "expected": "8",  "is_sample": true},\n  {"input": "10 20", "expected": "30", "is_sample": false}\n]\n\nПоля:\n• input — входные данные (stdin)\n• expected — ожидаемый вывод (stdout)\n• is_sample — показывать участнику (true/false)');
+        });
+    }
+
+    function renderTestCases(container, page) {
+        const el = container.querySelector('#ed-testcases');
+        if (!el) return;
+        el.innerHTML = '';
+        const cases = (page.page_meta && page.page_meta.test_cases) || [];
+        cases.forEach((tc, i) => {
+            const block = document.createElement('div');
+            block.className = 'cst-tc-block';
+            block.innerHTML = `
+                <div class="cst-tc-header">
+                    <span>Тест #${i + 1}</span>
+                    <label><input type="checkbox" class="tc-sample" ${tc.is_sample ? 'checked' : ''}> Образец</label>
+                    <button type="button" class="cst-answer-del tc-del" title="Удалить">✕</button>
+                </div>
+                <div class="cst-tc-fields">
+                    <div>
+                        <div class="cst-label">Входные данные (stdin)</div>
+                        <textarea class="cst-textarea tc-input" style="min-height:70px;font-family:monospace;font-size:0.82rem" placeholder="пусто — если ввод не нужен">${escHtml(tc.input)}</textarea>
+                    </div>
+                    <div>
+                        <div class="cst-label">Ожидаемый вывод (stdout)</div>
+                        <textarea class="cst-textarea tc-expected" style="min-height:70px;font-family:monospace;font-size:0.82rem" placeholder="ожидаемый вывод">${escHtml(tc.expected)}</textarea>
+                    </div>
+                </div>
+            `;
+            block.querySelector('.tc-input').addEventListener('input', e => { tc.input = e.target.value; markDirty(); });
+            block.querySelector('.tc-expected').addEventListener('input', e => { tc.expected = e.target.value; markDirty(); });
+            block.querySelector('.tc-sample').addEventListener('change', e => { tc.is_sample = e.target.checked; markDirty(); });
+            block.querySelector('.tc-del').addEventListener('click', () => {
+                page.page_meta.test_cases.splice(i, 1);
+                renderTestCases(container, page);
+                markDirty();
+            });
+            el.appendChild(block);
+        });
+    }
+
     function renderInputEditor(container, page) {
         const correctText = page.answers.length > 0 ? page.answers[0].text : '';
         container.innerHTML = `
@@ -386,7 +526,10 @@
     // ── Page operations ────────────────────────────────────────────────────────
 
     function addPage(type) {
-        const page = { localId: uid(), order: state.pages.length, type, title: '', content: '', answers: [] };
+        const defaultMeta = type === 'code'
+            ? { language: 'python', starter_code: '', time_limit: 5, test_cases: [] }
+            : {};
+        const page = { localId: uid(), order: state.pages.length, type, title: '', content: '', answers: [], page_meta: defaultMeta };
         state.pages.push(page);
         state.currentIndex = state.pages.length - 1;
         markDirty();
@@ -462,6 +605,7 @@
                 setStatus('Загрузка…');
                 const data = await apiFetch(`/api/tests/${state.testId}/`);
                 applyTest(data.test);
+                syncBackLink();
                 setStatus(data.test.status === 'published' ? 'Опубликован' : 'Черновик');
             } catch (e) {
                 setStatus('Ошибка загрузки теста');

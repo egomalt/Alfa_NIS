@@ -29,12 +29,14 @@ class TestPage(models.Model):
     TYPE_TEXT = 'text'
     TYPE_QUIZ = 'quiz'
     TYPE_INPUT = 'input'
+    TYPE_CODE = 'code'
 
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='pages')
     order = models.PositiveIntegerField(default=0)
     type = models.CharField(max_length=16)
     title = models.CharField(max_length=500, blank=True)
     content = models.TextField(blank=True)
+    page_meta = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ['order']
