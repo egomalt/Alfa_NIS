@@ -12,7 +12,6 @@
         dirty: false,
         saving: false,
         published: false,
-        saveTimer: null,
         localCounter: 0,
     };
 
@@ -96,9 +95,8 @@
 
     function markDirty() {
         state.dirty = true;
-        setStatus('');
-        clearTimeout(state.saveTimer);
-        state.saveTimer = setTimeout(save, 1000);
+        if (!state.published) setStatus('');
+        syncSaveBtn();
     }
 
     async function save() {
@@ -116,12 +114,14 @@
             }
             patchSavedState(data.test);
             history.replaceState(null, '', `/constructor/${state.testId}/`);
-            setStatus('Сохранено');
+            setStatus('Черновик');
+            syncSaveBtn();
             syncPublishBtn();
             syncPreviewBtn();
         } catch (e) {
             setStatus('Ошибка сохранения');
             state.dirty = true;
+            syncSaveBtn();
         } finally {
             state.saving = false;
         }
@@ -132,6 +132,12 @@
     function setStatus(msg) {
         const el = document.getElementById('cst-save-status');
         if (el) el.textContent = msg;
+    }
+
+    function syncSaveBtn() {
+        const btn = document.getElementById('cst-save-btn');
+        if (!btn) return;
+        btn.disabled = !state.dirty || !state.title.trim() || state.saving;
     }
 
     function syncPublishBtn() {
@@ -152,8 +158,11 @@
     }
 
     function syncBackLink() {
-        const link = document.getElementById('cst-back');
-        if (link) link.href = state.companyUsername ? `/${state.companyUsername}/tests/` : '/';
+        const testsHref = state.companyUsername ? `/${state.companyUsername}/tests/` : '/';
+        const brand = document.getElementById('cst-back');
+        if (brand) brand.href = testsHref;
+        const backTests = document.getElementById('cst-back-tests');
+        if (backTests) backTests.href = testsHref;
     }
 
     // ── Sidebar ────────────────────────────────────────────────────────────────
@@ -422,6 +431,8 @@
             btn.addEventListener('click', () => addPage(btn.dataset.add));
         });
 
+        document.getElementById('cst-save-btn')?.addEventListener('click', () => save());
+
         document.getElementById('cst-preview-btn')?.addEventListener('click', async () => {
             if (!state.testId && !state.title.trim()) return;
             if (state.dirty || !state.testId) await save();
@@ -438,7 +449,8 @@
                 setStatus('Публикация…');
                 await apiFetch(`/api/tests/${state.testId}/publish/`, { method: 'POST' });
                 state.published = true;
-                setStatus('Опубликован!');
+                setStatus('Опубликован');
+                syncSaveBtn();
                 syncPublishBtn();
             } catch (e) {
                 setStatus(e.message || 'Ошибка публикации');
@@ -450,7 +462,7 @@
                 setStatus('Загрузка…');
                 const data = await apiFetch(`/api/tests/${state.testId}/`);
                 applyTest(data.test);
-                setStatus('');
+                setStatus(data.test.status === 'published' ? 'Опубликован' : 'Черновик');
             } catch (e) {
                 setStatus('Ошибка загрузки теста');
             }

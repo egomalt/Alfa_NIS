@@ -210,6 +210,7 @@
 
         setVisible(verificationSection, !company.is_verified);
         setVisible(profileContent, company.is_verified);
+        setVisible(document.getElementById('profile-edit-btn'), company.is_verified);
 
         const verificationForm = document.getElementById('verification-form');
         if (verificationForm) {
@@ -437,10 +438,23 @@
 
             // Actions
             const tdActions = document.createElement('td');
+            tdActions.style.whiteSpace = 'nowrap';
+
             const editLink = document.createElement('a');
             editLink.href = test.edit_url;
-            editLink.textContent = 'Редактировать';
+            editLink.className = 'action-icon-btn';
+            editLink.title = 'Редактировать';
+            editLink.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'action-icon-btn danger';
+            deleteBtn.title = 'Удалить';
+            deleteBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+            deleteBtn.addEventListener('click', () => deleteTest(test.id, company.username));
+
             tdActions.appendChild(editLink);
+            tdActions.appendChild(deleteBtn);
             tr.appendChild(tdActions);
 
             tableBody.appendChild(tr);
@@ -448,6 +462,26 @@
 
         tableWrapper.hidden = false;
         empty.hidden = true;
+    }
+
+    async function deleteTest(testId, username) {
+        if (!confirm('Удалить тест? Это действие нельзя отменить.')) return;
+        try {
+            await fetchJson(`/api/tests/${testId}/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': getCsrfToken() },
+                credentials: 'same-origin',
+            });
+            const payload = await fetchJson(`/api/companies/${username}/tests/`);
+            state.company = payload.company;
+            state.tests = payload.tests || [];
+            state.stats = payload.stats || null;
+            syncNavigation(state.company);
+            syncTopbar(state.company);
+            syncTestsPage(state.company, state.tests, state.stats);
+        } catch (e) {
+            showFlash(e.message || 'Не удалось удалить тест.');
+        }
     }
 
     function openModal() {

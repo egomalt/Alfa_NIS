@@ -125,7 +125,7 @@ def api_company_tests(request, username):
             'page_count': t.pages.count(),
             'submissions': t.stats.get('submissions', 0),
             'created_at': t.created_at.isoformat(),
-            'url': f'/tests/{t.id}/',
+            'url': f'/tests/{t.id}/' if t.status == t.STATUS_PUBLISHED else f'/constructor/{t.id}/?company={username}',
             'edit_url': f'/constructor/{t.id}/',
         }
         for t in tests

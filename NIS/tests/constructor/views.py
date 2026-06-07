@@ -140,7 +140,8 @@ def api_test_detail(request, test_id):
     with transaction.atomic():
         test.title = title
         test.description = (body.get('description') or '').strip()
-        test.save(update_fields=['title', 'description', 'updated_at'])
+        test.status = Test.STATUS_DRAFT
+        test.save(update_fields=['title', 'description', 'status', 'updated_at'])
         _save_pages(test, body.get('pages'))
 
     return JsonResponse({'ok': True, 'test': _serialize_test(test, include_pages=True)})

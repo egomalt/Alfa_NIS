@@ -228,7 +228,7 @@
                 <div class="tv-result-title">${pass ? 'Тест пройден!' : 'Тест не пройден'}</div>
                 <div class="tv-result-sub">${state.score} из ${state.total} правильных ответов</div>
                 ${resultItems ? `<div class="tv-result-items">${resultItems}</div>` : ''}
-                <a href="/" class="tv-btn">На главную</a>
+                <a href="${isPreview ? `/constructor/${testId}/` : '/'}" class="tv-btn">${isPreview ? '← Вернуться в конструктор' : 'На главную'}</a>
             </div>
         `;
     }

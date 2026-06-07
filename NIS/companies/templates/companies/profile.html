@@ -25,7 +25,7 @@
         })();
     </script>
     <title>Alfa Career</title>
-    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260421-3">
+    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260607-1">
     <script>
         window.ALFA_APP_BOOTSTRAP = {
             path: "{{ app_path|escapejs }}",
@@ -34,7 +34,7 @@
         };
     </script>
     <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
-    <script type="module" src="{% static 'companies/app.js' %}?v=20260421-3"></script>
+    <script type="module" src="{% static 'companies/app.js' %}?v=20260607-1"></script>
 </head>
 <body class="app-runtime-body">
     <div class="dashboard-layout" id="company-dashboard">
@@ -80,7 +80,7 @@
                         </div>
                     </div>
                 </div>
-                <button type="button" class="outline-button" data-modal-open="profile-edit-modal">Изменить профиль</button>
+                <button id="profile-edit-btn" type="button" class="outline-button" data-modal-open="profile-edit-modal" hidden>Изменить профиль</button>
             </section>
 
             <div id="company-flash" class="app-alert" hidden></div>
