@@ -25,13 +25,67 @@
     </script>
     <title>Alfa Career</title>
     <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260421-3">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <style>
+        .home-avatar-btn {
+            display: flex; align-items: center; gap: 8px;
+            text-decoration: none; color: var(--text);
+            padding: 4px 8px 4px 4px;
+            border: 1px solid var(--line); border-radius: 20px;
+            background: var(--surface); transition: opacity .15s;
+        }
+        .home-avatar-btn:hover { opacity: 0.7; }
+        .home-avatar-circle {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--surface-alt); border: 1px solid var(--line);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700; color: var(--muted);
+            overflow: hidden; flex-shrink: 0;
+        }
+        .home-avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
+        .home-avatar-name { font-size: 0.82rem; font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
     <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
+    <script>
+        (function () {
+            function escHtml(s) {
+                return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+            function getInitial(name) { return (name || '?').trim()[0].toUpperCase(); }
+
+            async function initNav() {
+                const nav = document.getElementById('home-nav');
+                if (!nav) return;
+                try {
+                    const res = await fetch('/api/v1/auth/me/', {
+                        headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+                    });
+                    const data = await res.json();
+                    if (data.ok && data.account) {
+                        const a = data.account;
+                        const avatarInner = a.avatar
+                            ? `<img src="${escHtml(a.avatar)}" alt="">`
+                            : escHtml(getInitial(a.name));
+                        nav.innerHTML = `
+                            <a href="${escHtml(a.profile_url)}" class="home-avatar-btn">
+                                <div class="home-avatar-circle">${avatarInner}</div>
+                                <span class="home-avatar-name">${escHtml(a.name || a.username)}</span>
+                            </a>
+                            <button type="button" class="theme-toggle" data-theme-toggle>Тёмная тема</button>
+                        `;
+                    }
+                } catch (_) {}
+            }
+
+            document.addEventListener('DOMContentLoaded', initNav);
+        })();
+    </script>
 </head>
 <body class="app-runtime-body">
     <div class="home-shell">
         <header class="home-topbar">
             <a href="/" class="landing-brand home-brand"><span class="brand-mark"></span><span>Alfa Career</span></a>
-            <nav class="home-nav">
+            <nav class="home-nav" id="home-nav">
                 <a href="/authorization/signup/" class="mini-link-button">Регистрация</a>
                 <a href="/authorization/signin/" class="mini-link-button">Вход</a>
                 <button type="button" class="theme-toggle" data-theme-toggle>Тёмная тема</button>

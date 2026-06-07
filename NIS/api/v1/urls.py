@@ -4,11 +4,19 @@ import authorization.views as auth_views
 import companies.views as company_views
 import tests.constructor.views as constructor_views
 import tests.tests_app.views as test_views
+import users.views as user_views
 
 urlpatterns = [
     # Auth
-    path('auth/signup/', auth_views.api_register_company, name='v1_api_signup'),
-    path('auth/signin/', auth_views.api_login_company,   name='v1_api_signin'),
+    path('auth/signup/',  auth_views.api_register, name='v1_api_signup'),
+    path('auth/signin/',  auth_views.api_login,    name='v1_api_signin'),
+    path('auth/signout/', auth_views.api_logout,   name='v1_api_signout'),
+    path('auth/me/',      auth_views.api_me,        name='v1_api_me'),
+
+    # Candidates
+    path('candidates/<slug:username>/',        user_views.api_candidate_detail, name='v1_api_candidate_detail'),
+    path('candidates/<slug:username>/update/', user_views.api_candidate_update, name='v1_api_candidate_update'),
+    path('candidates/<slug:username>/avatar/', user_views.api_candidate_avatar, name='v1_api_candidate_avatar'),
 
     # Companies
     path('companies/<slug:username>/',              company_views.api_company_detail),

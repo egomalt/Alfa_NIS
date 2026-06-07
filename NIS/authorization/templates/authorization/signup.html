@@ -26,6 +26,11 @@
     </script>
     <title>Alfa Career</title>
     <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260608-4">
+    <style>
+        .role-toggle { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+        .role-btn { flex: 1; padding: 9px 0; font-size: 0.88rem; font-weight: 500; border: none; background: transparent; color: var(--muted); cursor: pointer; transition: background .15s, color .15s; }
+        .role-btn.active { background: var(--text); color: var(--bg); }
+    </style>
     <script>
         window.ALFA_APP_BOOTSTRAP = {
             path: "{{ app_path|escapejs }}",
@@ -46,39 +51,85 @@
                     <button type="button" class="theme-toggle" data-theme-toggle>Тёмная тема</button>
                 </div>
 
-                <div class="form-intro">
-                    <h2>Регистрация компании</h2>
-                    <p>Укажите отображаемое имя, имя пользователя для ссылки и рабочий email, чтобы создать кабинет.</p>
+                <div class="role-toggle" id="role-toggle">
+                    <button type="button" class="role-btn active" data-role="candidate">Кандидат</button>
+                    <button type="button" class="role-btn" data-role="company">Компания</button>
                 </div>
 
-                <div class="company-only-chip">Компания</div>
+                <div class="form-intro">
+                    <h2 id="signup-title">Регистрация кандидата</h2>
+                    <p id="signup-desc">Создайте аккаунт, чтобы проходить тесты компаний и откликаться на вакансии.</p>
+                </div>
 
                 <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
 
                 <form id="signup-form" method="post" action="/api/v1/auth/signup/" class="company-signup-form" data-api-form="register">
                     {% csrf_token %}
+                    <input type="hidden" name="role" id="role-input" value="candidate">
+
                     <div class="field" data-field="name">
                         <label for="register-name">Отображаемое имя</label>
-                        <input id="register-name" name="name" type="text" placeholder="Например, Alfa Career" required>
+                        <input id="register-name" name="name" type="text" placeholder="Например, Иван Иванов" required>
                         <ul class="errorlist" hidden></ul>
                     </div>
 
                     <div class="field" data-field="username">
                         <label for="register-username">Имя пользователя</label>
-                        <input id="register-username" name="username" type="text" placeholder="Например, alfa-career" pattern="[a-z0-9_-]+" autocapitalize="off" autocomplete="off" spellcheck="false" required>
+                        <input id="register-username" name="username" type="text" placeholder="Например, ivan-ivanov" pattern="[a-z0-9_-]+" autocapitalize="off" autocomplete="off" spellcheck="false" required>
                         <ul class="errorlist" hidden></ul>
                     </div>
 
                     <div class="field" data-field="email">
-                        <label for="register-email">Рабочий email</label>
-                        <input id="register-email" name="email" type="email" placeholder="team@company.com" required>
+                        <label for="register-email" id="email-label">Email</label>
+                        <input id="register-email" name="email" type="email" placeholder="ivan@example.com" required>
                         <ul class="errorlist" hidden></ul>
                     </div>
 
-                    <button type="submit" class="dark-button full-width">Создать кабинет компании</button>
+                    <button type="submit" class="dark-button full-width" id="signup-submit">Создать аккаунт кандидата</button>
                 </form>
             </div>
         </section>
     </div>
+    <script>
+        (function () {
+            const ROLES = {
+                candidate: {
+                    title: 'Регистрация кандидата',
+                    desc: 'Создайте аккаунт, чтобы проходить тесты компаний и откликаться на вакансии.',
+                    namePlaceholder: 'Например, Иван Иванов',
+                    emailLabel: 'Email',
+                    emailPlaceholder: 'ivan@example.com',
+                    submit: 'Создать аккаунт кандидата',
+                },
+                company: {
+                    title: 'Регистрация компании',
+                    desc: 'Укажите отображаемое имя, имя пользователя для ссылки и рабочий email, чтобы создать кабинет.',
+                    namePlaceholder: 'Например, Alfa Career',
+                    emailLabel: 'Рабочий email',
+                    emailPlaceholder: 'team@company.com',
+                    submit: 'Создать кабинет компании',
+                },
+            };
+
+            function applyRole(role) {
+                const cfg = ROLES[role];
+                document.getElementById('role-input').value = role;
+                document.getElementById('signup-title').textContent = cfg.title;
+                document.getElementById('signup-desc').textContent = cfg.desc;
+                document.getElementById('register-name').placeholder = cfg.namePlaceholder;
+                document.getElementById('email-label').textContent = cfg.emailLabel;
+                document.getElementById('register-email').placeholder = cfg.emailPlaceholder;
+                document.getElementById('signup-submit').textContent = cfg.submit;
+                document.querySelectorAll('.role-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.role === role);
+                });
+            }
+
+            document.getElementById('role-toggle').addEventListener('click', e => {
+                const btn = e.target.closest('.role-btn');
+                if (btn) applyRole(btn.dataset.role);
+            });
+        })();
+    </script>
 </body>
 </html>
