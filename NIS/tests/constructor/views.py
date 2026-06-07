@@ -38,6 +38,8 @@ def _serialize_page(page):
     }
     if page.type in (TestPage.TYPE_QUIZ, TestPage.TYPE_INPUT):
         data['answers'] = [_serialize_answer(a) for a in page.answers.all()]
+    if page.type == TestPage.TYPE_CODE:
+        data['page_meta'] = page.page_meta or {}
     return data
 
 
@@ -78,6 +80,7 @@ def _save_pages(test, pages_data):
             type=page_data.get('type', TestPage.TYPE_TEXT),
             title=(page_data.get('title') or ''),
             content=(page_data.get('content') or ''),
+            page_meta=(page_data.get('page_meta') or {}),
         )
         for ans_data in (page_data.get('answers') or []):
             TestAnswer.objects.create(
@@ -160,3 +163,67 @@ def api_test_publish(request, test_id):
     test.status = Test.STATUS_PUBLISHED
     test.save(update_fields=['status', 'updated_at'])
     return JsonResponse({'ok': True, 'test': _serialize_test(test)})
+
+
+@require_http_methods(['POST'])
+def api_code_run(request, page_id):
+    try:
+        page = TestPage.objects.get(id=page_id, type=TestPage.TYPE_CODE)
+    except TestPage.DoesNotExist:
+        return JsonResponse({'ok': False, 'message': 'Not found'}, status=404)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'message': 'Invalid JSON'}, status=400)
+
+    code = (body.get('code') or '').strip()
+    language = (body.get('language') or '').strip()
+    sample_only = body.get('sample_only', True)
+
+    if not code:
+        return JsonResponse({'ok': False, 'message': 'Код не может быть пустым'}, status=400)
+
+    from .executor import LANGUAGES, run_in_docker
+
+    if language not in LANGUAGES:
+        return JsonResponse({'ok': False, 'message': f'Неподдерживаемый язык: {language}'}, status=400)
+
+    meta = page.page_meta or {}
+    test_cases = meta.get('test_cases', [])
+    time_limit = int(meta.get('time_limit', 5))
+
+    if sample_only:
+        test_cases = [tc for tc in test_cases if tc.get('is_sample')]
+
+    if not test_cases:
+        return JsonResponse({'ok': False, 'message': 'Нет тест-кейсов для проверки'}, status=400)
+
+    results = []
+    passed = 0
+    for i, tc in enumerate(test_cases):
+        run_result = run_in_docker(language, code, stdin_data=tc.get('input', ''), time_limit=time_limit)
+        if not run_result['ok']:
+            return JsonResponse({'ok': False, 'message': run_result['error']})
+
+        actual = run_result['stdout'].rstrip('\n')
+        expected = (tc.get('expected') or '').rstrip('\n')
+        is_correct = (actual == expected) and run_result['exit_code'] == 0 and not run_result['timed_out']
+        if is_correct:
+            passed += 1
+
+        tc_result = {
+            'index': i + 1,
+            'passed': is_correct,
+            'timed_out': run_result['timed_out'],
+            'exit_code': run_result['exit_code'],
+        }
+        if tc.get('is_sample'):
+            tc_result['input'] = tc.get('input', '')
+            tc_result['expected'] = expected
+            tc_result['actual'] = actual
+            tc_result['stderr'] = run_result['stderr']
+
+        results.append(tc_result)
+
+    return JsonResponse({'ok': True, 'passed': passed, 'total': len(test_cases), 'results': results})

@@ -98,7 +98,7 @@ def api_test_submit(request, test_id):
     score = 0
     total = 0
 
-    for page in test.pages.filter(type__in=[TestPage.TYPE_QUIZ, TestPage.TYPE_INPUT]):
+    for page in test.pages.filter(type__in=[TestPage.TYPE_QUIZ, TestPage.TYPE_INPUT, TestPage.TYPE_CODE]):
         page_id_str = str(page.id)
         user_answer = submitted.get(page_id_str)
         result = {'page_id': page.id, 'type': page.type}
@@ -127,6 +127,18 @@ def api_test_submit(request, test_id):
                 score += 1
             result['correct'] = is_correct
             result['correct_text'] = correct_answers[0] if correct_answers else ''
+
+        elif page.type == TestPage.TYPE_CODE:
+            total += 1
+            code_answer = user_answer if isinstance(user_answer, dict) else {}
+            passed_cases = code_answer.get('passed', 0)
+            total_cases = code_answer.get('total', 0)
+            is_correct = total_cases > 0 and passed_cases == total_cases
+            if is_correct:
+                score += 1
+            result['correct'] = is_correct
+            result['passed_cases'] = passed_cases
+            result['total_cases'] = total_cases
 
         results.append(result)
 

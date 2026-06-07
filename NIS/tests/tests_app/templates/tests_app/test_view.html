@@ -79,6 +79,24 @@
         .tv-result-item-title { font-weight: 500; margin-bottom: 4px; }
         .tv-result-item-hint { color: var(--muted); font-size: 0.8rem; }
         .tv-loading { text-align: center; padding: 80px 20px; color: var(--muted); }
+        .tv-code-textarea { width: 100%; min-height: 320px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-family: 'Consolas','Fira Mono','Menlo',monospace; font-size: 0.88rem; line-height: 1.6; resize: vertical; box-sizing: border-box; tab-size: 4; }
+        .tv-code-textarea:focus { outline: none; border-color: var(--text); }
+        .tv-code-lang-badge { font-size: 0.72rem; padding: 3px 10px; border-radius: 10px; background: rgba(37,99,235,.12); color: #2563eb; font-weight: 600; }
+        .tv-upload-label { font-size: 0.8rem; padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; user-select: none; }
+        .tv-upload-label:hover { background: var(--surface-alt); }
+        .tv-code-results-wrap { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+        .tv-code-results-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 0.88rem; background: var(--surface-alt); }
+        .tv-code-verdict { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+        .tv-code-verdict.pass { background: rgba(56,161,105,.12); color: #38a169; }
+        .tv-code-verdict.fail { background: rgba(229,62,62,.08); color: #e53e3e; }
+        .tv-code-result-list { display: flex; flex-direction: column; }
+        .tv-code-result-item { padding: 8px 14px; font-size: 0.84rem; border-bottom: 1px solid var(--line); }
+        .tv-code-result-item:last-child { border-bottom: none; }
+        .tv-code-result-item.fail { background: rgba(229,62,62,.03); }
+        .tv-code-result-item.pass { background: rgba(56,161,105,.03); }
+        .tv-code-detail { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; }
+        .tv-code-detail-label { color: var(--muted); margin-right: 4px; }
+        .tv-code-detail pre { display: inline; margin: 0; padding: 2px 6px; background: var(--surface-alt); border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
     </style>
     <script>
         window.ALFA_APP_BOOTSTRAP = {
@@ -89,7 +107,7 @@
         };
     </script>
     <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
-    <script type="module" src="{% static 'main/test_view/app.js' %}?v=20260607-1"></script>
+    <script type="module" src="{% static 'main/test_view/app.js' %}?v=20260608-2"></script>
 </head>
 <body class="app-runtime-body">
 <div class="tv-layout" id="tv-root">

@@ -78,6 +78,12 @@
         .cst-flash.success { border-color: #38a169; color: #38a169; }
         .cst-type-badge { font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: var(--surface-alt); color: var(--muted); margin-bottom: 16px; display: inline-block; }
         .cst-empty { text-align: center; color: var(--muted); padding: 60px 20px; }
+        .cst-tc-block { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+        .cst-tc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 0.82rem; color: var(--muted); }
+        .cst-tc-header label { display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text); margin-left: auto; }
+        .cst-tc-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .cst-tc-fields .cst-label { margin-bottom: 4px; }
+        .cst-select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 0.92rem; font-family: inherit; }
     </style>
     <script>
         window.ALFA_APP_BOOTSTRAP = {
@@ -88,7 +94,7 @@
         };
     </script>
     <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
-    <script type="module" src="{% static 'constructor/app.js' %}?v=20260607-2"></script>
+    <script type="module" src="{% static 'constructor/app.js' %}?v=20260608-3"></script>
 </head>
 <body class="app-runtime-body">
 <div class="cst-layout" id="cst-root">
@@ -117,6 +123,7 @@
                 <button type="button" class="cst-add-btn" data-add="text">+ Текст (Markdown)</button>
                 <button type="button" class="cst-add-btn" data-add="quiz">+ Вопрос с вариантами</button>
                 <button type="button" class="cst-add-btn" data-add="input">+ Вопрос с вводом</button>
+                <button type="button" class="cst-add-btn" data-add="code">+ Задача с кодом</button>
             </div>
         </aside>
 
