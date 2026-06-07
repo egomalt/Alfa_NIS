@@ -1,0 +1,29 @@
+from django.urls import path
+
+import authorization.views as auth_views
+import companies.views as company_views
+import tests.constructor.views as constructor_views
+import tests.tests_app.views as test_views
+
+urlpatterns = [
+    # Auth
+    path('auth/signup/', auth_views.api_register_company, name='v1_api_signup'),
+    path('auth/signin/', auth_views.api_login_company,   name='v1_api_signin'),
+
+    # Companies
+    path('companies/<slug:username>/',              company_views.api_company_detail),
+    path('companies/<slug:username>/profile/',      company_views.api_company_profile),
+    path('companies/<slug:username>/verification/', company_views.api_company_verification),
+    path('companies/<slug:username>/tests/',        company_views.api_company_tests),
+
+    # Tests — constructor (CRUD)
+    path('tests/',                              constructor_views.api_tests_list),
+    path('tests/create/',                       constructor_views.api_tests_create),
+    path('tests/<int:test_id>/',                constructor_views.api_test_detail),
+    path('tests/<int:test_id>/publish/',        constructor_views.api_test_publish),
+    path('tests/pages/<int:page_id>/run/',      constructor_views.api_code_run),
+
+    # Tests — taking (view & submit)
+    path('tests/<int:test_id>/view/',           test_views.api_test_view),
+    path('tests/<int:test_id>/submit/',         test_views.api_test_submit),
+]
