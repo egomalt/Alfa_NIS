@@ -88,7 +88,7 @@
         };
     </script>
     <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
-    <script type="module" src="{% static 'constructor/app.js' %}?v=20260422-1"></script>
+    <script type="module" src="{% static 'constructor/app.js' %}?v=20260607-2"></script>
 </head>
 <body class="app-runtime-body">
 <div class="cst-layout" id="cst-root">
@@ -99,9 +99,12 @@
             <span>Alfa Career</span>
         </a>
         <span class="cst-topbar-sep">›</span>
+        <a id="cst-back-tests" href="#" class="cst-btn" style="text-decoration:none;flex-shrink:0">← К тестам</a>
+        <span class="cst-topbar-sep">›</span>
         <input id="cst-title" class="cst-title-input" type="text" placeholder="Название теста" maxlength="255" autocomplete="off">
         <span id="cst-save-status" class="cst-save-status"></span>
         <button type="button" class="theme-toggle cst-btn" data-theme-toggle>Тема</button>
+        <button type="button" id="cst-save-btn" class="cst-btn" disabled>Сохранить</button>
         <button type="button" id="cst-preview-btn" class="cst-btn" disabled>Предпросмотр</button>
         <button type="button" id="cst-publish-btn" class="cst-btn cst-btn-primary" disabled>Опубликовать</button>
     </header>
