@@ -2,10 +2,19 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from .forms import AccountLoginForm, AccountRegistrationForm
-from .models import Account, ROLE_COMPANY
+from .models import Account, ROLE_COMPANY, ROLE_USER
+
+SESSION_KEY = 'account_username'
+
+
+def get_current_account(request):
+    username = request.session.get(SESSION_KEY)
+    if not username:
+        return None
+    return Account.objects.filter(username=username).first()
 
 
 @ensure_csrf_cookie
@@ -24,28 +33,37 @@ def _serialize_form_errors(form):
 
 
 @require_POST
-def api_register_company(request):
+def api_register(request):
     from companies.models import Company
+    from users.models import UserProfile
 
     form = AccountRegistrationForm(request.POST)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': _serialize_form_errors(form)}, status=400)
 
+    role = request.POST.get('role', 'candidate')
+    is_company = role == 'company'
+
     with transaction.atomic():
         account = form.save(commit=False)
-        account.role = ROLE_COMPANY
+        account.role = ROLE_COMPANY if is_company else ROLE_USER
         account.save()
-        Company.objects.create(
-            username=account.username,
-            name=account.name,
-            contact_email=account.email,
-        )
 
+        if is_company:
+            Company.objects.create(
+                username=account.username,
+                name=account.name,
+                contact_email=account.email,
+            )
+        else:
+            UserProfile.objects.create(username=account.username)
+
+    request.session[SESSION_KEY] = account.username
     return JsonResponse({'ok': True, 'next_url': f'/{account.username}/'}, status=201)
 
 
 @require_POST
-def api_login_company(request):
+def api_login(request):
     form = AccountLoginForm(request.POST)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': _serialize_form_errors(form)}, status=400)
@@ -64,15 +82,41 @@ def api_login_company(request):
             status=404,
         )
 
-    if account.role != ROLE_COMPANY:
-        return JsonResponse(
-            {
-                'ok': False,
-                'errors': {
-                    'username': [{'message': 'У этого аккаунта нет роли компании.', 'code': 'wrong_role'}]
-                },
-            },
-            status=403,
-        )
-
+    request.session[SESSION_KEY] = account.username
     return JsonResponse({'ok': True, 'next_url': f'/{account.username}/'})
+
+
+@require_POST
+def api_logout(request):
+    request.session.flush()
+    return JsonResponse({'ok': True})
+
+
+@require_GET
+def api_me(request):
+    account = get_current_account(request)
+    if not account:
+        return JsonResponse({'ok': True, 'account': None})
+
+    avatar = None
+    if account.role == ROLE_USER:
+        from users.models import UserProfile
+        profile = UserProfile.objects.filter(username=account.username).first()
+        if profile and profile.avatar:
+            avatar = profile.avatar.url
+    elif account.role == ROLE_COMPANY:
+        from companies.models import Company
+        company = Company.objects.filter(username=account.username).first()
+        if company and company.avatar:
+            avatar = company.avatar.url
+
+    return JsonResponse({
+        'ok': True,
+        'account': {
+            'username': account.username,
+            'name': account.name,
+            'role': account.role,
+            'avatar': avatar,
+            'profile_url': f'/{account.username}/',
+        },
+    })

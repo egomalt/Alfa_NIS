@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script>
+        (function () {
+            var storageKey = 'forum_theme';
+            var theme = 'light';
+            try {
+                var savedTheme = localStorage.getItem(storageKey);
+                if (savedTheme === 'dark' || savedTheme === 'light') {
+                    theme = savedTheme;
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            } catch (error) {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <title>Alfa Career — Профиль кандидата</title>
+    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260608-4">
+    <style>
+        .cd-layout { display: flex; flex-direction: column; min-height: 100vh; }
+        .cd-topbar { display: flex; align-items: center; gap: 12px; padding: 0 24px; height: 56px; border-bottom: 1px solid var(--line); background: var(--bg); flex-shrink: 0; }
+        .cd-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none; color: var(--text); }
+        .cd-topbar-spacer { flex: 1; }
+        .cd-topbar-btn { padding: 6px 14px; font-size: 0.82rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; text-decoration: none; transition: opacity .15s; }
+        .cd-topbar-btn:hover { opacity: 0.7; }
+        .cd-main { flex: 1; display: flex; justify-content: center; padding: 40px 20px; }
+        .cd-inner { width: 100%; max-width: 640px; }
+        .cd-loading { text-align: center; padding: 80px 0; color: var(--muted); font-size: 0.9rem; }
+        .cd-card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+        .cd-card-header { padding: 28px 28px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 20px; }
+        .cd-avatar-wrap { position: relative; flex-shrink: 0; }
+        .cd-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--surface-alt); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 700; color: var(--muted); overflow: hidden; cursor: default; }
+        .cd-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .cd-avatar-edit-btn { position: absolute; bottom: 0; right: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--text); color: var(--bg); border: none; cursor: pointer; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; }
+        .cd-header-info { flex: 1; min-width: 0; }
+        .cd-name { font-size: 1.3rem; font-weight: 700; margin: 0 0 4px; }
+        .cd-username { font-size: 0.85rem; color: var(--muted); margin: 0 0 8px; }
+        .cd-role-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: rgba(37,99,235,.1); color: #2563eb; }
+        .cd-card-body { padding: 24px 28px; }
+        .cd-section { margin-bottom: 20px; }
+        .cd-section-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+        .cd-bio { font-size: 0.9rem; line-height: 1.6; color: var(--text); white-space: pre-wrap; }
+        .cd-empty-bio { font-size: 0.88rem; color: var(--muted); font-style: italic; }
+        .cd-meta { font-size: 0.83rem; color: var(--muted); }
+        .cd-actions { display: flex; gap: 8px; margin-top: 20px; }
+        .cd-btn { padding: 8px 18px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--text); transition: opacity .15s; }
+        .cd-btn:hover { opacity: 0.7; }
+        .cd-btn-primary { background: var(--text); color: var(--bg); border-color: transparent; }
+        /* Edit form */
+        .cd-edit-field { margin-bottom: 16px; }
+        .cd-edit-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+        .cd-edit-input { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 0.9rem; font-family: inherit; box-sizing: border-box; }
+        .cd-edit-input:focus { outline: none; border-color: var(--text); }
+        .cd-edit-textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 0.9rem; font-family: inherit; box-sizing: border-box; resize: vertical; min-height: 100px; line-height: 1.5; }
+        .cd-edit-textarea:focus { outline: none; border-color: var(--text); }
+        .cd-flash { padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 14px; border: 1px solid; }
+        .cd-flash.error { border-color: #e53e3e; color: #e53e3e; background: rgba(229,62,62,.04); }
+        .cd-flash.success { border-color: #38a169; color: #38a169; background: rgba(56,161,105,.04); }
+    </style>
+    <script>
+        window.ALFA_APP_BOOTSTRAP = {
+            path: "{{ app_path|escapejs }}",
+            username: "{{ username|escapejs }}",
+            page: "candidate"
+        };
+    </script>
+    <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
+    <script type="module" src="{% static 'users/app.js' %}?v=20260608-5"></script>
+</head>
+<body class="app-runtime-body">
+<div class="cd-layout">
+
+    <header class="cd-topbar">
+        <a href="/" class="cd-brand">
+            <span class="brand-mark"></span>
+            <span>Alfa Career</span>
+        </a>
+        <div class="cd-topbar-spacer"></div>
+        <button type="button" id="cd-logout-btn" class="cd-topbar-btn" hidden>Выйти</button>
+        <button type="button" class="theme-toggle cd-topbar-btn" data-theme-toggle>Тема</button>
+    </header>
+
+    <main class="cd-main">
+        <div class="cd-inner">
+            <div id="cd-content">
+                <div class="cd-loading">Загрузка профиля…</div>
+            </div>
+        </div>
+    </main>
+
+</div>
+</body>
+</html>
