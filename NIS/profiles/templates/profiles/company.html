@@ -4,28 +4,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="csrf-token" content="{{ csrf_token }}">
   <script>
     (function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();
   </script>
-  <title>Alfa Career — Профиль кандидата</title>
+  <title>Alfa Career — Профиль компании</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
   <script>
     window.ALFA_APP_BOOTSTRAP = {
-      path: "{{ app_path|escapejs }}",
       username: "{{ username|escapejs }}",
-      page: "candidate"
+      type: "company"
     };
   </script>
   <script src="{% static 'main/theme.js' %}" defer></script>
-  <script type="module" src="{% static 'users/app.js' %}?v=20260612-1"></script>
+  <script type="module" src="{% static 'profiles/app.js' %}?v=20260612-1"></script>
 </head>
 <body>
 <div style="display:flex;flex-direction:column;min-height:100vh;">
 
-  <!-- Navbar -->
   <header class="cr-navbar">
     <a href="/" class="cr-brand">
       <span class="cr-brand-mark">
@@ -36,21 +33,18 @@
     <nav class="cr-nav">
       <a href="/" class="cr-nav-link">Главная</a>
       <a href="/companies/" class="cr-nav-link">Компании</a>
-      <a href="/companies/" class="cr-nav-link">Тесты</a>
     </nav>
     <div class="cr-navbar-spacer"></div>
     <button type="button" data-theme-toggle class="cr-theme-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.3 6.3 0 0 0 10.5 10.5Z"/></svg>
       <span>Тема</span>
     </button>
-    <!-- cd-logout-btn скрыт в навбаре, выход — через кнопку внутри карточки -->
-    <button type="button" id="cd-logout-btn" class="cr-btn-secondary" hidden>Выйти</button>
   </header>
 
   <main style="flex:1;">
     <div style="max-width:1080px;margin:0 auto;padding:32px 32px 80px;">
-      <div id="cd-content">
-        <div style="padding:80px;text-align:center;color:var(--muted);">Загрузка профиля…</div>
+      <div id="profile-content">
+        <div style="padding:80px;text-align:center;color:var(--muted);">Загрузка…</div>
       </div>
     </div>
   </main>

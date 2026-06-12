@@ -56,7 +56,14 @@ def api_register(request):
             UserProfile.objects.create(username=account.username)
 
     request.session[SESSION_KEY] = account.username
-    return JsonResponse({'ok': True, 'next_url': f'/{account.username}/'}, status=201)
+    cabinet_url = '/cabinet/company/' if is_company else '/cabinet/user/'
+    return JsonResponse({'ok': True, 'next_url': cabinet_url}, status=201)
+
+
+def _cabinet_url(account):
+    if account.role == ROLE_COMPANY:
+        return '/cabinet/company/'
+    return '/cabinet/user/'
 
 
 @require_POST
@@ -80,7 +87,7 @@ def api_login(request):
         )
 
     request.session[SESSION_KEY] = account.username
-    return JsonResponse({'ok': True, 'next_url': f'/{account.username}/'})
+    return JsonResponse({'ok': True, 'next_url': _cabinet_url(account)})
 
 
 @require_POST
@@ -114,6 +121,6 @@ def api_me(request):
             'name': account.name,
             'role': account.role,
             'avatar': avatar,
-            'profile_url': f'/{account.username}/',
+            'profile_url': _cabinet_url(account),
         },
     })

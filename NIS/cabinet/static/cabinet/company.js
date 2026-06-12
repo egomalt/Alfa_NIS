@@ -1,6 +1,7 @@
-﻿(() => {
+(() => {
     const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
     const PAGE = BOOTSTRAP.page === 'tests' ? 'tests' : 'profile';
+    const username = BOOTSTRAP.username || '';
 
     const state = {
         company: null,
@@ -8,7 +9,6 @@
         stats: null,
         loading: true,
         modalOpen: false,
-        isOwner: false,
     };
 
     function getCookie(name) {
@@ -28,60 +28,43 @@
     }
 
     function formatDate(value) {
-        if (!value) {
-            return '';
-        }
+        if (!value) return '';
         const date = new Date(value);
-        if (Number.isNaN(date.getTime())) {
-            return '';
-        }
+        if (Number.isNaN(date.getTime())) return '';
         return new Intl.DateTimeFormat('ru-RU').format(date);
     }
 
     function setVisible(element, visible) {
-        if (!element) {
-            return;
-        }
+        if (!element) return;
         element.hidden = !visible;
     }
 
     function setText(id, value) {
         const element = document.getElementById(id);
-        if (!element) {
-            return;
-        }
+        if (!element) return;
         element.textContent = value || '';
     }
 
     function setHref(id, href) {
         const element = document.getElementById(id);
-        if (!element) {
-            return;
-        }
+        if (!element) return;
         element.setAttribute('href', href);
     }
 
     function showFlash(message) {
         const flash = document.getElementById('company-flash');
-        if (!flash) {
-            return;
-        }
-
+        if (!flash) return;
         if (!message) {
             flash.hidden = true;
             flash.textContent = '';
             return;
         }
-
         flash.textContent = message;
         flash.hidden = false;
     }
 
     function clearFormErrors(form) {
-        if (!form) {
-            return;
-        }
-
+        if (!form) return;
         form.querySelectorAll('[data-field] .errorlist').forEach((list) => {
             list.innerHTML = '';
             list.hidden = true;
@@ -90,13 +73,9 @@
 
     function showFormErrors(form, errors) {
         clearFormErrors(form);
-
         Object.entries(errors || {}).forEach(([fieldName, values]) => {
             const list = form.querySelector(`[data-field="${fieldName}"] .errorlist`);
-            if (!list) {
-                return;
-            }
-
+            if (!list) return;
             list.innerHTML = '';
             for (const item of values) {
                 const li = document.createElement('li');
@@ -109,49 +88,32 @@
 
     async function fetchJson(url, options = {}) {
         const response = await fetch(url, options);
-
         let payload = null;
         try {
             payload = await response.json();
         } catch (_error) {
             payload = null;
         }
-
         if (!response.ok) {
             const error = new Error(payload?.message || payload?.detail || 'Ошибка запроса.');
             error.status = response.status;
             error.payload = payload;
             throw error;
         }
-
         return payload;
     }
 
-    function syncNavigation(company) {
-        const profileHref = `/${company.username}/`;
-        const testsHref = `/${company.username}/tests/`;
-
-        // sidebar-brand is now the navbar brand — don't overwrite it
-        setHref('nav-profile', profileHref);
-        setHref('nav-tests', testsHref);
-
-        // lock card shown only to owner of unverified company
-        const lockCard = document.getElementById('lock-card');
-        const lockButton = document.getElementById('lock-add-file');
-        if (lockButton) {
-            lockButton.setAttribute('href', `${profileHref}#verification-section`);
-        }
+    function syncNavigation() {
+        setHref('nav-profile', '/cabinet/company/');
+        setHref('nav-tests', '/cabinet/company/tests/');
     }
 
     function syncTopbar(company) {
         setText('topbar-company-name', company.name || 'Компания');
-
         const initial = (company.name || 'A').charAt(0).toUpperCase();
         setText('topbar-avatar-placeholder', initial);
-
         const avatar = document.getElementById('topbar-avatar');
         const placeholder = document.getElementById('topbar-avatar-placeholder');
-
         if (avatar && placeholder) {
             if (company.avatar_url) {
                 avatar.src = company.avatar_url;
@@ -167,10 +129,8 @@
 
     function syncProfileHeader(company) {
         setText('hero-name', company.name || 'Компания');
-
         const initial = (company.name || 'A').charAt(0).toUpperCase();
         setText('hero-avatar-placeholder', initial);
-
         const heroAvatar = document.getElementById('hero-avatar');
         const heroPlaceholder = document.getElementById('hero-avatar-placeholder');
         if (heroAvatar && heroPlaceholder) {
@@ -184,64 +144,39 @@
                 heroPlaceholder.hidden = false;
             }
         }
-
         setVisible(document.getElementById('hero-verified'), company.is_verified);
-
         const industry = document.getElementById('hero-industry');
         const size = document.getElementById('hero-size');
         const city = document.getElementById('hero-city');
-
-        if (industry) {
-            industry.textContent = company.industry || '';
-            industry.hidden = !company.industry;
-        }
-        if (size) {
-            size.textContent = company.company_size || '';
-            size.hidden = !company.company_size;
-        }
-        if (city) {
-            city.textContent = company.city || '';
-            city.hidden = !company.city;
-        }
+        if (industry) { industry.textContent = company.industry || ''; industry.hidden = !company.industry; }
+        if (size) { size.textContent = company.company_size || ''; size.hidden = !company.company_size; }
+        if (city) { city.textContent = company.city || ''; city.hidden = !company.city; }
     }
 
-    function syncProfileContent(company, isOwner) {
+    // Cabinet: always isOwner = true
+    function syncProfileContent(company) {
         const verificationSection = document.getElementById('verification-section');
         const profileContent = document.getElementById('profile-content');
-
         const lockCard = document.getElementById('lock-card');
 
-        // Non-owners only see profile content (unverified companies are blocked at the server level)
-        if (!isOwner) {
-            setVisible(lockCard, false);
-            setVisible(verificationSection, false);
-            setVisible(profileContent, true);
-            setVisible(document.getElementById('profile-edit-btn'), false);
-        } else {
-            setVisible(lockCard, !company.is_verified);
-            setVisible(verificationSection, !company.is_verified);
-            setVisible(profileContent, company.is_verified);
-            setVisible(document.getElementById('profile-edit-btn'), company.is_verified);
-        }
+        setVisible(lockCard, !company.is_verified);
+        setVisible(verificationSection, !company.is_verified);
+        setVisible(profileContent, company.is_verified);
+        setVisible(document.getElementById('profile-edit-btn'), company.is_verified);
 
         const verificationForm = document.getElementById('verification-form');
         if (verificationForm) {
             verificationForm.setAttribute('action', `/api/v1/companies/${company.username}/verification/`);
         }
 
-        if (!company.is_verified) {
-            return;
-        }
+        if (!company.is_verified) return;
 
         const aboutCard = document.getElementById('about-card');
         const emptyAboutCard = document.getElementById('empty-about-card');
         const aboutText = document.getElementById('about-text');
-
         setVisible(aboutCard, Boolean(company.description));
         setVisible(emptyAboutCard, !company.description);
-        if (aboutText) {
-            aboutText.textContent = company.description || '';
-        }
+        if (aboutText) aboutText.textContent = company.description || '';
 
         const directionsCard = document.getElementById('directions-card');
         const directionsGrid = document.getElementById('directions-grid');
@@ -259,28 +194,16 @@
         const contactsList = document.getElementById('contacts-list');
         if (contactsList) {
             contactsList.innerHTML = '';
-
             const rows = [];
-            if (company.contact_email) {
-                rows.push(['Email', company.contact_email]);
-            }
-            if (company.phone) {
-                rows.push(['Телефон', company.phone]);
-            }
-            if (company.website) {
-                rows.push(['Сайт', company.website]);
-            }
-
-            if (!rows.length) {
-                rows.push(['Контакты', 'Пока не заполнены']);
-            }
-
+            if (company.contact_email) rows.push(['Email', company.contact_email]);
+            if (company.phone) rows.push(['Телефон', company.phone]);
+            if (company.website) rows.push(['Сайт', company.website]);
+            if (!rows.length) rows.push(['Контакты', 'Пока не заполнены']);
             for (const [label, value] of rows) {
                 const row = document.createElement('div');
                 const title = document.createElement('span');
                 title.textContent = label;
                 const body = document.createElement('strong');
-
                 if (label === 'Сайт' && company.website) {
                     const link = document.createElement('a');
                     link.href = company.website;
@@ -291,7 +214,6 @@
                 } else {
                     body.textContent = value;
                 }
-
                 row.appendChild(title);
                 row.appendChild(body);
                 contactsList.appendChild(row);
@@ -305,10 +227,7 @@
                 ['Статус', 'Подтверждена'],
                 ['Дата обновления', formatDate(company.updated_at)],
             ];
-            if (company.address) {
-                pairs.push(['Адрес', company.address]);
-            }
-
+            if (company.address) pairs.push(['Адрес', company.address]);
             for (const [label, value] of pairs) {
                 const row = document.createElement('div');
                 const title = document.createElement('span');
@@ -334,12 +253,8 @@
 
     function syncProfileForm(company) {
         const form = document.getElementById('profile-form');
-        if (!form) {
-            return;
-        }
-
+        if (!form) return;
         form.action = `/api/v1/companies/${company.username}/profile/`;
-
         const fields = {
             username: company.username || '',
             name: company.name || '',
@@ -356,14 +271,10 @@
             direction_3: company.direction_3 || '',
             direction_4: company.direction_4 || '',
         };
-
         for (const [name, value] of Object.entries(fields)) {
             const input = form.querySelector(`[name="${name}"]`);
-            if (input) {
-                input.value = value;
-            }
+            if (input) input.value = value;
         }
-
         const currentAvatar = document.getElementById('current-avatar');
         const currentAvatarLink = document.getElementById('current-avatar-link');
         if (currentAvatar && currentAvatarLink) {
@@ -374,7 +285,6 @@
                 currentAvatar.hidden = true;
             }
         }
-
         const currentDocument = document.getElementById('current-document');
         const currentDocumentLink = document.getElementById('current-document-link');
         if (currentDocument && currentDocumentLink) {
@@ -385,7 +295,6 @@
                 currentDocument.hidden = true;
             }
         }
-
         clearFormErrors(form);
     }
 
@@ -400,13 +309,9 @@
         const tableWrapper = document.getElementById('tests-table-wrapper');
         const tableBody = document.getElementById('tests-table-body');
         const empty = document.getElementById('tests-empty');
-
-        if (!tableWrapper || !tableBody || !empty) {
-            return;
-        }
+        if (!tableWrapper || !tableBody || !empty) return;
 
         tableBody.innerHTML = '';
-
         if (!tests.length) {
             tableWrapper.hidden = true;
             empty.hidden = false;
@@ -416,7 +321,6 @@
         for (const test of tests) {
             const tr = document.createElement('tr');
 
-            // Title (link to test page)
             const tdTitle = document.createElement('td');
             const titleLink = document.createElement('a');
             titleLink.href = test.url;
@@ -425,7 +329,6 @@
             tdTitle.appendChild(titleLink);
             tr.appendChild(tdTitle);
 
-            // Status pill
             const tdStatus = document.createElement('td');
             const pill = document.createElement('span');
             pill.className = `status-pill ${String(test.status || '').toLowerCase()}`;
@@ -433,22 +336,18 @@
             tdStatus.appendChild(pill);
             tr.appendChild(tdStatus);
 
-            // Page count
             const tdPages = document.createElement('td');
             tdPages.textContent = String(test.page_count ?? 0);
             tr.appendChild(tdPages);
 
-            // Submissions
             const tdSubs = document.createElement('td');
             tdSubs.textContent = String(test.submissions ?? 0);
             tr.appendChild(tdSubs);
 
-            // Date
             const tdDate = document.createElement('td');
             tdDate.textContent = formatDate(test.created_at);
             tr.appendChild(tdDate);
 
-            // Actions
             const tdActions = document.createElement('td');
             tdActions.style.whiteSpace = 'nowrap';
 
@@ -463,7 +362,7 @@
             deleteBtn.className = 'action-icon-btn danger';
             deleteBtn.title = 'Удалить';
             deleteBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
-            deleteBtn.addEventListener('click', () => deleteTest(test.id, company.username));
+            deleteBtn.addEventListener('click', () => deleteTest(test.id));
 
             tdActions.appendChild(editLink);
             tdActions.appendChild(deleteBtn);
@@ -476,7 +375,7 @@
         empty.hidden = true;
     }
 
-    async function deleteTest(testId, username) {
+    async function deleteTest(testId) {
         if (!confirm('Удалить тест? Это действие нельзя отменить.')) return;
         try {
             await fetchJson(`/api/v1/tests/${testId}/`, {
@@ -488,8 +387,6 @@
             state.company = payload.company;
             state.tests = payload.tests || [];
             state.stats = payload.stats || null;
-            syncNavigation(state.company);
-            syncTopbar(state.company);
             syncTestsPage(state.company, state.tests, state.stats);
         } catch (e) {
             showFlash(e.message || 'Не удалось удалить тест.');
@@ -498,18 +395,14 @@
 
     function openModal() {
         const modal = document.getElementById('profile-edit-modal');
-        if (!modal) {
-            return;
-        }
+        if (!modal) return;
         state.modalOpen = true;
         modal.classList.remove('hidden');
     }
 
     function closeModal() {
         const modal = document.getElementById('profile-edit-modal');
-        if (!modal) {
-            return;
-        }
+        if (!modal) return;
         state.modalOpen = false;
         modal.classList.add('hidden');
         clearFormErrors(document.getElementById('profile-form'));
@@ -518,31 +411,24 @@
     async function handleProfileSubmit(form) {
         showFlash('');
         clearFormErrors(form);
-
         try {
             const payload = await fetchJson(form.action, {
                 method: 'POST',
                 body: new FormData(form),
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                },
+                headers: { 'X-CSRFToken': getCsrfToken() },
                 credentials: 'same-origin',
             });
-
             if (payload.company) {
                 state.company = payload.company;
-                syncNavigation(state.company);
                 syncTopbar(state.company);
                 syncProfileHeader(state.company);
-                syncProfileContent(state.company, state.isOwner);
+                syncProfileContent(state.company);
                 syncProfileForm(state.company);
             }
-
-            if (payload.company?.username && payload.company.username !== BOOTSTRAP.companyUsername) {
-                window.location.assign(`/${payload.company.username}/`);
+            if (payload.company?.username && payload.company.username !== username) {
+                window.location.assign('/cabinet/company/');
                 return;
             }
-
             showFlash('Профиль компании сохранён.');
             closeModal();
         } catch (error) {
@@ -554,29 +440,22 @@
     async function handleVerificationSubmit(form) {
         showFlash('');
         clearFormErrors(form);
-
         try {
             const payload = await fetchJson(form.action, {
                 method: 'POST',
                 body: new FormData(form),
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                },
+                headers: { 'X-CSRFToken': getCsrfToken() },
                 credentials: 'same-origin',
             });
-
             if (payload.company) {
                 state.company = payload.company;
-                syncNavigation(state.company);
                 syncTopbar(state.company);
                 syncProfileHeader(state.company);
-                syncProfileContent(state.company, state.isOwner);
+                syncProfileContent(state.company);
                 syncProfileForm(state.company);
             }
-
             if (payload.next_url) {
                 window.location.assign(payload.next_url);
-                return;
             }
         } catch (error) {
             showFormErrors(form, error.payload?.errors || {});
@@ -587,54 +466,34 @@
     function bindGlobalEvents() {
         document.body.addEventListener('change', (event) => {
             const input = event.target.closest('.file-input-hidden');
-            if (!input) {
-                return;
-            }
-
+            if (!input) return;
             const fileNameTarget = document.querySelector(`[data-file-name="${input.id}"]`);
-            if (!fileNameTarget) {
-                return;
-            }
-
+            if (!fileNameTarget) return;
             fileNameTarget.textContent = input.files?.length ? input.files[0].name : 'Файл не выбран';
         });
 
         document.body.addEventListener('click', (event) => {
             const openButton = event.target.closest('[data-modal-open]');
-            if (openButton) {
-                openModal();
-                return;
-            }
-
+            if (openButton) { openModal(); return; }
             const closeButton = event.target.closest('[data-modal-close]');
-            if (closeButton) {
-                closeModal();
-                return;
-            }
-
-            if (event.target.matches('[data-modal]')) {
-                closeModal();
-            }
+            if (closeButton) { closeModal(); return; }
+            if (event.target.matches('[data-modal]')) closeModal();
         });
 
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && state.modalOpen) {
-                closeModal();
-            }
+            if (event.key === 'Escape' && state.modalOpen) closeModal();
         });
     }
 
-    async function initProfilePage(username) {
+    async function initProfilePage() {
         const payload = await fetchJson(`/api/v1/companies/${username}/`);
         state.company = payload.company;
-        state.isOwner = Boolean(payload.is_owner);
 
-        syncNavigation(state.company);
+        syncNavigation();
         syncTopbar(state.company);
         syncProfileHeader(state.company);
-        syncProfileContent(state.company, state.isOwner);
+        syncProfileContent(state.company);
         syncProfileForm(state.company);
-        setVisible(document.getElementById('company-logout-btn'), state.isOwner);
 
         const profileForm = document.getElementById('profile-form');
         profileForm?.addEventListener('submit', (event) => {
@@ -649,17 +508,15 @@
         });
     }
 
-    async function initTestsPage(username) {
+    async function initTestsPage() {
         const payload = await fetchJson(`/api/v1/companies/${username}/tests/`);
         state.company = payload.company;
         state.tests = payload.tests || [];
         state.stats = payload.stats || null;
-        const isOwner = Boolean(payload.is_owner);
 
-        syncNavigation(state.company);
+        syncNavigation();
         syncTopbar(state.company);
         syncTestsPage(state.company, state.tests, state.stats);
-        setVisible(document.getElementById('company-logout-btn'), isOwner);
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -668,24 +525,22 @@
 
         const logoutBtn = document.getElementById('company-logout-btn');
         if (logoutBtn) {
-            logoutBtn.hidden = true; // shown only for owner after data loads
             logoutBtn.addEventListener('click', async () => {
                 await fetch('/api/v1/auth/signout/', { method: 'POST', headers: { 'X-CSRFToken': getCsrfToken() } });
                 window.location.assign('/');
             });
         }
 
-        const username = BOOTSTRAP.companyUsername || '';
         if (!username) {
-            showFlash('Не удалось определить компанию по адресу страницы.');
+            showFlash('Не удалось определить компанию.');
             return;
         }
 
         try {
             if (PAGE === 'tests') {
-                await initTestsPage(username);
+                await initTestsPage();
             } else {
-                await initProfilePage(username);
+                await initProfilePage();
             }
         } catch (error) {
             showFlash(error.payload?.message || error.message || 'Не удалось загрузить данные компании.');

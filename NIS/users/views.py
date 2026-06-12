@@ -41,6 +41,7 @@ def api_candidate_update(request, username):
 
     name = (body.get('name') or '').strip()
     bio = body.get('bio', '')
+    skills_raw = body.get('skills', None)
 
     if name:
         account.name = name
@@ -48,7 +49,9 @@ def api_candidate_update(request, username):
 
     profile, _ = UserProfile.objects.get_or_create(username=username)
     profile.bio = bio
-    profile.save(update_fields=['bio'])
+    if skills_raw is not None:
+        profile.skills = [s.strip() for s in skills_raw if isinstance(s, str) and s.strip()][:20]
+    profile.save(update_fields=['bio', 'skills'])
 
     return JsonResponse({'ok': True, 'candidate': _serialize_candidate(account, profile)})
 
@@ -80,6 +83,7 @@ def _serialize_candidate(account, profile):
         'name': account.name,
         'email': account.email,
         'bio': profile.bio if profile else '',
+        'skills': profile.skills if profile else [],
         'avatar': profile.avatar.url if profile and profile.avatar else None,
         'created_at': account.created_at.isoformat(),
     }

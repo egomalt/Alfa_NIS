@@ -14,20 +14,19 @@
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
   <script>
     window.ALFA_APP_BOOTSTRAP = {
-      path: "{{ app_path|escapejs }}",
-      companyUsername: "{% if company_username %}{{ company_username|escapejs }}{% endif %}",
+      username: "{{ username|escapejs }}",
       page: "tests"
     };
   </script>
   <script src="{% static 'main/theme.js' %}" defer></script>
-  <script type="module" src="{% static 'companies/app.js' %}?v=20260612-3"></script>
+  <script type="module" src="{% static 'cabinet/company.js' %}?v=20260612-1"></script>
 </head>
 <body>
 <div style="display:flex;flex-direction:column;min-height:100vh;">
 
   <!-- Navbar -->
   <header class="cr-navbar">
-    <a id="sidebar-brand" href="/" class="cr-brand">
+    <a href="/" class="cr-brand">
       <span class="cr-brand-mark">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><rect x="3.5" y="13" width="4.3" height="8" rx="1.4"/><rect x="9.85" y="8" width="4.3" height="13" rx="1.4"/><rect x="16.2" y="3" width="4.3" height="18" rx="1.4"/></svg>
       </span>
@@ -38,11 +37,10 @@
       <a href="/companies/" class="cr-nav-link">Компании</a>
     </nav>
     <div style="display:flex;align-items:center;height:64px;margin-left:8px;padding-left:12px;border-left:1px solid var(--line);gap:2px;">
-      <a id="nav-profile" href="#" class="cr-nav-link">Профиль</a>
-      <a id="nav-tests" href="#" class="cr-nav-link" style="font-weight:600;color:var(--text);border-bottom:2px solid var(--brand);">Тесты</a>
+      <a id="nav-profile" href="/cabinet/company/" class="cr-nav-link">Профиль</a>
+      <a id="nav-tests" href="/cabinet/company/tests/" class="cr-nav-link" style="font-weight:600;color:var(--text);border-bottom:2px solid var(--brand);">Тесты</a>
     </div>
     <div class="cr-navbar-spacer"></div>
-    <!-- hidden compat elements for syncTopbar -->
     <img id="topbar-avatar" hidden alt="">
     <span id="topbar-avatar-placeholder" hidden></span>
     <span id="topbar-company-name" hidden></span>
@@ -61,13 +59,12 @@
 
       <div id="company-flash" class="app-alert" hidden></div>
 
-      <!-- Page header -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:28px;">
         <div>
           <h1 style="font-size:28px;font-weight:800;letter-spacing:-.025em;margin:0 0 4px;">Тесты и оценки</h1>
           <p style="font-size:14px;color:var(--muted);margin:0;">Управляйте тестами и следите за результатами кандидатов</p>
         </div>
-        <a href="/constructor/?company={{ company_username }}"
+        <a href="/constructor/?company={{ username }}"
           style="display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 18px;border:none;border-radius:10px;background:var(--brand);color:var(--on-brand);font-size:14px;font-weight:600;text-decoration:none;"
           onmouseover="this.style.background='var(--brand-strong)'" onmouseout="this.style.background='var(--brand)'">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -75,27 +72,13 @@
         </a>
       </div>
 
-      <!-- Stats grid -->
       <div class="stats-grid" style="margin-bottom:24px;">
-        <div class="stat-box">
-          <strong id="stat-total-tests">0</strong>
-          <span>Всего тестов</span>
-        </div>
-        <div class="stat-box">
-          <strong id="stat-active-tests">0</strong>
-          <span>Активные</span>
-        </div>
-        <div class="stat-box">
-          <strong id="stat-submissions">0</strong>
-          <span>Прохождений</span>
-        </div>
-        <div class="stat-box">
-          <strong id="stat-completion-rate">0%</strong>
-          <span>Активных, %</span>
-        </div>
+        <div class="stat-box"><strong id="stat-total-tests">0</strong><span>Всего тестов</span></div>
+        <div class="stat-box"><strong id="stat-active-tests">0</strong><span>Активные</span></div>
+        <div class="stat-box"><strong id="stat-submissions">0</strong><span>Прохождений</span></div>
+        <div class="stat-box"><strong id="stat-completion-rate">0%</strong><span>Активных, %</span></div>
       </div>
 
-      <!-- Tests table -->
       <div class="content-card section-card" style="padding:0;overflow:hidden;">
         <div class="tests-table-header" style="padding:20px 24px 18px;">
           <h2 style="margin:0;font-size:16px;font-weight:700;">Обзор тестов</h2>
@@ -122,7 +105,7 @@
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="1.5" stroke-linecap="round"><rect x="9" y="3" width="13" height="13" rx="2"/><path d="M5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/></svg>
             <div style="font-size:15px;font-weight:600;">Тестов пока нет</div>
             <div style="font-size:13.5px;color:var(--muted);">Создайте первый тест, чтобы начать оценку кандидатов</div>
-            <a href="/constructor/?company={{ company_username }}"
+            <a href="/constructor/?company={{ username }}"
               style="display:inline-flex;align-items:center;height:40px;padding:0 18px;border:none;border-radius:9px;background:var(--brand);color:var(--on-brand);font-size:14px;font-weight:600;text-decoration:none;margin-top:4px;"
               onmouseover="this.style.background='var(--brand-strong)'" onmouseout="this.style.background='var(--brand)'">Создать тест</a>
           </div>
@@ -132,6 +115,6 @@
     </div>
   </main>
 
-</div><!-- /flex wrapper -->
+</div>
 </body>
 </html>
