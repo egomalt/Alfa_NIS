@@ -12,6 +12,8 @@ from .models import Company
 
 @ensure_csrf_cookie
 def app_shell(request, username):
+    from authorization.views import get_current_account
+
     try:
         account = Account.objects.get(username=username)
     except Account.DoesNotExist:
@@ -28,6 +30,13 @@ def app_shell(request, username):
         username=username,
         defaults={'name': account.name, 'contact_email': account.email},
     )
+
+    current = get_current_account(request)
+    is_owner = current is not None and current.username == username
+
+    # Unverified companies are only visible to their owner
+    if not company.is_verified and not is_owner:
+        raise Http404
 
     if request.path.endswith('/tests/') and not company.is_verified:
         return redirect('company_profile_page', username=username)
@@ -74,7 +83,7 @@ def api_companies_list(request):
     from django.db.models import Count
     from tests.constructor.models import Test
 
-    companies = Company.objects.all().order_by('-created_at')
+    companies = Company.objects.exclude(registration_document='').order_by('-created_at')
     counts = (
         Test.objects.filter(status=Test.STATUS_PUBLISHED)
         .values('company_username')
@@ -86,6 +95,7 @@ def api_companies_list(request):
         {
             'username': c.username,
             'name': c.name,
+            'description': c.description,
             'avatar_url': c.avatar.url if c.avatar else '',
             'is_verified': c.is_verified,
             'industry': c.industry,
@@ -101,13 +111,20 @@ def api_companies_list(request):
 
 @require_GET
 def api_company_detail(request, username):
+    from authorization.views import get_current_account
     company = get_object_or_404(Company, username=username)
-    return JsonResponse({'ok': True, 'company': _serialize_company(company)})
+    current = get_current_account(request)
+    is_owner = current is not None and current.username == username
+    return JsonResponse({'ok': True, 'company': _serialize_company(company), 'is_owner': is_owner})
 
 
 @require_http_methods(['POST'])
 def api_company_profile(request, username):
+    from authorization.views import get_current_account
     company = get_object_or_404(Company, username=username)
+    current = get_current_account(request)
+    if current is None or current.username != username:
+        return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
     form = CompanyProfileForm(request.POST, request.FILES, instance=company)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
@@ -122,20 +139,24 @@ def api_company_verification(request, username):
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
     company = form.save()
-    return JsonResponse({'ok': True, 'company': _serialize_company(company), 'next_url': f'/{company.username}/'})
+    return JsonResponse({'ok': True, 'company': _serialize_company(company), 'next_url': '/cabinet/company/'})
 
 
 @require_GET
 def api_company_tests(request, username):
     from tests.constructor.models import Test
+    from authorization.views import get_current_account
 
     company = get_object_or_404(Company, username=username)
+    current = get_current_account(request)
+    is_owner = current is not None and current.username == username
+
     if not company.is_verified:
         return JsonResponse(
             {
                 'ok': False,
                 'message': 'Сначала подтвердите компанию, чтобы открыть раздел тестов.',
-                'next_url': f'/{company.username}/',
+                'next_url': '/cabinet/company/',
             },
             status=403,
         )
@@ -162,6 +183,7 @@ def api_company_tests(request, username):
     return JsonResponse({
         'ok': True,
         'company': _serialize_company(company),
+        'is_owner': is_owner,
         'tests': serialized,
         'stats': {
             'total_tests': total,

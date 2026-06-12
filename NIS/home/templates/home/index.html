@@ -2,102 +2,212 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script>
-        (function () {
-            var storageKey = 'alfa_theme';
-            var theme = 'light';
-            try {
-                var savedTheme = localStorage.getItem(storageKey);
-                if (savedTheme === 'dark' || savedTheme === 'light') {
-                    theme = savedTheme;
-                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    theme = 'dark';
-                }
-            } catch (error) {
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    theme = 'dark';
-                }
-            }
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
-    <title>Alfa Career</title>
-    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260421-3">
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    <style>
-        .home-avatar-btn {
-            display: flex; align-items: center; gap: 8px;
-            text-decoration: none; color: var(--text);
-            padding: 4px 8px 4px 4px;
-            border: 1px solid var(--line); border-radius: 20px;
-            background: var(--surface); transition: opacity .15s;
-        }
-        .home-avatar-btn:hover { opacity: 0.7; }
-        .home-avatar-circle {
-            width: 28px; height: 28px; border-radius: 50%;
-            background: var(--surface-alt); border: 1px solid var(--line);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.75rem; font-weight: 700; color: var(--muted);
-            overflow: hidden; flex-shrink: 0;
-        }
-        .home-avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
-        .home-avatar-name { font-size: 0.82rem; font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    </style>
-    <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
-    <script>
-        (function () {
-            function escHtml(s) {
-                return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-            }
-            function getInitial(name) { return (name || '?').trim()[0].toUpperCase(); }
-
-            async function initNav() {
-                const nav = document.getElementById('home-nav');
-                if (!nav) return;
-                try {
-                    const res = await fetch('/api/v1/auth/me/', {
-                        headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' },
-                    });
-                    const data = await res.json();
-                    if (data.ok && data.account) {
-                        const a = data.account;
-                        const avatarInner = a.avatar
-                            ? `<img src="${escHtml(a.avatar)}" alt="">`
-                            : escHtml(getInitial(a.name));
-                        nav.innerHTML = `
-                            <a href="${escHtml(a.profile_url)}" class="home-avatar-btn">
-                                <div class="home-avatar-circle">${avatarInner}</div>
-                                <span class="home-avatar-name">${escHtml(a.name || a.username)}</span>
-                            </a>
-                            <button type="button" class="theme-toggle" data-theme-toggle>Тёмная тема</button>
-                        `;
-                    }
-                } catch (_) {}
-            }
-
-            document.addEventListener('DOMContentLoaded', initNav);
-        })();
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <script>
+    (function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();
+  </script>
+  <title>Alfa Career — HR-система для IT-собеседований</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/career.css' %}">
+  <script src="{% static 'main/theme.js' %}" defer></script>
+  <script src="{% static 'js/career.js' %}" defer></script>
 </head>
-<body class="app-runtime-body">
-    <div class="home-shell">
-        <header class="home-topbar">
-            <a href="/" class="landing-brand home-brand"><span class="brand-mark"></span><span>Alfa Career</span></a>
-            <nav class="home-nav" id="home-nav">
-                <a href="/authorization/signup/" class="mini-link-button">Регистрация</a>
-                <a href="/authorization/signin/" class="mini-link-button">Вход</a>
-                <button type="button" class="theme-toggle" data-theme-toggle>Тёмная тема</button>
-            </nav>
-        </header>
-        <main class="home-placeholder">
-            <div class="home-placeholder-card">
-                <div class="eyebrow-text">Главная</div>
-                <h1>Это главная страница</h1>
-                <p>Здесь будет размещаться основной контент платформы и быстрые переходы к ключевым разделам.</p>
-            </div>
-        </main>
+<body>
+
+<!-- Navbar -->
+<header class="cr-navbar">
+  <a href="/" class="cr-brand">
+    <span class="cr-brand-mark">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><rect x="3.5" y="13" width="4.3" height="8" rx="1.4"/><rect x="9.85" y="8" width="4.3" height="13" rx="1.4"/><rect x="16.2" y="3" width="4.3" height="18" rx="1.4"/></svg>
+    </span>
+    <span class="cr-brand-name">Career</span>
+  </a>
+  <nav class="cr-nav">
+    <a href="/" class="cr-nav-link active">Главная</a>
+    <a href="/companies/" class="cr-nav-link">Компании</a>
+    <a href="/companies/" class="cr-nav-link">Тесты</a>
+  </nav>
+  <div class="cr-navbar-spacer"></div>
+  <button type="button" data-theme-toggle class="cr-theme-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.3 6.3 0 0 0 10.5 10.5Z"/></svg>
+    <span>Тема</span>
+  </button>
+  <div id="home-user-chip">
+    <a href="/authorization/signin/" class="mini-link-button">Войти</a>
+    <a href="/authorization/signup/" class="mini-link-button" style="background:var(--brand);color:var(--on-brand);border-color:transparent;">Регистрация</a>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="cr-hero">
+    <h1>Готовьтесь к собеседованиям на реальном опыте</h1>
+    <p>Каталог компаний, тренировочные тесты и реальные испытания работодателей — в одном месте.</p>
+    <div class="cr-search-bar">
+      <span style="color:var(--muted);display:flex;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      </span>
+      <input placeholder="Поиск компаний и тестов" id="hero-search">
+      <a href="/companies/" class="cr-btn-primary" style="height:42px;border-radius:9px;font-size:14px;">Найти</a>
     </div>
+    <div class="cr-chips">
+      <span class="cr-chip">Frontend</span>
+      <span class="cr-chip">Backend</span>
+      <span class="cr-chip">DevOps</span>
+      <span class="cr-chip">Аналитика</span>
+      <span class="cr-chip">Junior</span>
+      <span class="cr-chip">Middle</span>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--faint);">
+      Платформа для IT-собеседований · Компании · Тесты · Кандидаты
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="cr-section">
+    <div class="cr-steps-grid">
+      <div class="cr-step-card">
+        <div class="cr-step-n">01</div>
+        <div class="cr-step-title">Выберите компанию</div>
+        <div class="cr-step-text">Изучите каталог работодателей, найдите интересующую компанию и ознакомьтесь с требованиями.</div>
+      </div>
+      <div class="cr-step-card">
+        <div class="cr-step-n">02</div>
+        <div class="cr-step-title">Пройдите тест</div>
+        <div class="cr-step-text">Решайте тренировочные задачи или реальные испытания от работодателя и получайте мгновенный результат.</div>
+      </div>
+      <div class="cr-step-card">
+        <div class="cr-step-n">03</div>
+        <div class="cr-step-title">Получите оффер</div>
+        <div class="cr-step-text">Показывайте результаты тестов компаниям и ускоряйте путь к желаемой должности.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Popular companies -->
+  <section class="cr-section" style="padding-top:48px;">
+    <div class="cr-section-header">
+      <div>
+        <h2 class="cr-section-title">Популярные компании</h2>
+        <p class="cr-section-sub">Работодатели, которые активно проводят испытания</p>
+      </div>
+      <a href="/companies/" class="cr-all-link">
+        Все компании
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+    <div class="cr-company-list" id="home-companies">
+      <div style="padding:32px;text-align:center;color:var(--muted);font-size:14px;">Загрузка…</div>
+    </div>
+  </section>
+
+  <!-- Training tests -->
+  <section class="cr-section" style="padding-top:48px;padding-bottom:80px;">
+    <div style="margin-bottom:18px;">
+      <h2 class="cr-section-title">Тренировочные тесты</h2>
+      <p class="cr-section-sub">Готовьтесь по актуальным заданиям без привязки к вакансии</p>
+    </div>
+    <div class="cr-tests-grid" id="home-tests">
+      <div style="padding:32px;text-align:center;color:var(--muted);font-size:14px;grid-column:1/-1;">Загрузка…</div>
+    </div>
+  </section>
+</main>
+
+<footer class="cr-footer">
+  <div class="cr-footer-inner">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <span class="cr-brand-mark" style="width:22px;height:22px;border-radius:6px;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><rect x="3.5" y="13" width="4.3" height="8" rx="1.4"/><rect x="9.85" y="8" width="4.3" height="13" rx="1.4"/><rect x="16.2" y="3" width="4.3" height="18" rx="1.4"/></svg>
+      </span>
+      <span style="font-weight:700;font-size:14px;">Career</span>
+    </div>
+    <div class="cr-footer-copy">© 2026 · HR-решение для IT-собеседований</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function initial(name){return(name||'?').trim()[0].toUpperCase();}
+
+  function testsLabel(n){
+    if(n===0)return'Нет тестов';
+    const m10=n%10,m100=n%100;
+    if(m100>=11&&m100<=19)return`${n} тестов`;
+    if(m10===1)return`${n} тест`;
+    if(m10>=2&&m10<=4)return`${n} теста`;
+    return`${n} тестов`;
+  }
+
+  async function loadCompanies(){
+    const el=document.getElementById('home-companies');
+    if(!el)return;
+    try{
+      const res=await fetch('/api/v1/companies/');
+      const data=await res.json();
+      if(!data.ok||!data.companies.length){el.innerHTML='<div style="padding:32px;text-align:center;color:var(--muted);">Компаний пока нет</div>';return;}
+      const items=data.companies.slice(0,5).map(c=>{
+        const avatarHtml=c.avatar_url?`<img src="${esc(c.avatar_url)}" alt="">`:`${esc(initial(c.name))}`;
+        const metaParts=[c.industry,c.city].filter(Boolean).join(' · ');
+        const verified=c.is_verified?`<span class="cr-verified-dot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>`:'' ;
+        return`<a href="${esc(c.profile_url)}" class="cr-company-row">
+          <span class="cr-company-initial">${avatarHtml}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:7px;">
+              <span style="font-size:15px;font-weight:600;">${esc(c.name)}</span>${verified}
+            </div>
+            <div style="font-size:13px;color:var(--muted);">${esc(metaParts)}</div>
+          </div>
+          <span class="cr-tests-count">${esc(testsLabel(c.tests_count))}</span>
+          <span style="color:var(--faint);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </a>`;
+      });
+      el.innerHTML=items.join('');
+    }catch(_){el.innerHTML='<div style="padding:32px;text-align:center;color:var(--muted);">Не удалось загрузить компании</div>';}
+  }
+
+  async function loadTests(){
+    const el=document.getElementById('home-tests');
+    if(!el)return;
+    try{
+      const res=await fetch('/api/v1/companies/');
+      const data=await res.json();
+      if(!data.ok||!data.companies.length){el.innerHTML='<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--muted);">Тестов пока нет</div>';return;}
+      // show up to 3 companies as test cards
+      const items=data.companies.filter(c=>c.tests_count>0).slice(0,3).map(c=>`
+        <a href="${esc(c.profile_url)}" class="cr-test-card">
+          <span style="align-self:flex-start;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:6px;background:var(--brand-soft);color:var(--brand-text);margin-bottom:14px;">Компания</span>
+          <div style="font-size:16px;font-weight:700;line-height:1.3;margin-bottom:6px;">${esc(c.name)}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--faint);margin-bottom:18px;">${esc(testsLabel(c.tests_count))}</div>
+          <span class="cr-btn-secondary" style="margin-top:auto;">Открыть</span>
+        </a>`);
+      el.innerHTML=items.length?items.join(''):'<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--muted);">Нет активных тестов</div>';
+    }catch(_){el.innerHTML='<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--muted);">Не удалось загрузить тесты</div>';}
+  }
+
+  async function loadUser(){
+    try{
+      const res=await fetch('/api/v1/auth/me/');
+      const data=await res.json();
+      const el=document.getElementById('home-user-chip');
+      if(!el)return;
+      if(data.ok&&data.account){
+        const a=data.account;
+        const avatarInner=a.avatar?`<img src="${esc(a.avatar)}" alt="">`:`${esc(initial(a.name))}`;
+        el.innerHTML=`<a href="${esc(a.profile_url)}" class="cr-user-chip">
+          <div class="cr-user-avatar">${avatarInner}</div>
+          <div><div class="cr-user-name">${esc(a.name||a.username)}</div>
+          <div class="cr-user-role">${a.role==='company'?'Компания':'Кандидат'}</div></div>
+        </a>`;
+      }
+    }catch(_){}
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{loadCompanies();loadTests();loadUser();});
+})();
+</script>
 </body>
 </html>

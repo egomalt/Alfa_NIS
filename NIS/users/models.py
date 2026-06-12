@@ -4,6 +4,7 @@ from django.db import models
 class UserProfile(models.Model):
     username = models.SlugField(max_length=50, unique=True)
     bio = models.TextField(blank=True)
+    skills = models.JSONField(default=list, blank=True)
     avatar = models.ImageField(upload_to='user_avatars/', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

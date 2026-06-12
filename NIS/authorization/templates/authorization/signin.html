@@ -2,69 +2,62 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    <script>
-        (function () {
-            var storageKey = 'alfa_theme';
-            var theme = 'light';
-            try {
-                var savedTheme = localStorage.getItem(storageKey);
-                if (savedTheme === 'dark' || savedTheme === 'light') {
-                    theme = savedTheme;
-                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    theme = 'dark';
-                }
-            } catch (error) {
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    theme = 'dark';
-                }
-            }
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
-    <title>Alfa Career</title>
-    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260608-4">
-    <script>
-        window.ALFA_APP_BOOTSTRAP = {
-            path: "{{ app_path|escapejs }}",
-            page: "signin"
-        };
-    </script>
-    <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
-    <script type="module" src="{% static 'authorization/app.js' %}?v=20260608-4"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <script>
+    (function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();
+  </script>
+  <title>Вход — Alfa Career</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/career.css' %}">
+  <script>
+    window.ALFA_APP_BOOTSTRAP = {
+      path: "{{ app_path|escapejs }}",
+      page: "signin"
+    };
+  </script>
+  <script src="{% static 'main/theme.js' %}" defer></script>
+  <script type="module" src="{% static 'authorization/app.js' %}?v=20260608-4"></script>
 </head>
-<body class="app-runtime-body">
-    <div class="landing-layout single-card-layout">
-        <section class="landing-form-card standalone-card">
-            <div class="landing-form-inner">
-                <div class="landing-form-topbar">
-                    <div class="landing-top-actions">
-                        <a href="/authorization/signup/" class="mini-link-button">Регистрация</a>
-                    </div>
-                    <button type="button" class="theme-toggle" data-theme-toggle>Тёмная тема</button>
-                </div>
+<body>
+<div class="cr-auth-page">
 
-                <div class="form-intro">
-                    <h2>Вход по имени пользователя</h2>
-                    <p>Введите имя пользователя компании, чтобы открыть кабинет и продолжить работу.</p>
-                </div>
+  <a href="/" style="display:flex;align-items:center;gap:10px;margin-bottom:40px;text-decoration:none;color:var(--text);">
+    <span class="cr-brand-mark">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><rect x="3.5" y="13" width="4.3" height="8" rx="1.4"/><rect x="9.85" y="8" width="4.3" height="13" rx="1.4"/><rect x="16.2" y="3" width="4.3" height="18" rx="1.4"/></svg>
+    </span>
+    <span style="font-weight:800;font-size:19px;letter-spacing:-.01em;">Career</span>
+  </a>
 
-                <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
+  <div class="cr-auth-card">
+    <h1 style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px;">Добро пожаловать</h1>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 28px;">Войдите в свой аккаунт</p>
 
-                <form id="signin-form" method="post" action="/api/v1/auth/signin/" class="company-signup-form" data-api-form="login">
-                    {% csrf_token %}
-                    <div class="field" data-field="username">
-                        <label for="login-username">Имя пользователя</label>
-                        <input id="login-username" name="username" type="text" placeholder="alfa-career" required>
-                        <ul class="errorlist" hidden></ul>
-                    </div>
+    <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
 
-                    <button type="submit" class="dark-button full-width">Войти</button>
-                </form>
-            </div>
-        </section>
+    <form id="signin-form" method="post" action="/api/v1/auth/signin/" data-api-form="login">
+      {% csrf_token %}
+      <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:24px;">
+        <div data-field="username">
+          <div class="cr-auth-field-label">Имя пользователя</div>
+          <input id="login-username" name="username" type="text" placeholder="ivan-sokolov"
+            class="cr-auth-input" required autocapitalize="off" autocomplete="username">
+          <ul class="errorlist" hidden></ul>
+        </div>
+      </div>
+      <button type="submit" class="cr-auth-submit">Войти</button>
+    </form>
+
+    <div style="height:1px;background:var(--line);margin:20px 0;"></div>
+    <div style="text-align:center;font-size:13px;color:var(--muted);">
+      Нет аккаунта?
+      <a href="/authorization/signup/" style="color:var(--brand-text);font-weight:600;text-decoration:none;">Зарегистрироваться</a>
     </div>
+  </div>
+
+  <button type="button" data-theme-toggle class="theme-toggle" style="margin-top:24px;">Тёмная тема</button>
+</div>
 </body>
 </html>

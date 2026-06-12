@@ -9,7 +9,9 @@ urlpatterns = [
     path('', include('tests.constructor.urls')),
     path('', include('tests.tests_app.urls')),
     path('', include('company_catalog.urls')),
-    path('', include('companies.urls')),
+    path('', include('cabinet.urls')),
+    # profiles must come last — catches /<username>/
+    path('', include('profiles.urls')),
 ]
 
 if settings.DEBUG:

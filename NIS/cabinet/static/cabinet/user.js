@@ -3,7 +3,8 @@
     const username = BOOTSTRAP.username;
     const CSRF = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-    let state = { candidate: null, isOwner: false };
+    // Cabinet: always owner
+    let state = { candidate: null };
 
     function esc(s) {
         return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -58,8 +59,6 @@
         } catch (e) { alert(e.message); }
     }
 
-    // ── Профиль ───────────────────────────────────────────────────────────
-
     function renderProfile(tests) {
         const c = state.candidate;
         const el = document.getElementById('cd-content');
@@ -75,34 +74,14 @@
             ? `<img src="${esc(c.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
             : `<span style="font-size:32px;font-weight:700;color:var(--brand-text);">${esc(initial(c.name))}</span>`;
 
-        const editAvatarBtn = state.isOwner
-            ? `<button id="cd-avatar-btn" title="Сменить фото"
-                 style="position:absolute;bottom:3px;right:3px;width:26px;height:26px;border-radius:50%;background:var(--text);color:var(--bg);border:2px solid var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;"
-                 onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-               </button>`
-            : '';
-
-        const ownerBtns = state.isOwner
-            ? `<div style="display:flex;gap:9px;flex-shrink:0;padding-bottom:6px;">
-                 <button id="cd-edit-btn"
-                   style="height:36px;padding:0 15px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);color:var(--text);font-size:13.5px;font-weight:600;cursor:pointer;"
-                   onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">Редактировать</button>
-                 <button id="cd-logout-inline"
-                   style="height:36px;padding:0 15px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);color:var(--text-2);font-size:13.5px;font-weight:600;cursor:pointer;"
-                   onmouseover="this.style.color='var(--red-text)';this.style.borderColor='var(--red-text)'"
-                   onmouseout="this.style.color='var(--text-2)';this.style.borderColor='var(--line-2)'">Выйти</button>
-               </div>`
-            : '';
-
         const bioHtml = c.bio
             ? `<p style="font-size:14px;line-height:1.65;color:var(--text-2);margin:0;text-wrap:pretty;">${esc(c.bio)}</p>`
-            : `<p style="font-size:14px;color:var(--faint);margin:0;">${state.isOwner ? 'Нажмите «Редактировать», чтобы добавить информацию о себе.' : 'Биография не заполнена.'}</p>`;
+            : `<p style="font-size:14px;color:var(--faint);margin:0;">Нажмите «Редактировать», чтобы добавить информацию о себе.</p>`;
 
         const skills = c.skills || [];
         const skillsHtml = skills.length
             ? skills.map(sk => `<span style="padding:5px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:13px;font-weight:500;color:var(--text-2);">${esc(sk)}</span>`).join('')
-            : `<span style="font-size:13.5px;color:var(--faint);">${state.isOwner ? 'Добавьте навыки в редактировании профиля.' : 'Навыки не указаны.'}</span>`;
+            : `<span style="font-size:13.5px;color:var(--faint);">Добавьте навыки в редактировании профиля.</span>`;
 
         let testsPreviewHtml;
         if (!tests || !tests.length) {
@@ -140,7 +119,11 @@
             <div style="display:flex;align-items:flex-end;gap:18px;margin-top:-42px;">
               <div style="position:relative;flex-shrink:0;">
                 <div style="width:90px;height:90px;border-radius:50%;background:var(--brand-soft);border:4px solid var(--surface);display:flex;align-items:center;justify-content:center;overflow:hidden;">${avatarInner}</div>
-                ${editAvatarBtn}
+                <button id="cd-avatar-btn" title="Сменить фото"
+                  style="position:absolute;bottom:3px;right:3px;width:26px;height:26px;border-radius:50%;background:var(--text);color:var(--bg);border:2px solid var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;"
+                  onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </button>
               </div>
               <div style="flex:1;padding-bottom:6px;">
                 <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
@@ -148,7 +131,15 @@
                   <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--brand-soft);color:var(--brand-text);">Кандидат</span>
                 </div>
               </div>
-              ${ownerBtns}
+              <div style="display:flex;gap:9px;flex-shrink:0;padding-bottom:6px;">
+                <button id="cd-edit-btn"
+                  style="height:36px;padding:0 15px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);color:var(--text);font-size:13.5px;font-weight:600;cursor:pointer;"
+                  onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">Редактировать</button>
+                <button id="cd-logout-inline"
+                  style="height:36px;padding:0 15px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);color:var(--text-2);font-size:13.5px;font-weight:600;cursor:pointer;"
+                  onmouseover="this.style.color='var(--red-text)';this.style.borderColor='var(--red-text)'"
+                  onmouseout="this.style.color='var(--text-2)';this.style.borderColor='var(--line-2)'">Выйти</button>
+              </div>
             </div>
             <div style="display:flex;align-items:center;gap:16px;margin-top:12px;font-size:13.5px;color:var(--muted);flex-wrap:wrap;">
               <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;">@${esc(c.username)}</span>
@@ -159,12 +150,10 @@
 
         <div style="display:grid;grid-template-columns:1fr 310px;gap:20px;margin-top:20px;align-items:start;">
           <div style="display:flex;flex-direction:column;gap:20px;">
-
             <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:22px 24px;">
               <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:12px;">О себе</div>
               ${bioHtml}
             </div>
-
             <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:22px 24px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                 <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);">Мои тесты</div>
@@ -184,12 +173,10 @@
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;">${testsPreviewHtml}</div>
             </div>
-
             <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:22px 24px;">
               <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:12px;">Навыки</div>
               <div style="display:flex;flex-wrap:wrap;gap:8px;">${skillsHtml}</div>
             </div>
-
             <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:22px 24px;">
               <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:14px;">Пройденные тесты</div>
               <div style="padding:18px;text-align:center;border:1px dashed var(--line-2);border-radius:11px;">
@@ -197,7 +184,6 @@
               </div>
             </div>
           </div>
-
           <div style="display:flex;flex-direction:column;gap:20px;position:sticky;top:88px;">
             <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:20px 22px;">
               <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:14px;">Статистика</div>
@@ -225,7 +211,6 @@
         </div>
         `;
 
-        // Аватар (единственная привязка — здесь)
         const avatarBtn = document.getElementById('cd-avatar-btn');
         const avatarInput = document.getElementById('cd-avatar-input');
         if (avatarBtn && avatarInput) {
@@ -240,8 +225,6 @@
         document.getElementById('cd-logout-inline')?.addEventListener('click', logout);
         document.getElementById('cd-all-tests-btn')?.addEventListener('click', () => renderMyTests(tests));
     }
-
-    // ── Страница «Все мои тесты» ──────────────────────────────────────────
 
     function renderMyTests(tests) {
         const el = document.getElementById('cd-content');
@@ -311,11 +294,8 @@
         document.getElementById('cd-back-btn')?.addEventListener('click', () => renderProfile(tests));
     }
 
-    // ── Модалка редактирования ────────────────────────────────────────────
-
     function openEditModal(tests) {
         const c = state.candidate;
-
         const overlay = document.createElement('div');
         overlay.id = 'cd-edit-overlay';
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;';
@@ -399,8 +379,6 @@
         }
     }
 
-    // ── Init ──────────────────────────────────────────────────────────────
-
     async function init() {
         if (!username) return;
         document.getElementById('cd-logout-btn')?.addEventListener('click', logout);
@@ -412,8 +390,6 @@
             ]);
 
             state.candidate = candData.candidate;
-            state.isOwner = candData.is_owner;
-
             const tests = testsResp.ok ? (testsResp.tests || []) : [];
             renderProfile(tests);
         } catch (e) {

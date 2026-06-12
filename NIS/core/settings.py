@@ -13,6 +13,8 @@ INSTALLED_APPS = [
     'companies',
     'company_catalog',
     'users',
+    'cabinet',
+    'profiles',
     'tests.constructor',
     'tests.tests_app',
     'home',

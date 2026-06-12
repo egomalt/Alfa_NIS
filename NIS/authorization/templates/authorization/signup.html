@@ -2,134 +2,125 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    <script>
-        (function () {
-            var storageKey = 'alfa_theme';
-            var theme = 'light';
-            try {
-                var savedTheme = localStorage.getItem(storageKey);
-                if (savedTheme === 'dark' || savedTheme === 'light') {
-                    theme = savedTheme;
-                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    theme = 'dark';
-                }
-            } catch (error) {
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    theme = 'dark';
-                }
-            }
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
-    <title>Alfa Career</title>
-    <link rel="stylesheet" href="{% static 'main/styles.css' %}?v=20260608-4">
-    <style>
-        .role-toggle { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
-        .role-btn { flex: 1; padding: 9px 0; font-size: 0.88rem; font-weight: 500; border: none; background: transparent; color: var(--muted); cursor: pointer; transition: background .15s, color .15s; }
-        .role-btn.active { background: var(--text); color: var(--bg); }
-    </style>
-    <script>
-        window.ALFA_APP_BOOTSTRAP = {
-            path: "{{ app_path|escapejs }}",
-            page: "signup"
-        };
-    </script>
-    <script src="{% static 'main/theme.js' %}?v=20260421-3" defer></script>
-    <script type="module" src="{% static 'authorization/app.js' %}?v=20260608-4"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <script>
+    (function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();
+  </script>
+  <title>Регистрация — Alfa Career</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/career.css' %}">
+  <script>
+    window.ALFA_APP_BOOTSTRAP = {
+      path: "{{ app_path|escapejs }}",
+      page: "signup"
+    };
+  </script>
+  <script src="{% static 'main/theme.js' %}" defer></script>
+  <script type="module" src="{% static 'authorization/app.js' %}?v=20260608-4"></script>
 </head>
-<body class="app-runtime-body">
-    <div class="landing-layout single-card-layout">
-        <section class="landing-form-card standalone-card">
-            <div class="landing-form-inner">
-                <div class="landing-form-topbar">
-                    <div class="landing-top-actions">
-                        <a href="/authorization/signin/" class="mini-link-button">Вход</a>
-                    </div>
-                    <button type="button" class="theme-toggle" data-theme-toggle>Тёмная тема</button>
-                </div>
+<body>
+<div class="cr-auth-page">
 
-                <div class="role-toggle" id="role-toggle">
-                    <button type="button" class="role-btn active" data-role="candidate">Кандидат</button>
-                    <button type="button" class="role-btn" data-role="company">Компания</button>
-                </div>
+  <a href="/" style="display:flex;align-items:center;gap:10px;margin-bottom:40px;text-decoration:none;color:var(--text);">
+    <span class="cr-brand-mark">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><rect x="3.5" y="13" width="4.3" height="8" rx="1.4"/><rect x="9.85" y="8" width="4.3" height="13" rx="1.4"/><rect x="16.2" y="3" width="4.3" height="18" rx="1.4"/></svg>
+    </span>
+    <span style="font-weight:800;font-size:19px;letter-spacing:-.01em;">Career</span>
+  </a>
 
-                <div class="form-intro">
-                    <h2 id="signup-title">Регистрация кандидата</h2>
-                    <p id="signup-desc">Создайте аккаунт, чтобы проходить тесты компаний и откликаться на вакансии.</p>
-                </div>
+  <div class="cr-auth-card cr-auth-card-wide">
+    <h1 style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px;">Создать аккаунт</h1>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 22px;">Выберите тип аккаунта</p>
 
-                <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
-
-                <form id="signup-form" method="post" action="/api/v1/auth/signup/" class="company-signup-form" data-api-form="register">
-                    {% csrf_token %}
-                    <input type="hidden" name="role" id="role-input" value="candidate">
-
-                    <div class="field" data-field="name">
-                        <label for="register-name">Отображаемое имя</label>
-                        <input id="register-name" name="name" type="text" placeholder="Например, Иван Иванов" required>
-                        <ul class="errorlist" hidden></ul>
-                    </div>
-
-                    <div class="field" data-field="username">
-                        <label for="register-username">Имя пользователя</label>
-                        <input id="register-username" name="username" type="text" placeholder="Например, ivan-ivanov" pattern="[a-z0-9_-]+" autocapitalize="off" autocomplete="off" spellcheck="false" required>
-                        <ul class="errorlist" hidden></ul>
-                    </div>
-
-                    <div class="field" data-field="email">
-                        <label for="register-email" id="email-label">Email</label>
-                        <input id="register-email" name="email" type="email" placeholder="ivan@example.com" required>
-                        <ul class="errorlist" hidden></ul>
-                    </div>
-
-                    <button type="submit" class="dark-button full-width" id="signup-submit">Создать аккаунт кандидата</button>
-                </form>
-            </div>
-        </section>
+    <div class="cr-role-switcher" id="role-toggle">
+      <button type="button" class="cr-role-btn active" data-role="candidate">Кандидат</button>
+      <button type="button" class="cr-role-btn" data-role="company">Компания</button>
     </div>
-    <script>
-        (function () {
-            const ROLES = {
-                candidate: {
-                    title: 'Регистрация кандидата',
-                    desc: 'Создайте аккаунт, чтобы проходить тесты компаний и откликаться на вакансии.',
-                    namePlaceholder: 'Например, Иван Иванов',
-                    emailLabel: 'Email',
-                    emailPlaceholder: 'ivan@example.com',
-                    submit: 'Создать аккаунт кандидата',
-                },
-                company: {
-                    title: 'Регистрация компании',
-                    desc: 'Укажите отображаемое имя, имя пользователя для ссылки и рабочий email, чтобы создать кабинет.',
-                    namePlaceholder: 'Например, Alfa Career',
-                    emailLabel: 'Рабочий email',
-                    emailPlaceholder: 'team@company.com',
-                    submit: 'Создать кабинет компании',
-                },
-            };
 
-            function applyRole(role) {
-                const cfg = ROLES[role];
-                document.getElementById('role-input').value = role;
-                document.getElementById('signup-title').textContent = cfg.title;
-                document.getElementById('signup-desc').textContent = cfg.desc;
-                document.getElementById('register-name').placeholder = cfg.namePlaceholder;
-                document.getElementById('email-label').textContent = cfg.emailLabel;
-                document.getElementById('register-email').placeholder = cfg.emailPlaceholder;
-                document.getElementById('signup-submit').textContent = cfg.submit;
-                document.querySelectorAll('.role-btn').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.role === role);
-                });
-            }
+    <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
 
-            document.getElementById('role-toggle').addEventListener('click', e => {
-                const btn = e.target.closest('.role-btn');
-                if (btn) applyRole(btn.dataset.role);
-            });
-        })();
-    </script>
+    <form id="signup-form" method="post" action="/api/v1/auth/signup/" data-api-form="register">
+      {% csrf_token %}
+      <input type="hidden" name="role" id="role-input" value="candidate">
+
+      <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px;">
+        <div data-field="name" id="field-name">
+          <div class="cr-auth-field-label" id="label-name">Отображаемое имя</div>
+          <input id="register-name" name="name" type="text" placeholder="Например, Иван Иванов"
+            class="cr-auth-input" required>
+          <ul class="errorlist" hidden></ul>
+        </div>
+
+        <div data-field="username">
+          <div class="cr-auth-field-label">Имя пользователя</div>
+          <input id="register-username" name="username" type="text" placeholder="Например, ivan-ivanov"
+            class="cr-auth-input" pattern="[a-z0-9_-]+" autocapitalize="off" autocomplete="off"
+            spellcheck="false" required>
+          <ul class="errorlist" hidden></ul>
+        </div>
+
+        <div data-field="email">
+          <div class="cr-auth-field-label" id="email-label">Email</div>
+          <input id="register-email" name="email" type="email" placeholder="ivan@example.com"
+            class="cr-auth-input" required>
+          <ul class="errorlist" hidden></ul>
+        </div>
+      </div>
+
+      <button type="submit" class="cr-auth-submit" id="signup-submit">Создать аккаунт кандидата</button>
+    </form>
+
+    <div style="text-align:center;margin-top:22px;font-size:13.5px;color:var(--muted);">
+      Уже есть аккаунт?
+      <a href="/authorization/signin/" style="color:var(--brand-text);font-weight:600;text-decoration:none;">Войти</a>
+    </div>
+  </div>
+
+  <button type="button" data-theme-toggle class="theme-toggle" style="margin-top:24px;">Тёмная тема</button>
+</div>
+
+<script>
+(function(){
+  const ROLES = {
+    candidate: {
+      title: 'Создать аккаунт кандидата',
+      nameLabel: 'Отображаемое имя',
+      namePlaceholder: 'Например, Иван Иванов',
+      emailLabel: 'Email',
+      emailPlaceholder: 'ivan@example.com',
+      submit: 'Создать аккаунт кандидата',
+    },
+    company: {
+      title: 'Создать кабинет компании',
+      nameLabel: 'Название компании',
+      namePlaceholder: 'Например, Alfa Career',
+      emailLabel: 'Рабочий email',
+      emailPlaceholder: 'team@company.com',
+      submit: 'Создать кабинет компании',
+    },
+  };
+
+  function applyRole(role) {
+    const cfg = ROLES[role];
+    document.getElementById('role-input').value = role;
+    document.getElementById('label-name').textContent = cfg.nameLabel;
+    document.getElementById('register-name').placeholder = cfg.namePlaceholder;
+    document.getElementById('email-label').textContent = cfg.emailLabel;
+    document.getElementById('register-email').placeholder = cfg.emailPlaceholder;
+    document.getElementById('signup-submit').textContent = cfg.submit;
+    document.querySelectorAll('.cr-role-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.role === role);
+    });
+  }
+
+  document.getElementById('role-toggle').addEventListener('click', e => {
+    const btn = e.target.closest('.cr-role-btn');
+    if (btn) applyRole(btn.dataset.role);
+  });
+})();
+</script>
 </body>
 </html>
