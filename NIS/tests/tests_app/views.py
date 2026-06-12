@@ -2,11 +2,21 @@ import json
 
 from django.db import transaction
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
 from tests.constructor.models import Test, TestPage
+
+
+@ensure_csrf_cookie
+def user_tests_cabinet(request):
+    from authorization.models import ROLE_USER
+    from authorization.views import get_current_account
+    account = get_current_account(request)
+    if account is None or account.role != ROLE_USER:
+        return redirect('/authorization/signup/')
+    return render(request, 'tests_app/user_tests.html', {'username': account.username})
 
 
 @ensure_csrf_cookie

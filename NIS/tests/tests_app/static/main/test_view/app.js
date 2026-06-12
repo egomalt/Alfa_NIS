@@ -175,12 +175,11 @@
     function renderCodePage(container, page) {
         const meta = page.page_meta || {};
         const language = meta.language || 'python';
-        const starterCode = meta.starter_code || '';
         const langLabel = LANG_LABELS[language] || language;
         const ext = LANG_EXTENSIONS[language] || '.txt';
         const problemHtml = window.marked ? window.marked.parse(page.content || '') : escHtml(page.content);
 
-        const currentCode = (state.answers[page.id] && state.answers[page.id].code) || starterCode;
+        const currentCode = (state.answers[page.id] && state.answers[page.id].code) || '';
 
         const isFirst = state.currentIndex === 0;
         const isLast = state.currentIndex === state.pages.length - 1;
@@ -221,7 +220,7 @@
         });
 
         container.querySelector('#tv-code-reset').addEventListener('click', () => {
-            textarea.value = starterCode;
+            textarea.value = '';
             saveCode();
         });
 

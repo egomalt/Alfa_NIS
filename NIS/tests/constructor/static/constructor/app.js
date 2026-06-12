@@ -7,15 +7,23 @@
         companyUsername: BOOTSTRAP.companyUsername || '',
         title: '',
         description: '',
-        pages: [],           // [{localId, id?, order, type, title, content, answers:[{localId, id?, text, is_correct, order}]}]
-        currentIndex: -1,    // -1 = meta page
+        level: '',
+        category: '',
+        pages: [],
+        currentIndex: -1,
         dirty: false,
         saving: false,
         published: false,
         localCounter: 0,
     };
 
+    const TYPE_LABELS = { info: 'Инфо', text: 'Текст', quiz: 'Выбор', input: 'Ввод', code: 'Код' };
+
     function uid() { return ++state.localCounter; }
+
+    function makeInfoPage() {
+        return { localId: uid(), type: 'info', title: 'Информация о тесте', content: '', answers: [], page_meta: {} };
+    }
 
     async function apiFetch(url, options = {}) {
         const res = await fetch(url, {
@@ -34,7 +42,10 @@
             company_username: state.companyUsername,
             title: state.title,
             description: state.description,
-            pages: state.pages.map((p, i) => ({
+            level: state.level,
+            category: state.category,
+            // info page is virtual — skip it
+            pages: state.pages.filter(p => p.type !== 'info').map((p, i) => ({
                 ...(p.id ? { id: p.id } : {}),
                 order: i,
                 type: p.type,
@@ -54,38 +65,31 @@
     function applyTest(test) {
         state.testId = test.id;
         state.title = test.title;
-        state.description = test.description;
+        state.description = test.description || '';
+        state.level = test.level || (test.stats && test.stats.level) || '';
+        state.category = test.category || (test.stats && test.stats.category) || '';
         state.published = test.status === 'published';
-        if (!state.companyUsername && test.company_username) {
-            state.companyUsername = test.company_username;
-        }
-        state.pages = (test.pages || []).map(p => ({
-            localId: uid(),
-            id: p.id,
-            order: p.order,
-            type: p.type,
-            title: p.title,
-            content: p.content,
-            page_meta: p.page_meta || {},
-            answers: (p.answers || []).map(a => ({
-                localId: uid(),
-                id: a.id,
-                text: a.text,
-                is_correct: a.is_correct,
-                order: a.order,
+        if (!state.companyUsername && test.company_username) state.companyUsername = test.company_username;
+        state.pages = [
+            makeInfoPage(),
+            ...(test.pages || []).map(p => ({
+                localId: uid(), id: p.id, order: p.order, type: p.type,
+                title: p.title, content: p.content, page_meta: p.page_meta || {},
+                answers: (p.answers || []).map(a => ({
+                    localId: uid(), id: a.id, text: a.text,
+                    is_correct: a.is_correct, order: a.order,
+                })),
             })),
-        }));
+        ];
     }
-
-    // ── After save: patch IDs without replacing live objects ──────────────────
-    // applyTest() replaces state.pages with new objects, breaking event-listener
-    // closures in the editor. patchSavedState() only writes back DB-assigned IDs.
 
     function patchSavedState(savedTest) {
         state.testId = savedTest.id;
         state.published = savedTest.status === 'published';
         const savedPages = savedTest.pages || [];
-        state.pages.forEach((page, i) => {
+        // Skip info page (index 0) when matching
+        const realPages = state.pages.filter(p => p.type !== 'info');
+        realPages.forEach((page, i) => {
             const sp = savedPages[i];
             if (!sp) return;
             page.id = sp.id;
@@ -96,7 +100,7 @@
         });
     }
 
-    // ── Save logic ─────────────────────────────────────────────────────────────
+    // ── Save ──────────────────────────────────────────────────────────────────
 
     function markDirty() {
         state.dirty = true;
@@ -119,12 +123,18 @@
             }
             patchSavedState(data.test);
             history.replaceState(null, '', `/constructor/${state.testId}/`);
+            const saveBtn = document.getElementById('cst-save-btn');
+            if (saveBtn) { saveBtn.textContent = '✓ Сохранено'; saveBtn.classList.add('saved'); }
             setStatus('Черновик');
+            setTimeout(() => {
+                const b = document.getElementById('cst-save-btn');
+                if (b) { b.textContent = 'Сохранить'; b.classList.remove('saved'); }
+            }, 1800);
             syncSaveBtn();
             syncPublishBtn();
             syncPreviewBtn();
         } catch (e) {
-            setStatus('Ошибка сохранения');
+            setStatus('Ошибка');
             state.dirty = true;
             syncSaveBtn();
         } finally {
@@ -132,7 +142,7 @@
         }
     }
 
-    // ── UI helpers ─────────────────────────────────────────────────────────────
+    // ── UI sync ───────────────────────────────────────────────────────────────
 
     function setStatus(msg) {
         const el = document.getElementById('cst-save-status');
@@ -148,13 +158,9 @@
     function syncPublishBtn() {
         const btn = document.getElementById('cst-publish-btn');
         if (!btn) return;
-        if (state.published) {
-            btn.textContent = 'Опубликован';
-            btn.disabled = true;
-        } else {
-            btn.textContent = 'Опубликовать';
-            btn.disabled = !state.testId || state.pages.length === 0;
-        }
+        const realPages = state.pages.filter(p => p.type !== 'info');
+        if (state.published) { btn.textContent = 'Опубликован'; btn.disabled = true; }
+        else { btn.textContent = 'Опубликовать'; btn.disabled = !state.testId || realPages.length === 0; }
     }
 
     function syncPreviewBtn() {
@@ -163,393 +169,271 @@
     }
 
     function syncBackLink() {
-        const testsHref = state.companyUsername ? `/${state.companyUsername}/tests/` : '/';
-        const brand = document.getElementById('cst-back');
-        if (brand) brand.href = testsHref;
+        const href = BOOTSTRAP.isCompany ? '/cabinet/company/tests/' : '/cabinet/user/tests/';
+        const back = document.getElementById('cst-back');
         const backTests = document.getElementById('cst-back-tests');
-        if (backTests) backTests.href = testsHref;
+        if (back) back.href = href;
+        if (backTests) backTests.href = href;
     }
 
-    // ── Sidebar ────────────────────────────────────────────────────────────────
+    function syncInfoToggles() {
+        document.querySelectorAll('#info-level .toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === state.level);
+        });
+        document.querySelectorAll('#info-category .toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === state.category);
+        });
+    }
 
-    const PAGE_TYPE_LABELS = { text: 'Текст', quiz: 'Вопрос', input: 'Ввод', code: 'Код' };
 
-    function renderSidebar() {
+    // ── Page list (sidebar) ───────────────────────────────────────────────────
+
+    function renderPageList() {
         const list = document.getElementById('cst-pages-list');
         if (!list) return;
         list.innerHTML = '';
+        state.pages.forEach((p, i) => {
+            const isActive = i === state.currentIndex;
+            const isInfo = p.type === 'info';
+            const el = document.createElement('div');
+            el.className = 'page-item' + (isActive ? ' active' : '');
+            const numBg = isActive ? 'var(--brand)' : 'var(--surface-2)';
+            const numColor = isActive ? '#fff' : 'var(--text-2)';
 
-        // Meta item
-        const meta = document.createElement('div');
-        meta.className = `cst-page-item${state.currentIndex === -1 ? ' active' : ''}`;
-        meta.innerHTML = `<span class="cst-page-num">●</span><span class="cst-page-label">Заголовок и описание</span>`;
-        meta.addEventListener('click', () => { state.currentIndex = -1; renderEditor(); renderSidebar(); });
-        list.appendChild(meta);
+            const numContent = isInfo
+                ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 1 0 20A10 10 0 0 1 12 2zm1 9h-2v6h2v-6zm0-4h-2v2h2V7z"/></svg>`
+                : String(i);
 
-        state.pages.forEach((page, i) => {
-            const item = document.createElement('div');
-            item.className = `cst-page-item${state.currentIndex === i ? ' active' : ''}`;
-            const label = page.title || PAGE_TYPE_LABELS[page.type] || page.type;
-            item.innerHTML = `
-                <span class="cst-page-num">${i + 1}</span>
-                <span class="cst-page-label">${escHtml(label)}</span>
-                <button type="button" class="cst-page-del" title="Удалить">✕</button>
+            el.innerHTML = `
+                <span class="page-num" style="background:${numBg};color:${numColor};">${numContent}</span>
+                <div style="flex:1;min-width:0;">
+                    <div class="page-title">${escHtml(p.title || 'Без названия')}</div>
+                    <div class="page-type">${TYPE_LABELS[p.type] || p.type}</div>
+                </div>
+                ${isInfo ? '' : `<button type="button" class="page-del-btn" title="Удалить"
+                  style="flex-shrink:0;width:18px;height:18px;border:none;background:none;cursor:pointer;
+                  color:var(--faint);font-size:11px;display:flex;align-items:center;justify-content:center;
+                  border-radius:4px;opacity:0;transition:opacity .1s,background .1s,color .1s;">✕</button>`}
             `;
-            item.querySelector('.cst-page-del').addEventListener('click', e => {
-                e.stopPropagation();
-                deletePage(i);
-            });
-            item.addEventListener('click', () => { state.currentIndex = i; renderEditor(); renderSidebar(); });
-            list.appendChild(item);
+
+            if (!isInfo) {
+                el.addEventListener('mouseenter', () => { el.querySelector('.page-del-btn').style.opacity = '1'; });
+                el.addEventListener('mouseleave', () => { el.querySelector('.page-del-btn').style.opacity = '0'; });
+                el.querySelector('.page-del-btn').addEventListener('click', e => {
+                    e.stopPropagation();
+                    deletePage(i);
+                });
+                el.querySelector('.page-del-btn').addEventListener('mouseenter', e => {
+                    e.currentTarget.style.background = 'var(--brand-soft)';
+                    e.currentTarget.style.color = 'var(--red-text)';
+                });
+                el.querySelector('.page-del-btn').addEventListener('mouseleave', e => {
+                    e.currentTarget.style.background = '';
+                    e.currentTarget.style.color = 'var(--faint)';
+                });
+            }
+            el.addEventListener('click', () => switchPage(i));
+            list.appendChild(el);
         });
     }
 
-    // ── Editor ─────────────────────────────────────────────────────────────────
+    // ── Editor ────────────────────────────────────────────────────────────────
+
+    function switchPage(idx) {
+        state.currentIndex = idx;
+        renderPageList();
+        renderEditor();
+    }
+
+    function setType(type) {
+        const page = state.pages[state.currentIndex];
+        if (!page || page.type === type || page.type === 'info') return;
+        page.type = type;
+        page.answers = [];
+        page.page_meta = type === 'code'
+            ? { language: 'python', time_limit: 5, test_cases: [] }
+            : {};
+        markDirty();
+        renderEditor();
+        renderPageList();
+    }
 
     function renderEditor() {
-        const inner = document.getElementById('cst-editor-inner');
-        if (!inner) return;
+        const page = state.currentIndex >= 0 ? state.pages[state.currentIndex] : null;
+        const panelType = page ? page.type : 'empty';
 
-        if (state.currentIndex === -1) {
-            renderMetaEditor(inner);
-        } else {
-            const page = state.pages[state.currentIndex];
-            if (!page) { inner.innerHTML = '<div class="cst-empty">Страница не найдена</div>'; return; }
-            if (page.type === 'text') renderTextEditor(inner, page);
-            else if (page.type === 'quiz') renderQuizEditor(inner, page);
-            else if (page.type === 'input') renderInputEditor(inner, page);
-            else if (page.type === 'code') renderCodeEditor(inner, page);
+        // Show type tabs only for question pages
+        const typeTabs = document.getElementById('type-tabs');
+        if (typeTabs) typeTabs.style.display = (panelType === 'info' || panelType === 'empty') ? 'none' : '';
+
+        // Type tabs active state
+        document.querySelectorAll('#type-tabs .tab-btn').forEach(btn => {
+            btn.disabled = !page || page.type === 'info';
+            btn.classList.toggle('active', !!page && btn.dataset.type === page.type);
+        });
+
+        // Panels
+        document.querySelectorAll('[data-panel]').forEach(p => {
+            p.classList.toggle('active', p.dataset.panel === panelType);
+        });
+
+        if (!page) return;
+
+        if (page.type === 'info') {
+            const descEl = document.getElementById('p-info-desc');
+            if (descEl) descEl.value = state.description || '';
+            syncInfoToggles();
+            return;
+        }
+
+        if (page.type === 'text') {
+            const t = document.getElementById('p-title');
+            const c = document.getElementById('p-content');
+            if (t) t.value = page.title || '';
+            if (c) c.value = page.content || '';
+        } else if (page.type === 'quiz') {
+            const q = document.getElementById('p-question-choice');
+            if (q) q.value = page.title || '';
+            if (!page.answers.length) {
+                page.answers.push({ localId: uid(), text: '', is_correct: false, order: 0 });
+                page.answers.push({ localId: uid(), text: '', is_correct: false, order: 1 });
+                page.answers.push({ localId: uid(), text: '', is_correct: false, order: 2 });
+                page.answers.push({ localId: uid(), text: '', is_correct: false, order: 3 });
+            }
+            renderOptions();
+        } else if (page.type === 'input') {
+            const q = document.getElementById('p-question-input');
+            const a = document.getElementById('p-answer');
+            if (q) q.value = page.title || '';
+            if (a) a.value = page.answers.length > 0 ? page.answers[0].text : '';
+        } else if (page.type === 'code') {
+            const q = document.getElementById('p-question-code');
+            if (q) q.value = page.content || '';
+            const meta = page.page_meta || {};
+            const langEl = document.getElementById('ed-language');
+            const timeLimitEl = document.getElementById('ed-time-limit');
+            if (langEl) langEl.value = meta.language || 'python';
+            if (timeLimitEl) timeLimitEl.value = meta.time_limit || 5;
+            renderTestCases();
         }
     }
 
-    function renderMetaEditor(container) {
-        container.innerHTML = `
-            <h2 class="cst-section-title">Заголовок и описание теста</h2>
-            <div class="cst-field">
-                <label class="cst-label">Название теста</label>
-                <input id="ed-title" class="cst-input" type="text" maxlength="255" placeholder="Введите название" value="${escAttr(state.title)}">
-            </div>
-            <div class="cst-field">
-                <label class="cst-label">Описание</label>
-                <textarea id="ed-desc" class="cst-textarea" placeholder="Краткое описание теста (необязательно)">${escHtml(state.description)}</textarea>
-            </div>
-        `;
-        container.querySelector('#ed-title').addEventListener('input', e => {
-            state.title = e.target.value;
-            document.getElementById('cst-title').value = state.title;
-            markDirty();
-        });
-        container.querySelector('#ed-desc').addEventListener('input', e => {
-            state.description = e.target.value;
-            markDirty();
-        });
-    }
+    // ── Options (quiz) ────────────────────────────────────────────────────────
 
-    function renderTextEditor(container, page) {
-        let previewing = false;
-        container.innerHTML = `
-            <span class="cst-type-badge">Текстовая страница</span>
-            <div class="cst-field">
-                <label class="cst-label">Заголовок страницы</label>
-                <input id="ed-page-title" class="cst-input" type="text" maxlength="500" placeholder="Необязательно" value="${escAttr(page.title)}">
-            </div>
-            <div class="cst-field">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                    <label class="cst-label" style="margin:0">Содержимое (Markdown)</label>
-                    <button type="button" id="ed-preview-toggle" class="cst-preview-toggle">Показать предпросмотр</button>
-                </div>
-                <textarea id="ed-content" class="cst-textarea" style="min-height:200px" placeholder="# Заголовок&#10;&#10;Текст страницы...">${escHtml(page.content)}</textarea>
-                <div id="ed-md-preview" class="cst-markdown-preview" hidden></div>
-            </div>
-        `;
-        container.querySelector('#ed-page-title').addEventListener('input', e => {
-            page.title = e.target.value;
-            markDirty();
-            renderSidebar();
-        });
-        container.querySelector('#ed-content').addEventListener('input', e => {
-            page.content = e.target.value;
-            markDirty();
-            if (previewing) updateMdPreview(e.target.value);
-        });
-        container.querySelector('#ed-preview-toggle').addEventListener('click', () => {
-            previewing = !previewing;
-            const contentEl = container.querySelector('#ed-content');
-            const previewEl = container.querySelector('#ed-md-preview');
-            contentEl.hidden = previewing;
-            previewEl.hidden = !previewing;
-            container.querySelector('#ed-preview-toggle').textContent = previewing ? 'Редактировать' : 'Показать предпросмотр';
-            if (previewing) updateMdPreview(page.content);
-        });
-    }
-
-    function updateMdPreview(md) {
-        const el = document.getElementById('ed-md-preview');
-        if (el && window.marked) el.innerHTML = window.marked.parse(md || '');
-    }
-
-    function renderQuizEditor(container, page) {
-        container.innerHTML = `
-            <span class="cst-type-badge">Вопрос с вариантами ответа</span>
-            <div class="cst-field">
-                <label class="cst-label">Вопрос</label>
-                <input id="ed-page-title" class="cst-input" type="text" maxlength="500" placeholder="Формулировка вопроса" value="${escAttr(page.title)}">
-            </div>
-            <div class="cst-field">
-                <label class="cst-label">Дополнительный текст (необязательно)</label>
-                <textarea id="ed-content" class="cst-textarea" style="min-height:80px" placeholder="Описание, контекст...">${escHtml(page.content)}</textarea>
-            </div>
-            <div class="cst-field">
-                <label class="cst-label">Варианты ответа</label>
-                <p class="cst-correct-hint">Отметьте правильные ответы галочкой. Если отмечено несколько — тип вопроса «множественный выбор».</p>
-                <div id="ed-answers" class="cst-answers"></div>
-                <button type="button" id="ed-add-answer" class="cst-add-btn">+ Добавить вариант</button>
-            </div>
-        `;
-        container.querySelector('#ed-page-title').addEventListener('input', e => {
-            page.title = e.target.value;
-            markDirty();
-            renderSidebar();
-        });
-        container.querySelector('#ed-content').addEventListener('input', e => {
-            page.content = e.target.value;
-            markDirty();
-        });
-        renderAnswers(container, page);
-        container.querySelector('#ed-add-answer').addEventListener('click', () => {
-            page.answers.push({ localId: uid(), text: '', is_correct: false, order: page.answers.length });
-            renderAnswers(container, page);
-            markDirty();
-        });
-    }
-
-    function renderAnswers(container, page) {
-        const answersEl = container.querySelector('#ed-answers');
-        if (!answersEl) return;
-        answersEl.innerHTML = '';
-        page.answers.forEach((ans, i) => {
+    function renderOptions() {
+        const page = state.pages[state.currentIndex];
+        const list = document.getElementById('options-list');
+        if (!list || !page) return;
+        list.innerHTML = '';
+        (page.answers || []).forEach((ans, i) => {
+            const isCorrect = ans.is_correct;
             const row = document.createElement('div');
-            row.className = 'cst-answer-row';
+            row.className = 'option-row';
             row.innerHTML = `
-                <input type="checkbox" class="cst-answer-check" ${ans.is_correct ? 'checked' : ''} title="Правильный ответ">
-                <input type="text" class="cst-answer-text" value="${escAttr(ans.text)}" placeholder="Вариант ответа ${i + 1}" maxlength="1000">
-                <button type="button" class="cst-answer-del" title="Удалить">✕</button>
+                <div class="checkbox ${isCorrect ? 'checked' : ''}" data-idx="${i}">
+                    ${isCorrect ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>' : ''}
+                </div>
+                <input class="opt-input ${isCorrect ? 'correct' : ''}" value="${escAttr(ans.text)}" placeholder="Вариант ${i + 1}">
+                <button type="button" style="height:40px;width:32px;flex-shrink:0;border:1px solid var(--line);border-radius:8px;background:none;color:var(--faint);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .15s,border-color .15s;" class="opt-del-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
             `;
-            row.querySelector('.cst-answer-check').addEventListener('change', e => {
-                ans.is_correct = e.target.checked;
+            row.querySelector('.checkbox').addEventListener('click', () => {
+                ans.is_correct = !ans.is_correct;
+                renderOptions();
                 markDirty();
             });
-            row.querySelector('.cst-answer-text').addEventListener('input', e => {
+            row.querySelector('.opt-input').addEventListener('input', e => {
                 ans.text = e.target.value;
                 markDirty();
             });
-            row.querySelector('.cst-answer-del').addEventListener('click', () => {
+            row.querySelector('.opt-del-btn').addEventListener('click', () => {
                 page.answers.splice(i, 1);
-                renderAnswers(container, page);
+                renderOptions();
                 markDirty();
             });
-            answersEl.appendChild(row);
+            row.querySelector('.opt-del-btn').addEventListener('mouseenter', e => {
+                e.currentTarget.style.color = 'var(--red-text)';
+                e.currentTarget.style.borderColor = 'var(--red-text)';
+            });
+            row.querySelector('.opt-del-btn').addEventListener('mouseleave', e => {
+                e.currentTarget.style.color = 'var(--faint)';
+                e.currentTarget.style.borderColor = 'var(--line)';
+            });
+            list.appendChild(row);
         });
     }
 
-    function renderCodeEditor(container, page) {
-        const meta = page.page_meta || {};
-        container.innerHTML = `
-            <span class="cst-type-badge">Задача с кодом</span>
-            <div class="cst-field">
-                <label class="cst-label">Условие задачи (Markdown)</label>
-                <textarea id="ed-code-content" class="cst-textarea" style="min-height:140px" placeholder="Описание задачи, входные/выходные данные...">${escHtml(page.content)}</textarea>
-            </div>
-            <div class="cst-field" data-field="title">
-                <label class="cst-label">Заголовок (необязательно)</label>
-                <input id="ed-code-title" class="cst-input" type="text" maxlength="500" placeholder="Название задачи" value="${escAttr(page.title)}">
-            </div>
-            <div class="cst-field">
-                <label class="cst-label">Язык</label>
-                <select id="ed-code-lang" class="cst-select">
-                    <option value="python" ${meta.language === 'python' ? 'selected' : ''}>Python 3</option>
-                    <option value="javascript" ${meta.language === 'javascript' ? 'selected' : ''}>JavaScript (Node)</option>
-                    <option value="cpp" ${meta.language === 'cpp' ? 'selected' : ''}>C++17</option>
-                </select>
-            </div>
-            <div class="cst-field">
-                <label class="cst-label">Стартовый код (выдаётся участнику)</label>
-                <textarea id="ed-starter-code" class="cst-textarea" style="min-height:100px;font-family:monospace;font-size:0.85rem" placeholder="# Введите стартовый код...">${escHtml(meta.starter_code || '')}</textarea>
-            </div>
-            <div class="cst-field">
-                <label class="cst-label">Ограничение времени (сек)</label>
-                <input id="ed-time-limit" class="cst-input" type="number" min="1" max="30" value="${escAttr(String(meta.time_limit || 5))}">
-            </div>
-            <div class="cst-field">
-                <label class="cst-label">Тест-кейсы</label>
-                <p class="cst-correct-hint">Образцы видны участнику при запуске. Скрытые — только для финальной проверки.</p>
-                <div id="ed-testcases"></div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-                    <button type="button" id="ed-add-tc" class="cst-add-btn">+ Добавить тест-кейс</button>
-                    <label class="cst-add-btn" style="cursor:pointer">
-                        📁 Загрузить из файла (.json)
-                        <input type="file" id="ed-tc-file" accept=".json" hidden>
-                    </label>
-                    <a href="#" id="ed-tc-format-hint" style="font-size:0.75rem;color:var(--muted);align-self:center;text-decoration:none" title='Формат файла: [{"input":"3 5","expected":"8","is_sample":true}, ...]'>? формат файла</a>
-                </div>
-            </div>
-        `;
+    // ── Test cases (code) ─────────────────────────────────────────────────────
 
-        const syncMeta = () => {
-            page.page_meta = {
-                language: container.querySelector('#ed-code-lang').value,
-                starter_code: container.querySelector('#ed-starter-code').value,
-                time_limit: parseInt(container.querySelector('#ed-time-limit').value, 10) || 5,
-                test_cases: page.page_meta.test_cases || [],
-            };
-        };
-
-        container.querySelector('#ed-code-content').addEventListener('input', e => { page.content = e.target.value; syncMeta(); markDirty(); });
-        container.querySelector('#ed-code-title').addEventListener('input', e => { page.title = e.target.value; syncMeta(); markDirty(); renderSidebar(); });
-        container.querySelector('#ed-code-lang').addEventListener('change', () => { syncMeta(); markDirty(); });
-        container.querySelector('#ed-starter-code').addEventListener('input', () => { syncMeta(); markDirty(); });
-        container.querySelector('#ed-time-limit').addEventListener('input', () => { syncMeta(); markDirty(); });
-
-        renderTestCases(container, page);
-
-        container.querySelector('#ed-add-tc').addEventListener('click', () => {
-            page.page_meta.test_cases = page.page_meta.test_cases || [];
-            page.page_meta.test_cases.push({ input: '', expected: '', is_sample: false });
-            renderTestCases(container, page);
-            markDirty();
-        });
-
-        container.querySelector('#ed-tc-file').addEventListener('change', e => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => {
-                try {
-                    const parsed = JSON.parse(ev.target.result);
-                    if (!Array.isArray(parsed)) throw new Error('Ожидается массив');
-                    page.page_meta.test_cases = parsed.map(tc => ({
-                        input: String(tc.input ?? ''),
-                        expected: String(tc.expected ?? ''),
-                        is_sample: Boolean(tc.is_sample),
-                    }));
-                    renderTestCases(container, page);
-                    markDirty();
-                    setStatus(`Загружено ${page.page_meta.test_cases.length} тест-кейсов`);
-                } catch (err) {
-                    alert(`Ошибка чтения файла: ${err.message}\n\nОжидается JSON-массив:\n[{"input":"3 5","expected":"8","is_sample":true}, ...]`);
-                }
-                e.target.value = '';
-            };
-            reader.readAsText(file);
-        });
-
-        container.querySelector('#ed-tc-format-hint').addEventListener('click', e => {
-            e.preventDefault();
-            alert('Формат файла — JSON-массив:\n\n[\n  {"input": "3 5",  "expected": "8",  "is_sample": true},\n  {"input": "10 20", "expected": "30", "is_sample": false}\n]\n\nПоля:\n• input — входные данные (stdin)\n• expected — ожидаемый вывод (stdout)\n• is_sample — показывать участнику (true/false)');
-        });
-    }
-
-    function renderTestCases(container, page) {
-        const el = container.querySelector('#ed-testcases');
-        if (!el) return;
-        el.innerHTML = '';
+    function renderTestCases() {
+        const page = state.pages[state.currentIndex];
+        const list = document.getElementById('tc-list');
+        if (!list || !page) return;
+        list.innerHTML = '';
         const cases = (page.page_meta && page.page_meta.test_cases) || [];
+        if (!cases.length) {
+            list.innerHTML = '<div class="empty-tc">Добавьте хотя бы один тест-кейс</div>';
+            return;
+        }
         cases.forEach((tc, i) => {
-            const block = document.createElement('div');
-            block.className = 'cst-tc-block';
-            block.innerHTML = `
-                <div class="cst-tc-header">
-                    <span>Тест #${i + 1}</span>
-                    <label><input type="checkbox" class="tc-sample" ${tc.is_sample ? 'checked' : ''}> Образец</label>
-                    <button type="button" class="cst-answer-del tc-del" title="Удалить">✕</button>
+            const row = document.createElement('div');
+            row.className = 'tc-row';
+            row.innerHTML = `
+                <div>
+                    <div class="tc-mini-label">Ввод (stdin)</div>
+                    <input class="inp-sm tc-input" value="${escAttr(tc.input)}" placeholder="пусто — если ввод не нужен">
                 </div>
-                <div class="cst-tc-fields">
-                    <div>
-                        <div class="cst-label">Входные данные (stdin)</div>
-                        <textarea class="cst-textarea tc-input" style="min-height:70px;font-family:monospace;font-size:0.82rem" placeholder="пусто — если ввод не нужен">${escHtml(tc.input)}</textarea>
-                    </div>
-                    <div>
-                        <div class="cst-label">Ожидаемый вывод (stdout)</div>
-                        <textarea class="cst-textarea tc-expected" style="min-height:70px;font-family:monospace;font-size:0.82rem" placeholder="ожидаемый вывод">${escHtml(tc.expected)}</textarea>
-                    </div>
+                <div>
+                    <div class="tc-mini-label">Ожидаемый вывод</div>
+                    <input class="inp-sm tc-expected" value="${escAttr(tc.expected)}" placeholder="ожидаемый stdout">
                 </div>
+                <button type="button" class="btn-remove-tc">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
             `;
-            block.querySelector('.tc-input').addEventListener('input', e => { tc.input = e.target.value; markDirty(); });
-            block.querySelector('.tc-expected').addEventListener('input', e => { tc.expected = e.target.value; markDirty(); });
-            block.querySelector('.tc-sample').addEventListener('change', e => { tc.is_sample = e.target.checked; markDirty(); });
-            block.querySelector('.tc-del').addEventListener('click', () => {
+            row.querySelector('.tc-input').addEventListener('input', e => { tc.input = e.target.value; markDirty(); });
+            row.querySelector('.tc-expected').addEventListener('input', e => { tc.expected = e.target.value; markDirty(); });
+            row.querySelector('.btn-remove-tc').addEventListener('click', () => {
                 page.page_meta.test_cases.splice(i, 1);
-                renderTestCases(container, page);
+                renderTestCases();
                 markDirty();
             });
-            el.appendChild(block);
+            list.appendChild(row);
         });
     }
 
-    function renderInputEditor(container, page) {
-        const correctText = page.answers.length > 0 ? page.answers[0].text : '';
-        container.innerHTML = `
-            <span class="cst-type-badge">Вопрос с текстовым ответом</span>
-            <div class="cst-field">
-                <label class="cst-label">Вопрос</label>
-                <input id="ed-page-title" class="cst-input" type="text" maxlength="500" placeholder="Формулировка вопроса" value="${escAttr(page.title)}">
-            </div>
-            <div class="cst-field">
-                <label class="cst-label">Дополнительный текст (необязательно)</label>
-                <textarea id="ed-content" class="cst-textarea" style="min-height:80px" placeholder="Описание, контекст...">${escHtml(page.content)}</textarea>
-            </div>
-            <div class="cst-field">
-                <label class="cst-label">Правильный ответ (регистр не учитывается)</label>
-                <input id="ed-correct" class="cst-input" type="text" maxlength="1000" placeholder="Точная формулировка правильного ответа" value="${escAttr(correctText)}">
-            </div>
-        `;
-        container.querySelector('#ed-page-title').addEventListener('input', e => {
-            page.title = e.target.value;
-            markDirty();
-            renderSidebar();
-        });
-        container.querySelector('#ed-content').addEventListener('input', e => {
-            page.content = e.target.value;
-            markDirty();
-        });
-        container.querySelector('#ed-correct').addEventListener('input', e => {
-            if (page.answers.length === 0) {
-                page.answers.push({ localId: uid(), text: e.target.value, is_correct: true, order: 0 });
-            } else {
-                page.answers[0].text = e.target.value;
-                page.answers[0].is_correct = true;
-            }
-            markDirty();
-        });
-    }
+    // ── Page operations ───────────────────────────────────────────────────────
 
-    // ── Page operations ────────────────────────────────────────────────────────
-
-    function addPage(type) {
-        const defaultMeta = type === 'code'
-            ? { language: 'python', starter_code: '', time_limit: 5, test_cases: [] }
-            : {};
-        const page = { localId: uid(), order: state.pages.length, type, title: '', content: '', answers: [], page_meta: defaultMeta };
-        state.pages.push(page);
-        state.currentIndex = state.pages.length - 1;
+    function addPage() {
+        const realCount = state.pages.filter(p => p.type !== 'info').length;
+        state.pages.push({
+            localId: uid(), order: state.pages.length, type: 'quiz',
+            title: 'Вопрос ' + (realCount + 1), content: '',
+            answers: [
+                { localId: uid(), text: '', is_correct: false, order: 0 },
+                { localId: uid(), text: '', is_correct: false, order: 1 },
+                { localId: uid(), text: '', is_correct: false, order: 2 },
+                { localId: uid(), text: '', is_correct: false, order: 3 },
+            ],
+            page_meta: {},
+        });
+        switchPage(state.pages.length - 1);
         markDirty();
-        renderSidebar();
-        renderEditor();
         syncPublishBtn();
     }
 
     function deletePage(index) {
+        if (index === 0 && state.pages[0]?.type === 'info') return;
         state.pages.splice(index, 1);
-        if (state.currentIndex >= state.pages.length) {
-            state.currentIndex = state.pages.length - 1;
-        }
+        if (state.currentIndex >= state.pages.length) state.currentIndex = state.pages.length - 1;
         markDirty();
-        renderSidebar();
+        renderPageList();
         renderEditor();
         syncPublishBtn();
     }
 
-    // ── Escape helpers ─────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     function escHtml(s) {
         return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -559,31 +443,45 @@
         return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     }
 
-    // ── Init ───────────────────────────────────────────────────────────────────
+    // ── Init ──────────────────────────────────────────────────────────────────
 
     async function init() {
         syncBackLink();
 
+        // Title input
         const titleInput = document.getElementById('cst-title');
         titleInput?.addEventListener('input', e => {
             state.title = e.target.value;
             markDirty();
         });
 
-        document.querySelectorAll('[data-add]').forEach(btn => {
-            btn.addEventListener('click', () => addPage(btn.dataset.add));
+        // Theme toggle
+        document.getElementById('cst-theme-btn')?.addEventListener('click', () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const next = isDark ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('alfa_theme', next); } catch(_) {}
         });
 
+        // Add page
+        document.getElementById('cst-add-page')?.addEventListener('click', addPage);
+
+        // Type tabs
+        document.querySelectorAll('#type-tabs .tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => setType(btn.dataset.type));
+        });
+
+        // Save
         document.getElementById('cst-save-btn')?.addEventListener('click', () => save());
 
+        // Preview
         document.getElementById('cst-preview-btn')?.addEventListener('click', async () => {
             if (!state.testId && !state.title.trim()) return;
             if (state.dirty || !state.testId) await save();
-            if (state.testId) {
-                window.location.assign(`/tests/${state.testId}/?preview=1`);
-            }
+            if (state.testId) window.location.assign(`/tests/${state.testId}/?preview=1`);
         });
 
+        // Publish
         document.getElementById('cst-publish-btn')?.addEventListener('click', async () => {
             if (!state.testId || state.published) return;
             if (state.dirty) await save();
@@ -596,10 +494,126 @@
                 syncSaveBtn();
                 syncPublishBtn();
             } catch (e) {
-                setStatus(e.message || 'Ошибка публикации');
+                setStatus(e.message || 'Ошибка');
             }
         });
 
+        // Info panel
+        document.getElementById('p-info-desc')?.addEventListener('input', e => {
+            state.description = e.target.value;
+            markDirty();
+        });
+        document.querySelectorAll('#info-level .toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.level = btn.dataset.value;
+                syncInfoToggles();
+                markDirty();
+            });
+        });
+        document.querySelectorAll('#info-category .toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.category = btn.dataset.value;
+                syncInfoToggles();
+                markDirty();
+            });
+        });
+
+        // Text panel fields
+        document.getElementById('p-title')?.addEventListener('input', e => {
+            const page = state.pages[state.currentIndex];
+            if (!page) return;
+            page.title = e.target.value;
+            markDirty();
+            renderPageList();
+        });
+        document.getElementById('p-content')?.addEventListener('input', e => {
+            const page = state.pages[state.currentIndex];
+            if (page) { page.content = e.target.value; markDirty(); }
+        });
+
+        // Quiz panel fields
+        document.getElementById('p-question-choice')?.addEventListener('input', e => {
+            const page = state.pages[state.currentIndex];
+            if (!page) return;
+            page.title = e.target.value;
+            markDirty();
+            renderPageList();
+        });
+        document.getElementById('btn-add-option')?.addEventListener('click', () => {
+            const page = state.pages[state.currentIndex];
+            if (!page) return;
+            page.answers.push({ localId: uid(), text: '', is_correct: false, order: page.answers.length });
+            renderOptions();
+            markDirty();
+        });
+
+        // Input panel fields
+        document.getElementById('p-question-input')?.addEventListener('input', e => {
+            const page = state.pages[state.currentIndex];
+            if (!page) return;
+            page.title = e.target.value;
+            markDirty();
+            renderPageList();
+        });
+        document.getElementById('p-answer')?.addEventListener('input', e => {
+            const page = state.pages[state.currentIndex];
+            if (!page) return;
+            if (!page.answers.length) {
+                page.answers.push({ localId: uid(), text: e.target.value, is_correct: true, order: 0 });
+            } else {
+                page.answers[0].text = e.target.value;
+                page.answers[0].is_correct = true;
+            }
+            markDirty();
+        });
+
+        // Code panel fields
+        document.getElementById('p-question-code')?.addEventListener('input', e => {
+            const page = state.pages[state.currentIndex];
+            if (page) { page.content = e.target.value; markDirty(); }
+        });
+        document.getElementById('ed-language')?.addEventListener('change', e => {
+            const page = state.pages[state.currentIndex];
+            if (page) { if (!page.page_meta) page.page_meta = {}; page.page_meta.language = e.target.value; markDirty(); }
+        });
+        document.getElementById('ed-time-limit')?.addEventListener('input', e => {
+            const page = state.pages[state.currentIndex];
+            if (page) { if (!page.page_meta) page.page_meta = {}; page.page_meta.time_limit = parseInt(e.target.value, 10) || 5; markDirty(); }
+        });
+        document.getElementById('ed-add-tc')?.addEventListener('click', () => {
+            const page = state.pages[state.currentIndex];
+            if (!page) return;
+            if (!page.page_meta) page.page_meta = {};
+            if (!page.page_meta.test_cases) page.page_meta.test_cases = [];
+            page.page_meta.test_cases.push({ input: '', expected: '', is_sample: true });
+            renderTestCases();
+            markDirty();
+        });
+        document.getElementById('ed-tc-file')?.addEventListener('change', e => {
+            const page = state.pages[state.currentIndex];
+            const file = e.target.files[0];
+            if (!file || !page) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const parsed = JSON.parse(ev.target.result);
+                    if (!Array.isArray(parsed)) throw new Error('Ожидается массив');
+                    if (!page.page_meta) page.page_meta = {};
+                    page.page_meta.test_cases = parsed.map(tc => ({
+                        input: String(tc.input ?? ''), expected: String(tc.expected ?? ''), is_sample: Boolean(tc.is_sample),
+                    }));
+                    renderTestCases();
+                    markDirty();
+                    setStatus(`Загружено ${page.page_meta.test_cases.length} тест-кейсов`);
+                } catch (err) {
+                    alert(`Ошибка: ${err.message}`);
+                }
+                e.target.value = '';
+            };
+            reader.readAsText(file);
+        });
+
+        // Load existing test
         if (state.testId) {
             try {
                 setStatus('Загрузка…');
@@ -608,12 +622,32 @@
                 syncBackLink();
                 setStatus(data.test.status === 'published' ? 'Опубликован' : 'Черновик');
             } catch (e) {
-                setStatus('Ошибка загрузки теста');
+                setStatus('Ошибка загрузки');
             }
         }
 
+        // New test: always start with info page + auto-name
+        if (!state.testId && state.pages.length === 0) {
+            state.pages.push(makeInfoPage());
+            if (state.companyUsername) {
+                try {
+                    const resp = await fetch(`/api/v1/tests/?company=${encodeURIComponent(state.companyUsername)}`).then(r => r.json()).catch(() => ({ ok: false }));
+                    const count = resp.ok ? (resp.tests || []).length : 0;
+                    state.title = `Тест ${count + 1}`;
+                } catch (_) {
+                    state.title = 'Тест 1';
+                }
+            } else {
+                state.title = 'Тест 1';
+            }
+            state.dirty = true;
+        }
+
+        // Always open the info page first
+        state.currentIndex = 0;
+
         if (titleInput) titleInput.value = state.title;
-        renderSidebar();
+        renderPageList();
         renderEditor();
         syncPublishBtn();
         syncPreviewBtn();

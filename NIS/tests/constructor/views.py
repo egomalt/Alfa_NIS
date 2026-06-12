@@ -11,11 +11,16 @@ from .models import Test, TestAnswer, TestPage
 
 @ensure_csrf_cookie
 def constructor_shell(request, test_id=None):
+    from authorization.views import get_current_account
+    from authorization.models import ROLE_COMPANY
     company_username = request.GET.get('company', '')
+    account = get_current_account(request)
+    is_company = account is not None and account.role == ROLE_COMPANY
     return render(request, 'constructor/constructor.html', {
         'app_path': request.path,
         'test_id': test_id or '',
         'company_username': company_username,
+        'is_company': is_company,
     })
 
 
@@ -44,14 +49,17 @@ def _serialize_page(page):
 
 
 def _serialize_test(test, include_pages=False):
+    stats = test.stats or {}
     data = {
         'id': test.id,
         'company_username': test.company_username,
         'title': test.title,
         'description': test.description,
         'status': test.status,
+        'level': stats.get('level', ''),
+        'category': stats.get('category', ''),
         'page_count': test.pages.count(),
-        'submissions': test.stats.get('submissions', 0),
+        'submissions': stats.get('submissions', 0),
         'created_at': test.created_at.isoformat(),
         'updated_at': test.updated_at.isoformat(),
         'url': f'/tests/{test.id}/',
@@ -105,11 +113,15 @@ def api_tests_create(request):
     if not title:
         return JsonResponse({'ok': False, 'message': 'title required'}, status=400)
 
+    level = (body.get('level') or '').strip()
+    category = (body.get('category') or '').strip()
+
     with transaction.atomic():
         test = Test.objects.create(
             company_username=company_username,
             title=title,
             description=(body.get('description') or '').strip(),
+            stats={'level': level, 'category': category},
         )
         _save_pages(test, body.get('pages'))
 
@@ -140,11 +152,16 @@ def api_test_detail(request, test_id):
     if not title:
         return JsonResponse({'ok': False, 'message': 'title required'}, status=400)
 
+    stats = dict(test.stats or {})
+    stats['level'] = (body.get('level') or '').strip()
+    stats['category'] = (body.get('category') or '').strip()
+
     with transaction.atomic():
         test.title = title
         test.description = (body.get('description') or '').strip()
         test.status = Test.STATUS_DRAFT
-        test.save(update_fields=['title', 'description', 'status', 'updated_at'])
+        test.stats = stats
+        test.save(update_fields=['title', 'description', 'status', 'stats', 'updated_at'])
         _save_pages(test, body.get('pages'))
 
     return JsonResponse({'ok': True, 'test': _serialize_test(test, include_pages=True)})

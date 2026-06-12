@@ -163,20 +163,20 @@ input, textarea, select {
 .cr-theme-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
+  width: 36px;
   height: 36px;
-  padding: 0 13px;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--surface);
   color: var(--text-2);
-  font-size: 13px;
-  font-weight: 500;
-  font-family: var(--font);
   cursor: pointer;
   transition: border-color .15s, color .15s;
 }
 .cr-theme-btn:hover { border-color: var(--line-2); color: var(--text); }
+[data-theme="dark"] .icon-moon { display: none; }
+[data-theme="light"] .icon-sun { display: none; }
 
 .cr-user-chip {
   display: flex;

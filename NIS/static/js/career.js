@@ -28,4 +28,7 @@
   }
 
   window.careerMountUserChip = mountUserChip;
+
+  // Auto-mount for all elements with data-user-chip attribute
+  document.querySelectorAll('[data-user-chip]').forEach(el => mountUserChip(el.id));
 })();
