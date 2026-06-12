@@ -223,7 +223,7 @@
 
         document.getElementById('cd-edit-btn')?.addEventListener('click', () => openEditModal(tests));
         document.getElementById('cd-logout-inline')?.addEventListener('click', logout);
-        document.getElementById('cd-all-tests-btn')?.addEventListener('click', () => renderMyTests(tests));
+        document.getElementById('cd-all-tests-btn')?.addEventListener('click', () => window.location.assign('/cabinet/user/tests/'));
     }
 
     function renderMyTests(tests) {
@@ -291,7 +291,7 @@
         ${bodyHtml}
         `;
 
-        document.getElementById('cd-back-btn')?.addEventListener('click', () => renderProfile(tests));
+        document.getElementById('cd-back-btn')?.addEventListener('click', () => window.location.assign('/cabinet/user/'));
     }
 
     function openEditModal(tests) {
@@ -382,6 +382,20 @@
     async function init() {
         if (!username) return;
         document.getElementById('cd-logout-btn')?.addEventListener('click', logout);
+
+        const page = BOOTSTRAP.page;
+
+        if (page === 'user_tests') {
+            try {
+                const testsResp = await fetch(`/api/v1/tests/?company=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false }));
+                const tests = testsResp.ok ? (testsResp.tests || []) : [];
+                renderMyTests(tests);
+            } catch (e) {
+                const el = document.getElementById('cd-content');
+                if (el) el.innerHTML = `<div style="padding:80px;text-align:center;color:var(--muted);">${esc(e.message)}</div>`;
+            }
+            return;
+        }
 
         try {
             const [candData, testsResp] = await Promise.all([
