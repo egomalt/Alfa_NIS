@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                         ('likes', models.IntegerField(default=0)),
                         ('created_at', models.DateTimeField(auto_now_add=True)),
                         ('updated_at', models.DateTimeField(auto_now=True)),
-                        ('published_at', models.DateTimeField(null=True, blank=True)),
+                        ('published_at', models.DateTimeField(blank=True, null=True)),
                     ],
                     options={
                         'db_table': 'articles',

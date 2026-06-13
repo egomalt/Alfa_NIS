@@ -1,0 +1,316 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token }}">
+<title>Редактор статей — Career</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F4F6FA; --surface: #FFFFFF; --surface-2: #EDF0F6;
+  --line: #E2E7F0; --line-2: #D2D9E6;
+  --text: #161A22; --text-2: #3C434F; --muted: #6E7787; --faint: #99A2B2;
+  --brand: #D62839; --brand-strong: #BC1F2F; --brand-text: #C81E2D;
+  --brand-soft: #FCE7E8; --on-brand: #FFFFFF;
+  --green-text: #15935A; --green-soft: #E2F3EA;
+  --amber-text: #B7770C; --amber-soft: #FBEEDA;
+  --red-text: #C81E2D; --red-soft: #FCE7E8;
+}
+[data-theme="dark"] {
+  --bg: #0E1117; --surface: #161B23; --surface-2: #1D2330;
+  --line: #262D3A; --line-2: #333C4B;
+  --text: #E8EBF1; --text-2: #B7BFCD; --muted: #838C9C; --faint: #5E6573;
+  --brand: #E63E4B; --brand-strong: #EC5460; --brand-text: #FF8A92;
+  --brand-soft: rgba(230,62,75,.17); --on-brand: #FFFFFF;
+  --green-text: #5FCF97; --green-soft: rgba(43,168,106,.16);
+  --amber-text: #F0C070; --amber-soft: rgba(215,154,58,.16);
+  --red-text: #FF8A92; --red-soft: rgba(230,62,75,.17);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: 'Onest', system-ui, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+input, textarea, select, button { font-family: inherit; }
+
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+/* Topbar */
+.topbar { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); }
+.logo-icon { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; background: var(--brand); }
+.logo-text { font-weight: 700; font-size: 14px; }
+.divider-v { width: 1px; height: 22px; background: var(--line); flex-shrink: 0; }
+.btn-back { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; cursor: pointer; text-decoration: none; transition: color .15s; }
+.btn-back:hover { color: var(--text); }
+.topbar-center { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 0; }
+.topbar-title { font-size: 14px; font-weight: 600; color: var(--text-2); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge-draft { font-size: 11.5px; color: var(--amber-text); padding: 3px 9px; border: 1px solid var(--amber-text); border-radius: 999px; background: var(--amber-soft); white-space: nowrap; opacity: .8; }
+.badge-published { font-size: 11.5px; color: var(--green-text); padding: 3px 9px; border: 1px solid var(--green-text); border-radius: 999px; background: var(--green-soft); white-space: nowrap; opacity: .8; }
+.topbar-meta { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--faint); white-space: nowrap; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 13px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
+.btn:hover { color: var(--text); }
+.btn-save { height: 32px; padding: 0 13px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.btn-save.saved { border-color: var(--green-text); color: var(--green-text); background: var(--green-soft); }
+.btn-publish { height: 32px; padding: 0 14px; border: none; border-radius: 8px; background: var(--brand); color: var(--on-brand); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
+.btn-publish:hover { background: var(--brand-strong); }
+.btn-theme { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text-2); cursor: pointer; transition: border-color .15s, color .15s; }
+.btn-theme:hover { border-color: var(--line-2); color: var(--text); }
+[data-theme="dark"] .icon-moon { display: none; }
+[data-theme="light"] .icon-sun { display: none; }
+
+/* Body split */
+.body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+
+/* Editor area */
+.editor-area { flex: 1; overflow-y: auto; padding: 48px 32px 100px; }
+.editor-inner { max-width: 680px; margin: 0 auto; }
+
+/* Cover zone */
+.cover-zone { position: relative; margin-bottom: 36px; border-radius: 14px; overflow: hidden; }
+.cover-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; height: 220px; border: 2px dashed var(--line-2); border-radius: 14px; color: var(--faint); cursor: pointer; transition: border-color .15s, background .15s; }
+.cover-placeholder:hover { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-text); }
+.cover-placeholder-text { font-size: 14px; font-weight: 500; }
+.cover-placeholder-sub { font-size: 12.5px; }
+.cover-set { height: 220px; position: relative; }
+.cover-set-bg { position: absolute; inset: 0; }
+.cover-change-btn { position: absolute; bottom: 12px; right: 12px; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border: 1px solid rgba(255,255,255,.3); border-radius: 7px; background: rgba(0,0,0,.4); color: #fff; font-size: 12px; cursor: pointer; backdrop-filter: blur(4px); transition: background .15s; }
+.cover-change-btn:hover { background: rgba(0,0,0,.6); }
+.cover-remove-btn { position: absolute; bottom: 12px; left: 12px; height: 30px; width: 30px; border: 1px solid rgba(255,255,255,.3); border-radius: 7px; background: rgba(0,0,0,.4); color: #fff; cursor: pointer; backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; transition: background .15s; }
+.cover-remove-btn:hover { background: rgba(200,30,45,.7); }
+
+/* Title */
+.title-input { width: 100%; border: none; outline: none; background: transparent; color: var(--text); font-family: 'Onest', sans-serif; font-size: 36px; font-weight: 800; line-height: 1.2; letter-spacing: -.025em; resize: none; overflow: hidden; margin-bottom: 14px; min-height: 44px; }
+.title-input::placeholder { color: var(--faint); }
+
+/* Lead */
+.lead-input { width: 100%; border: none; outline: none; background: transparent; color: var(--text-2); font-family: 'Onest', sans-serif; font-size: 18px; line-height: 1.6; resize: none; overflow: hidden; margin-bottom: 32px; min-height: 28px; }
+.lead-input::placeholder { color: var(--faint); }
+
+/* Divider */
+.divider { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.divider-line { flex: 1; height: 1px; background: var(--line); }
+.divider-icon { color: var(--faint); }
+
+/* Body editor */
+.body-editor { outline: none; font-size: 16.5px; line-height: 1.85; color: var(--text-2); min-height: 300px; word-break: break-word; }
+.body-editor:empty::before { content: attr(data-placeholder); color: var(--faint); pointer-events: none; white-space: pre-line; }
+.body-editor p { margin-bottom: 1em; }
+.body-editor h2 { font-size: 24px; font-weight: 700; color: var(--text); letter-spacing: -.02em; margin: 1.5em 0 .5em; }
+.body-editor h3 { font-size: 19px; font-weight: 700; color: var(--text); letter-spacing: -.01em; margin: 1.2em 0 .4em; }
+.body-editor blockquote { border-left: 3px solid var(--brand); padding: 4px 0 4px 18px; margin: 1.2em 0; color: var(--muted); font-style: italic; }
+.body-editor code { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; color: var(--brand-text); }
+.body-editor pre { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin: 1.2em 0; overflow-x: auto; }
+.body-editor pre code { background: none; border: none; padding: 0; font-size: 14px; color: var(--text); }
+.body-editor strong { font-weight: 700; color: var(--text); }
+.body-editor a { color: var(--brand-text); text-decoration: underline; }
+.body-editor ul, .body-editor ol { padding-left: 24px; margin-bottom: 1em; }
+.body-editor li { margin-bottom: .35em; }
+
+/* Floating toolbar */
+.floating-toolbar { position: fixed; display: none; align-items: center; gap: 2px; padding: 6px 8px; background: #1a1e26; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.4); z-index: 200; transform: translateX(-50%); }
+.floating-toolbar.visible { display: flex; }
+.ft-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: none; border-radius: 7px; background: transparent; color: rgba(255,255,255,.9); cursor: pointer; font-size: 13px; font-weight: 700; transition: background .12s, color .12s; }
+.ft-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
+.ft-btn.mono { font-family: 'JetBrains Mono', monospace; }
+.ft-sep { width: 1px; height: 18px; background: rgba(255,255,255,.18); margin: 0 3px; }
+.floating-toolbar::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1a1e26; }
+
+/* Settings panel */
+.settings { width: 280px; flex-shrink: 0; border-left: 1px solid var(--line); background: var(--surface); overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+.sp-section { display: flex; flex-direction: column; gap: 12px; }
+.sp-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.tag-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: var(--brand-soft); color: var(--brand-text); border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+.tag-chip button { display: flex; align-items: center; background: none; border: none; cursor: pointer; color: var(--brand-text); padding: 0; opacity: .7; transition: opacity .1s; }
+.tag-chip button:hover { opacity: 1; }
+.tag-input { width: 100%; height: 36px; padding: 0 11px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--bg); color: var(--text); font-size: 13.5px; outline: none; transition: border-color .15s; }
+.tag-input:focus { border-color: var(--brand); }
+.tag-hint { font-size: 11.5px; color: var(--faint); }
+.sp-select-wrap { position: relative; }
+.sp-select-wrap select { -webkit-appearance: none; appearance: none; width: 100%; height: 38px; padding: 0 32px 0 12px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--bg); color: var(--text); font-size: 13.5px; font-family: 'Onest', sans-serif; cursor: pointer; outline: none; transition: border-color .15s; }
+.sp-select-wrap select:focus { border-color: var(--brand); }
+.sp-select-wrap svg { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.sp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sp-stat { padding: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; text-align: center; }
+.sp-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; }
+.sp-stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.danger-btn { display: flex; align-items: center; gap: 7px; height: 36px; width: 100%; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--muted); font-size: 13px; cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
+.danger-btn:hover { border-color: var(--red-text); color: var(--red-text); background: var(--red-soft); }
+
+/* ── Scrollbar ── */
+* { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+</style>
+<script>
+  (function(){
+    var t = localStorage.getItem('alfa_theme');
+    if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      document.documentElement.setAttribute('data-theme', 'dark');
+  })();
+  window.ALFA_APP_BOOTSTRAP = {
+    username: "{{ username|escapejs }}",
+    articleId: {{ article_id|default:"null" }},
+    articleData: {{ article_json|safe }},
+  };
+</script>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <a href="/" class="logo">
+      <span class="logo-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><rect x="3.5" y="13" width="4.3" height="8" rx="1.4"/><rect x="9.85" y="8" width="4.3" height="13" rx="1.4"/><rect x="16.2" y="3" width="4.3" height="18" rx="1.4"/></svg>
+      </span>
+      <span class="logo-text">Career</span>
+    </a>
+    <a href="/cabinet/user/articles/" class="btn-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
+      Назад
+    </a>
+    <div class="divider-v"></div>
+    <div class="topbar-center">
+      <span class="topbar-title" id="topbar-title">Новая статья</span>
+      <span class="badge-draft" id="status-badge">Черновик</span>
+      <span class="topbar-meta" id="topbar-meta">0 слов</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-save" id="btn-save" onclick="doSave()">Сохранить</button>
+      <button class="btn-publish" id="btn-publish" onclick="doPublish()">Опубликовать</button>
+      <button class="btn-theme" data-theme-toggle>
+        <svg class="icon-moon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.3 6.3 0 0 0 10.5 10.5Z"/></svg>
+        <svg class="icon-sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <div class="editor-area" id="editor-area">
+      <div class="editor-inner">
+
+        <div id="cover-zone">
+          <div class="cover-placeholder" id="cover-placeholder" onclick="addCover()">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 16l5-5 4 4 3-3 4 4"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+            <span class="cover-placeholder-text">Добавить обложку</span>
+            <span class="cover-placeholder-sub">Выберите цвет градиента</span>
+          </div>
+          <div id="cover-set-area" style="display:none;">
+            <div class="cover-set" id="cover-set">
+              <div class="cover-set-bg" id="cover-bg"></div>
+              <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%;opacity:.1;">
+                <circle cx="580" cy="50" r="110" fill="#fff"/><circle cx="620" cy="190" r="140" fill="#fff"/><circle cx="80" cy="200" r="80" fill="#fff"/>
+              </svg>
+              <button class="cover-change-btn" onclick="cycleCover()">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+                Изменить
+              </button>
+              <button class="cover-remove-btn" onclick="removeCover()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <textarea class="title-input" id="title-input" placeholder="Заголовок статьи..." rows="1" oninput="onTitleInput(this)"></textarea>
+        <textarea class="lead-input" id="lead-input" placeholder="Краткое описание — появится в карточке превью..." rows="1" oninput="autoResize(this)"></textarea>
+
+        <div class="divider">
+          <div class="divider-line"></div>
+          <svg class="divider-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <div class="divider-line"></div>
+        </div>
+
+        <div class="body-editor" id="body-editor" contenteditable="true"
+          data-placeholder="Начните писать статью...
+
+Выделите текст — появится панель инструментов."></div>
+
+      </div>
+    </div>
+
+    <aside class="settings">
+
+      <div class="sp-section">
+        <div class="sp-title">Теги</div>
+        <div class="tags-wrap" id="tags-wrap"></div>
+        <input class="tag-input" id="tag-input" placeholder="Добавить тег..." maxlength="24" onkeydown="handleTagInput(event)">
+        <div class="tag-hint">Нажмите Enter, чтобы добавить</div>
+      </div>
+
+      <div class="sp-section">
+        <div class="sp-title">Категория</div>
+        <div class="sp-select-wrap">
+          <select id="category-select">
+            <option>Frontend</option>
+            <option>Backend</option>
+            <option>DevOps</option>
+            <option>Карьера</option>
+            <option>Аналитика</option>
+            <option>Дизайн</option>
+            <option>Другое</option>
+          </select>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+
+      <div class="sp-section">
+        <div class="sp-title">Статистика</div>
+        <div class="sp-stats">
+          <div class="sp-stat">
+            <div class="sp-stat-val" id="stat-words">0</div>
+            <div class="sp-stat-label">слов</div>
+          </div>
+          <div class="sp-stat">
+            <div class="sp-stat-val" id="stat-readtime">0</div>
+            <div class="sp-stat-label">мин. чтения</div>
+          </div>
+          <div class="sp-stat">
+            <div class="sp-stat-val" id="stat-chars">0</div>
+            <div class="sp-stat-label">символов</div>
+          </div>
+          <div class="sp-stat">
+            <div class="sp-stat-val" id="stat-paragraphs">0</div>
+            <div class="sp-stat-label">абзацев</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-section" style="margin-top:auto;">
+        <div class="sp-title">Действия</div>
+        <button class="danger-btn" onclick="deleteDraft()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          Удалить черновик
+        </button>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<div class="floating-toolbar" id="floating-toolbar">
+  <button class="ft-btn" onclick="fmt('bold')"><strong>B</strong></button>
+  <button class="ft-btn" onclick="fmt('italic')"><em>I</em></button>
+  <div class="ft-sep"></div>
+  <button class="ft-btn" onclick="fmtBlock('h2')" style="font-size:12px;font-weight:700;">H2</button>
+  <button class="ft-btn" onclick="fmtBlock('h3')" style="font-size:12px;font-weight:700;">H3</button>
+  <div class="ft-sep"></div>
+  <button class="ft-btn" onclick="fmtBlock('blockquote')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>
+  </button>
+  <button class="ft-btn mono" onclick="fmt('code')">&lt;/&gt;</button>
+  <div class="ft-sep"></div>
+  <button class="ft-btn" onclick="fmtLink()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  </button>
+</div>
+
+<script src="{% static 'main/theme.js' %}" defer></script>
+<script src="{% static 'articles_constructor/app.js' %}"></script>
+</body>
+</html>

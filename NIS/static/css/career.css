@@ -2022,7 +2022,7 @@ input, textarea, select {
 .theme-toggle:hover { color: var(--text); }
 
 /* Scrollbar */
-html, body, .app-runtime-body {
+* {
   scrollbar-width: thin;
   scrollbar-color: var(--line-2) transparent;
 }

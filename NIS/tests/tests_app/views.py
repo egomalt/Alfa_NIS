@@ -2,55 +2,11 @@ import json
 
 from django.db import transaction
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
 from tests.constructor.models import Test, TestPage
-
-
-@ensure_csrf_cookie
-def tests_catalog_shell(request):
-    return render(request, 'tests_app/tests_catalog.html')
-
-
-@ensure_csrf_cookie
-def tests_cabinet(request):
-    from authorization.models import ROLE_COMPANY, ROLE_USER
-    from authorization.views import get_current_account
-    account = get_current_account(request)
-    if account is None:
-        return redirect('/authorization/signup/')
-
-    if account.role == ROLE_COMPANY:
-        from companies.models import Company
-        company, _ = Company.objects.get_or_create(
-            username=account.username,
-            defaults={'name': account.name, 'contact_email': account.email},
-        )
-        if not company.is_verified:
-            return redirect('/cabinet/company/')
-        context = {
-            'role': 'company',
-            'page_bootstrap': 'tests',
-            'page_title': 'Тесты компании',
-            'page_heading': 'Тесты и оценки',
-            'page_subheading': 'Управляйте тестами и следите за результатами кандидатов',
-            'empty_text': 'Создайте первый тест, чтобы начать оценку кандидатов',
-        }
-    elif account.role == ROLE_USER:
-        context = {
-            'role': 'user',
-            'page_bootstrap': 'user_tests',
-            'page_title': 'Мои тесты',
-            'page_heading': 'Мои тесты',
-            'page_subheading': 'Управляйте тестами и следите за прохождениями',
-            'empty_text': 'Создайте первый тест в конструкторе',
-        }
-    else:
-        return redirect('/')
-
-    return render(request, 'tests_app/tests_page.html', {'username': account.username, **context})
 
 
 @ensure_csrf_cookie
@@ -202,23 +158,3 @@ def api_test_submit(request, test_id):
     })
 
 
-@require_GET
-def api_tests_catalog(request):
-    from authorization.models import Account
-    owner_names = {a.username: a.name for a in Account.objects.all()}
-    tests = Test.objects.filter(status=Test.STATUS_PUBLISHED).prefetch_related('pages')
-    result = []
-    for test in tests:
-        stats = test.stats or {}
-        result.append({
-            'id': test.id,
-            'title': test.title,
-            'description': test.description,
-            'owner_username': test.owner_username,
-            'owner_name': owner_names.get(test.owner_username, test.owner_username),
-            'level': stats.get('level', ''),
-            'category': stats.get('category', ''),
-            'page_count': test.pages.count(),
-            'url': f'/tests/{test.id}/',
-        })
-    return JsonResponse({'ok': True, 'tests': result})

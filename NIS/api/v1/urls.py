@@ -4,7 +4,9 @@ import authorization.views as auth_views
 import companies.views as company_views
 import tests.constructor.views as constructor_views
 import tests.tests_app.views as test_views
-import articles.views as article_views
+import tests.tests_catalog.views as tests_catalog_views
+import articles.constructor.views as article_constructor_views
+import articles.articles_cabinet.views as article_cabinet_views
 import users.views as user_views
 
 urlpatterns = [
@@ -20,8 +22,10 @@ urlpatterns = [
     path('candidates/<slug:username>/avatar/', user_views.api_candidate_avatar, name='v1_api_candidate_avatar'),
 
     # Articles
-    path('articles/my/',                      article_views.api_my_articles),
-    path('articles/<int:article_id>/publish/', article_views.api_article_publish),
+    path('articles/my/',                       article_cabinet_views.api_my_articles),
+    path('articles/create/',                   article_constructor_views.api_article_create),
+    path('articles/<int:article_id>/',         article_constructor_views.api_article_update),
+    path('articles/<int:article_id>/publish/', article_constructor_views.api_article_publish),
 
     # Companies
     path('companies/',                              company_views.api_companies_list),
@@ -33,7 +37,7 @@ urlpatterns = [
     # Tests — constructor (CRUD)
     path('tests/',                              constructor_views.api_tests_list),
     path('tests/create/',                       constructor_views.api_tests_create),
-    path('tests/catalog/',                      test_views.api_tests_catalog),
+    path('tests/catalog/',                      tests_catalog_views.api_tests_catalog),
     path('tests/<int:test_id>/',                constructor_views.api_test_detail),
     path('tests/<int:test_id>/publish/',        constructor_views.api_test_publish),
     path('tests/pages/<int:page_id>/run/',      constructor_views.api_code_run),

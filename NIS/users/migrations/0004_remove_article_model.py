@@ -5,7 +5,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('users', '0003_article'),
-        ('articles', '0001_move_from_users'),
+        ('articles_constructor', '0001_initial'),
     ]
 
     operations = [
