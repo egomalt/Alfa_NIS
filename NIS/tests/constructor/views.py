@@ -12,15 +12,13 @@ from .models import Test, TestAnswer, TestPage
 @ensure_csrf_cookie
 def constructor_shell(request, test_id=None):
     from authorization.views import get_current_account
-    from authorization.models import ROLE_COMPANY
-    company_username = request.GET.get('company', '')
+    owner_username = request.GET.get('owner', '')
     account = get_current_account(request)
-    is_company = account is not None and account.role == ROLE_COMPANY
     return render(request, 'constructor/constructor.html', {
         'app_path': request.path,
         'test_id': test_id or '',
-        'company_username': company_username,
-        'is_company': is_company,
+        'owner_username': owner_username,
+        'is_authenticated': account is not None,
     })
 
 
@@ -52,7 +50,7 @@ def _serialize_test(test, include_pages=False):
     stats = test.stats or {}
     data = {
         'id': test.id,
-        'company_username': test.company_username,
+        'owner_username': test.owner_username,
         'title': test.title,
         'description': test.description,
         'status': test.status,
@@ -72,10 +70,10 @@ def _serialize_test(test, include_pages=False):
 
 @require_GET
 def api_tests_list(request):
-    company_username = request.GET.get('company', '')
-    if not company_username:
-        return JsonResponse({'ok': False, 'message': 'company param required'}, status=400)
-    tests = Test.objects.filter(company_username=company_username)
+    owner_username = request.GET.get('owner', '')
+    if not owner_username:
+        return JsonResponse({'ok': False, 'message': 'owner param required'}, status=400)
+    tests = Test.objects.filter(owner_username=owner_username)
     return JsonResponse({'ok': True, 'tests': [_serialize_test(t) for t in tests]})
 
 
@@ -106,10 +104,10 @@ def api_tests_create(request):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({'ok': False, 'message': 'Invalid JSON'}, status=400)
 
-    company_username = (body.get('company_username') or '').strip()
+    owner_username = (body.get('owner_username') or '').strip()
     title = (body.get('title') or '').strip()
-    if not company_username:
-        return JsonResponse({'ok': False, 'message': 'company_username required'}, status=400)
+    if not owner_username:
+        return JsonResponse({'ok': False, 'message': 'owner_username required'}, status=400)
     if not title:
         return JsonResponse({'ok': False, 'message': 'title required'}, status=400)
 
@@ -118,7 +116,7 @@ def api_tests_create(request):
 
     with transaction.atomic():
         test = Test.objects.create(
-            company_username=company_username,
+            owner_username=owner_username,
             title=title,
             description=(body.get('description') or '').strip(),
             stats={'level': level, 'category': category},

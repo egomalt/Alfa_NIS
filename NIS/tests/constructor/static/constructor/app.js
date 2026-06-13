@@ -4,7 +4,7 @@
 
     const state = {
         testId: BOOTSTRAP.testId || null,
-        companyUsername: BOOTSTRAP.companyUsername || '',
+        ownerUsername: BOOTSTRAP.ownerUsername || '',
         title: '',
         description: '',
         level: '',
@@ -39,7 +39,7 @@
 
     function serializeState() {
         return {
-            company_username: state.companyUsername,
+            owner_username: state.ownerUsername,
             title: state.title,
             description: state.description,
             level: state.level,
@@ -69,7 +69,7 @@
         state.level = test.level || (test.stats && test.stats.level) || '';
         state.category = test.category || (test.stats && test.stats.category) || '';
         state.published = test.status === 'published';
-        if (!state.companyUsername && test.company_username) state.companyUsername = test.company_username;
+        if (!state.ownerUsername && test.owner_username) state.ownerUsername = test.owner_username;
         state.pages = [
             makeInfoPage(),
             ...(test.pages || []).map(p => ({
@@ -169,7 +169,7 @@
     }
 
     function syncBackLink() {
-        const href = BOOTSTRAP.isCompany ? '/cabinet/company/tests/' : '/cabinet/user/tests/';
+        const href = '/cabinet/user/tests/';
         const back = document.getElementById('cst-back');
         const backTests = document.getElementById('cst-back-tests');
         if (back) back.href = href;
@@ -629,9 +629,9 @@
         // New test: always start with info page + auto-name
         if (!state.testId && state.pages.length === 0) {
             state.pages.push(makeInfoPage());
-            if (state.companyUsername) {
+            if (state.ownerUsername) {
                 try {
-                    const resp = await fetch(`/api/v1/tests/?company=${encodeURIComponent(state.companyUsername)}`).then(r => r.json()).catch(() => ({ ok: false }));
+                    const resp = await fetch(`/api/v1/tests/?owner=${encodeURIComponent(state.ownerUsername)}`).then(r => r.json()).catch(() => ({ ok: false }));
                     const count = resp.ok ? (resp.tests || []).length : 0;
                     state.title = `Тест ${count + 1}`;
                 } catch (_) {

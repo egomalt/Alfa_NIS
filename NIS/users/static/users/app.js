@@ -173,7 +173,7 @@
                     style="display:inline-flex;align-items:center;height:28px;padding:0 11px;border:1px solid var(--line-2);border-radius:7px;font-size:12.5px;color:var(--text-2);cursor:pointer;background:var(--surface);"
                     onmouseover="this.style.color='var(--brand-text)';this.style.borderColor='var(--brand)'"
                     onmouseout="this.style.color='var(--text-2)';this.style.borderColor='var(--line-2)'">Все</button>
-                  <a href="/constructor/?company=${esc(username)}"
+                  <a href="/constructor/?owner=${esc(username)}"
                     style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border:1px solid var(--line-2);border-radius:7px;background:var(--surface);color:var(--text-2);font-size:12.5px;font-weight:500;text-decoration:none;"
                     onmouseover="this.style.borderColor='var(--brand)';this.style.color='var(--brand-text)'"
                     onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--text-2)'">
@@ -258,7 +258,7 @@
             bodyHtml = `<div style="padding:48px;text-align:center;border:1px dashed var(--line-2);border-radius:14px;">
               <div style="font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text);">Тестов пока нет</div>
               <div style="font-size:13.5px;color:var(--muted);margin-bottom:18px;">Создайте первый тест в конструкторе</div>
-              <a href="/constructor/?company=${esc(username)}"
+              <a href="/constructor/?owner=${esc(username)}"
                 style="display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 18px;background:var(--brand);color:var(--on-brand);border-radius:9px;font-size:14px;font-weight:600;text-decoration:none;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                 Создать тест
@@ -298,7 +298,7 @@
             Профиль
           </button>
           <h1 style="font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0;flex:1;">Мои тесты</h1>
-          <a href="/constructor/?company=${esc(username)}"
+          <a href="/constructor/?owner=${esc(username)}"
             style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 16px;background:var(--brand);color:var(--on-brand);border-radius:9px;font-size:13.5px;font-weight:600;text-decoration:none;"
             onmouseover="this.style.background='var(--brand-strong)'" onmouseout="this.style.background='var(--brand)'">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -408,7 +408,7 @@
         try {
             const [candData, testsResp] = await Promise.all([
                 apiFetch(`/api/v1/candidates/${username}/`),
-                fetch(`/api/v1/tests/?company=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false })),
+                fetch(`/api/v1/tests/?owner=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false })),
             ]);
 
             state.candidate = candData.candidate;

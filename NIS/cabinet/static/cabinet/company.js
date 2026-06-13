@@ -52,7 +52,7 @@
     }
 
     function showFlash(message) {
-        const flash = document.getElementById('company-flash');
+        const flash = document.getElementById('page-flash');
         if (!flash) return;
         if (!message) {
             flash.hidden = true;
@@ -306,9 +306,9 @@
 
     function syncTestsPage(company, tests, stats) {
         setText('stat-total-tests', String(stats?.total_tests ?? 0));
-        setText('stat-active-tests', String(stats?.active_tests ?? 0));
+        setText('stat-published', String(stats?.active_tests ?? 0));
         setText('stat-submissions', String(stats?.submissions ?? 0));
-        setText('stat-completion-rate', `${stats?.completion_rate ?? 0}%`);
+        setText('stat-active-rate', `${stats?.completion_rate ?? 0}%`);
 
         const tableWrapper = document.getElementById('tests-table-wrapper');
         const tableBody = document.getElementById('tests-table-body');
@@ -527,7 +527,7 @@
         bindGlobalEvents();
         showFlash('');
 
-        const logoutBtn = document.getElementById('company-logout-btn');
+        const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) {
             logoutBtn.hidden = false;
             logoutBtn.addEventListener('click', async () => {

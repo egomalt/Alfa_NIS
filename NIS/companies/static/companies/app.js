@@ -541,7 +541,7 @@
                 syncProfileForm(state.company);
             }
 
-            if (payload.company?.username && payload.company.username !== BOOTSTRAP.companyUsername) {
+            if (payload.company?.username && payload.company.username !== BOOTSTRAP.ownerUsername) {
                 window.location.assign(`/${payload.company.username}/`);
                 return;
             }
@@ -678,7 +678,7 @@
             });
         }
 
-        const username = BOOTSTRAP.companyUsername || '';
+        const username = BOOTSTRAP.ownerUsername || '';
         if (!username) {
             showFlash('Не удалось определить компанию по адресу страницы.');
             return;

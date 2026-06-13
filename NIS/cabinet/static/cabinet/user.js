@@ -162,7 +162,7 @@
                     style="display:inline-flex;align-items:center;height:28px;padding:0 11px;border:1px solid var(--line-2);border-radius:7px;font-size:12.5px;color:var(--text-2);cursor:pointer;background:var(--surface);"
                     onmouseover="this.style.color='var(--brand-text)';this.style.borderColor='var(--brand)'"
                     onmouseout="this.style.color='var(--text-2)';this.style.borderColor='var(--line-2)'">Все</button>
-                  <a href="/constructor/?company=${esc(username)}"
+                  <a href="/constructor/?owner=${esc(username)}"
                     style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border:1px solid var(--line-2);border-radius:7px;background:var(--surface);color:var(--text-2);font-size:12.5px;font-weight:500;text-decoration:none;"
                     onmouseover="this.style.borderColor='var(--brand)';this.style.color='var(--brand-text)'"
                     onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--text-2)'">
@@ -226,90 +226,100 @@
         document.getElementById('cd-all-tests-btn')?.addEventListener('click', () => window.location.assign('/cabinet/user/tests/'));
     }
 
+    const STATUS_LABELS_TESTS = { draft: 'Черновик', published: 'Опубликован' };
+
+    function setStatText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(value);
+    }
+
     function renderMyTests(tests) {
-        const el = document.getElementById('cd-content');
-        if (!el) return;
+        const total = (tests || []).length;
+        const published = (tests || []).filter(t => t.status === 'published').length;
+        const submissions = (tests || []).reduce((sum, t) => sum + (t.submissions || 0), 0);
+        const rate = total > 0 ? Math.round(published / total * 100) : 0;
 
-        const STATUS_COLORS = {
-            draft:     { bg: 'var(--amber-soft)', color: 'var(--amber-text)' },
-            published: { bg: 'var(--green-soft)',  color: 'var(--green-text)' },
-        };
-        const STATUS_LABELS = { draft: 'Черновик', published: 'Опубликован' };
+        setStatText('stat-total-tests', total);
+        setStatText('stat-published', published);
+        setStatText('stat-submissions', submissions);
+        setStatText('stat-active-rate', `${rate}%`);
 
-        let bodyHtml;
+        const tableWrapper = document.getElementById('tests-table-wrapper');
+        const tableBody = document.getElementById('tests-table-body');
+        const empty = document.getElementById('tests-empty');
+        const loading = document.getElementById('tests-loading');
+
+        if (loading) loading.hidden = true;
+
         if (!tests || !tests.length) {
-            bodyHtml = `<div style="padding:48px;text-align:center;border:1px dashed var(--line-2);border-radius:14px;">
-              <div style="font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text);">Тестов пока нет</div>
-              <div style="font-size:13.5px;color:var(--muted);margin-bottom:18px;">Создайте первый тест в конструкторе</div>
-              <a href="/constructor/?company=${esc(username)}"
-                style="display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 18px;background:var(--brand);color:var(--on-brand);border-radius:9px;font-size:14px;font-weight:600;text-decoration:none;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                Создать тест
-              </a>
-            </div>`;
-        } else {
-            bodyHtml = `<div style="display:flex;flex-direction:column;gap:10px;">
-              ${tests.map(t => {
-                const sc = STATUS_COLORS[t.status] || STATUS_COLORS.draft;
-                return `<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:13px;background:var(--surface);">
-                  <span style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:var(--surface-2);flex-shrink:0;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="13" height="13" rx="2"/><path d="M5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/></svg>
-                  </span>
-                  <div style="flex:1;min-width:0;">
-                    <div style="font-size:14px;font-weight:600;">${esc(t.title)}</div>
-                    <div style="font-size:12.5px;color:var(--muted);margin-top:2px;">${esc(pluralPages(t.page_count))} · ${t.submissions ?? 0} прохождений · ${esc(formatTestDate(t.created_at))}</div>
-                  </div>
-                  <span style="font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:${sc.bg};color:${sc.color};flex-shrink:0;">${esc(STATUS_LABELS[t.status] || t.status)}</span>
-                  <a href="${esc(t.edit_url)}"
-                    style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--line-2);border-radius:8px;color:var(--text-2);flex-shrink:0;"
-                    title="Редактировать"
-                    onmouseover="this.style.borderColor='var(--brand)';this.style.color='var(--brand-text)'"
-                    onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--text-2)'">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  </a>
-                  <button type="button" data-delete-id="${t.id}"
-                    style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--line-2);border-radius:8px;color:var(--text-2);flex-shrink:0;background:none;cursor:pointer;"
-                    title="Удалить"
-                    onmouseover="this.style.borderColor='var(--red-text)';this.style.color='var(--red-text)'"
-                    onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--text-2)'">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                  </button>
-                </div>`;
-            }).join('')}
-            </div>`;
+            if (tableWrapper) tableWrapper.hidden = true;
+            if (empty) empty.hidden = false;
+            return;
         }
 
-        el.innerHTML = `
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:32px;">
-          <button id="cd-back-btn"
-            style="display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text-2);font-size:13px;cursor:pointer;"
-            onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-2)'">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
-            Профиль
-          </button>
-          <h1 style="font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0;flex:1;">Мои тесты</h1>
-          <a href="/constructor/?company=${esc(username)}"
-            style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 16px;background:var(--brand);color:var(--on-brand);border-radius:9px;font-size:13.5px;font-weight:600;text-decoration:none;"
-            onmouseover="this.style.background='var(--brand-strong)'" onmouseout="this.style.background='var(--brand)'">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-            Создать тест
-          </a>
-        </div>
-        ${bodyHtml}
-        `;
+        tableBody.innerHTML = '';
+        for (const test of tests) {
+            const tr = document.createElement('tr');
 
-        document.getElementById('cd-back-btn')?.addEventListener('click', () => window.location.assign('/cabinet/user/'));
+            const tdTitle = document.createElement('td');
+            const titleLink = document.createElement('a');
+            titleLink.href = test.url || '#';
+            titleLink.textContent = test.title || '—';
+            titleLink.target = '_blank';
+            tdTitle.appendChild(titleLink);
+            tr.appendChild(tdTitle);
 
-        el.querySelectorAll('[data-delete-id]').forEach(btn => {
-            btn.addEventListener('click', () => deleteTest(parseInt(btn.dataset.deleteId, 10)));
-        });
+            const tdStatus = document.createElement('td');
+            const pill = document.createElement('span');
+            pill.className = `status-pill ${String(test.status || '').toLowerCase()}`;
+            pill.textContent = STATUS_LABELS_TESTS[test.status] || test.status || '—';
+            tdStatus.appendChild(pill);
+            tr.appendChild(tdStatus);
+
+            const tdPages = document.createElement('td');
+            tdPages.textContent = String(test.page_count ?? 0);
+            tr.appendChild(tdPages);
+
+            const tdSubs = document.createElement('td');
+            tdSubs.textContent = String(test.submissions ?? 0);
+            tr.appendChild(tdSubs);
+
+            const tdDate = document.createElement('td');
+            tdDate.textContent = formatTestDate(test.created_at);
+            tr.appendChild(tdDate);
+
+            const tdActions = document.createElement('td');
+            tdActions.style.whiteSpace = 'nowrap';
+
+            const editLink = document.createElement('a');
+            editLink.href = test.edit_url || '#';
+            editLink.className = 'action-icon-btn';
+            editLink.title = 'Редактировать';
+            editLink.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'action-icon-btn danger';
+            deleteBtn.title = 'Удалить';
+            deleteBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+            deleteBtn.addEventListener('click', () => deleteTest(test.id));
+
+            tdActions.appendChild(editLink);
+            tdActions.appendChild(deleteBtn);
+            tr.appendChild(tdActions);
+
+            tableBody.appendChild(tr);
+        }
+
+        if (tableWrapper) tableWrapper.hidden = false;
+        if (empty) empty.hidden = true;
     }
 
     async function deleteTest(testId) {
         if (!confirm('Удалить тест? Это действие нельзя отменить.')) return;
         try {
             await apiFetch(`/api/v1/tests/${testId}/`, { method: 'DELETE' });
-            const resp = await fetch(`/api/v1/tests/?company=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false }));
+            const resp = await fetch(`/api/v1/tests/?owner=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false }));
             renderMyTests(resp.ok ? (resp.tests || []) : []);
         } catch (e) {
             alert(e.message || 'Не удалось удалить тест.');
@@ -403,13 +413,13 @@
 
     async function init() {
         if (!username) return;
-        document.getElementById('cd-logout-btn')?.addEventListener('click', logout);
+        document.getElementById('logout-btn')?.addEventListener('click', logout);
 
         const page = BOOTSTRAP.page;
 
         if (page === 'user_tests') {
             try {
-                const testsResp = await fetch(`/api/v1/tests/?company=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false }));
+                const testsResp = await fetch(`/api/v1/tests/?owner=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false }));
                 const tests = testsResp.ok ? (testsResp.tests || []) : [];
                 renderMyTests(tests);
             } catch (e) {
@@ -422,7 +432,7 @@
         try {
             const [candData, testsResp] = await Promise.all([
                 apiFetch(`/api/v1/candidates/${username}/`),
-                fetch(`/api/v1/tests/?company=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false })),
+                fetch(`/api/v1/tests/?owner=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false })),
             ]);
 
             state.candidate = candData.candidate;
