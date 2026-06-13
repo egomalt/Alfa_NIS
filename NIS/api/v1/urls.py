@@ -7,6 +7,7 @@ import tests.tests_app.views as test_views
 import tests.tests_catalog.views as tests_catalog_views
 import articles.constructor.views as article_constructor_views
 import articles.articles_cabinet.views as article_cabinet_views
+import articles.articles_catalog.views as article_catalog_views
 import users.views as user_views
 
 urlpatterns = [
@@ -22,10 +23,12 @@ urlpatterns = [
     path('candidates/<slug:username>/avatar/', user_views.api_candidate_avatar, name='v1_api_candidate_avatar'),
 
     # Articles
+    path('articles/catalog/',                   article_catalog_views.api_articles_catalog),
     path('articles/my/',                       article_cabinet_views.api_my_articles),
     path('articles/create/',                   article_constructor_views.api_article_create),
     path('articles/<int:article_id>/',         article_constructor_views.api_article_update),
     path('articles/<int:article_id>/publish/', article_constructor_views.api_article_publish),
+    path('articles/<int:article_id>/delete/', article_constructor_views.api_article_delete),
 
     # Companies
     path('companies/',                              company_views.api_companies_list),

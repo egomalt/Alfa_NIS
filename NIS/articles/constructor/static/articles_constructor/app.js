@@ -185,6 +185,12 @@ async function ensureArticleId() {
     if (!data.ok) return false;
     currentArticleId = data.article_id;
     history.replaceState({}, '', `/cabinet/user/articles/${currentArticleId}/edit/`);
+    const preview = document.getElementById('btn-preview');
+    if (preview) {
+        preview.href = `/cabinet/user/articles/${currentArticleId}/preview/`;
+        preview.style.opacity = '';
+        preview.style.pointerEvents = '';
+    }
     return true;
 }
 
@@ -231,11 +237,6 @@ async function doPublish() {
         document.getElementById('status-badge').className = 'badge-published';
         document.getElementById('btn-publish').style.display = 'none';
     }
-}
-
-function deleteDraft() {
-    if (!confirm('Удалить черновик?')) return;
-    window.location.href = '/cabinet/user/articles/';
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

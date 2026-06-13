@@ -1,6 +1,6 @@
 import json
 
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -86,3 +86,41 @@ def api_article_publish(request, article_id):
     article.published_at = article.published_at or timezone.now()
     article.save(update_fields=['status', 'published_at'])
     return JsonResponse({'ok': True})
+
+
+@require_http_methods(['DELETE'])
+def api_article_delete(request, article_id):
+    current = get_current_account(request)
+    if not current:
+        return JsonResponse({'ok': False, 'message': 'Нет доступа'}, status=401)
+    article = Article.objects.filter(id=article_id, author_username=current.username).first()
+    if not article:
+        return JsonResponse({'ok': False, 'message': 'Статья не найдена'}, status=404)
+    article.delete()
+    return JsonResponse({'ok': True})
+
+
+COVERS = [
+    'linear-gradient(135deg,#1e3a5f 0%,#2d6a9f 100%)',
+    'linear-gradient(135deg,#D62839 0%,#7a1020 100%)',
+    'linear-gradient(135deg,#134e5e 0%,#1a7a6e 100%)',
+    'linear-gradient(135deg,#3d1f6e 0%,#6b3fa0 100%)',
+    'linear-gradient(135deg,#2d3a1a 0%,#4a7a2d 100%)',
+    'linear-gradient(135deg,#5c3d00 0%,#b07000 100%)',
+]
+
+
+@ensure_csrf_cookie
+def article_preview(request, article_id):
+    account = get_current_account(request)
+    if account is None or account.role != ROLE_USER:
+        return redirect('/authorization/signup/')
+    article = Article.objects.filter(id=article_id, author_username=account.username).first()
+    if not article:
+        raise Http404
+    cover_gradient = COVERS[article.cover_index % len(COVERS)] if article.cover_index >= 0 else None
+    return render(request, 'articles_constructor/preview.html', {
+        'article': article,
+        'article_id': article_id,
+        'cover_gradient': cover_gradient,
+    })

@@ -180,6 +180,10 @@ input, textarea, select, button { font-family: inherit; }
       <span class="topbar-meta" id="topbar-meta">0 слов</span>
     </div>
     <div class="topbar-actions">
+      <a class="btn" id="btn-preview" {% if article_id %}href="/cabinet/user/articles/{{ article_id }}/preview/" target="_blank"{% else %}style="opacity:.4;pointer-events:none;"{% endif %}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Предпросмотр
+      </a>
       <button class="btn-save" id="btn-save" onclick="doSave()">Сохранить</button>
       <button class="btn-publish" id="btn-publish" onclick="doPublish()">Опубликовать</button>
       <button class="btn-theme" data-theme-toggle>
@@ -281,13 +285,6 @@ input, textarea, select, button { font-family: inherit; }
         </div>
       </div>
 
-      <div class="sp-section" style="margin-top:auto;">
-        <div class="sp-title">Действия</div>
-        <button class="danger-btn" onclick="deleteDraft()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-          Удалить черновик
-        </button>
-      </div>
 
     </aside>
   </div>
