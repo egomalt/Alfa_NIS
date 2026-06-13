@@ -129,7 +129,8 @@
                 });
 
                 if (payload.next_url) {
-                    window.location.assign(payload.next_url);
+                    const next = new URLSearchParams(location.search).get('next');
+                    window.location.assign(next && next.startsWith('/') ? next : payload.next_url);
                     return;
                 }
             } catch (error) {
