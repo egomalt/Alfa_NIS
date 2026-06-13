@@ -21,7 +21,15 @@ def user_tests_cabinet(request):
     account = get_current_account(request)
     if account is None or account.role != ROLE_USER:
         return redirect('/authorization/signup/')
-    return render(request, 'tests_app/user_tests.html', {'username': account.username})
+    return render(request, 'cabinet/tests_page.html', {
+        'username': account.username,
+        'role': 'user',
+        'page_bootstrap': 'user_tests',
+        'page_title': 'Мои тесты',
+        'page_heading': 'Мои тесты',
+        'page_subheading': 'Управляйте тестами и следите за прохождениями',
+        'empty_text': 'Создайте первый тест в конструкторе',
+    })
 
 
 @ensure_csrf_cookie
@@ -175,8 +183,8 @@ def api_test_submit(request, test_id):
 
 @require_GET
 def api_tests_catalog(request):
-    from companies.models import Company
-    company_names = {c.username: c.name for c in Company.objects.all()}
+    from authorization.models import Account
+    owner_names = {a.username: a.name for a in Account.objects.all()}
     tests = Test.objects.filter(status=Test.STATUS_PUBLISHED).prefetch_related('pages')
     result = []
     for test in tests:
@@ -185,8 +193,8 @@ def api_tests_catalog(request):
             'id': test.id,
             'title': test.title,
             'description': test.description,
-            'company_username': test.company_username,
-            'company_name': company_names.get(test.company_username, test.company_username),
+            'owner_username': test.owner_username,
+            'owner_name': owner_names.get(test.owner_username, test.owner_username),
             'level': stats.get('level', ''),
             'category': stats.get('category', ''),
             'page_count': test.pages.count(),

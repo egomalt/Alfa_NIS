@@ -381,7 +381,7 @@ main {
     }
 
     grid.innerHTML = list.map(t => {
-      const initial = esc((t.company_name || t.company_username || '?')[0].toUpperCase());
+      const initial = esc((t.owner_name || t.owner_username || '?')[0].toUpperCase());
       const lc = LEVEL_COLORS[t.level] || null;
       const levelBadge = lc && t.level
         ? `<span class="card-level" style="background:${lc.bg};color:${lc.color};">${esc({junior:'Junior',middle:'Middle',senior:'Senior'}[t.level]||t.level)}</span>`
@@ -391,7 +391,7 @@ main {
         <div class="card">
           <div class="card-header">
             <span class="card-company-icon">${initial}</span>
-            <span class="card-company">${esc(t.company_name || t.company_username)}</span>
+            <span class="card-company">${esc(t.owner_name || t.owner_username)}</span>
             ${levelBadge}
           </div>
           <div class="card-title">${esc(t.title)}</div>

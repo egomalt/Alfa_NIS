@@ -5,7 +5,7 @@ class Test(models.Model):
     STATUS_DRAFT = 'draft'
     STATUS_PUBLISHED = 'published'
 
-    company_username = models.SlugField(max_length=50, db_index=True)
+    owner_username = models.SlugField(max_length=50, db_index=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     status = models.CharField(

@@ -41,7 +41,15 @@ def company_tests_cabinet(request):
     )
     if not company.is_verified:
         return redirect('/cabinet/company/')
-    return render(request, 'cabinet/company_tests.html', {'username': account.username, 'page': 'tests'})
+    return render(request, 'cabinet/tests_page.html', {
+        'username': account.username,
+        'role': 'company',
+        'page_bootstrap': 'tests',
+        'page_title': 'Тесты компании',
+        'page_heading': 'Тесты и оценки',
+        'page_subheading': 'Управляйте тестами и следите за результатами кандидатов',
+        'empty_text': 'Создайте первый тест, чтобы начать оценку кандидатов',
+    })
 
 
 @ensure_csrf_cookie

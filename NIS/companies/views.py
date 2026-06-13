@@ -46,7 +46,7 @@ def app_shell(request, username):
 
     return render(request, template_name, {
         'app_path': request.path,
-        'company_username': username,
+        'owner_username': username,
         'page': page,
     })
 
@@ -86,10 +86,10 @@ def api_companies_list(request):
     companies = Company.objects.exclude(registration_document='').order_by('-created_at')
     counts = (
         Test.objects.filter(status=Test.STATUS_PUBLISHED)
-        .values('company_username')
+        .values('owner_username')
         .annotate(cnt=Count('id'))
     )
-    published_counts = {row['company_username']: row['cnt'] for row in counts}
+    published_counts = {row['owner_username']: row['cnt'] for row in counts}
 
     result = [
         {
@@ -161,7 +161,7 @@ def api_company_tests(request, username):
             status=403,
         )
 
-    tests = Test.objects.filter(company_username=username)
+    tests = Test.objects.filter(owner_username=username)
     total = tests.count()
     active = tests.filter(status=Test.STATUS_PUBLISHED).count()
     submissions = sum(t.stats.get('submissions', 0) for t in tests)
@@ -174,7 +174,7 @@ def api_company_tests(request, username):
             'page_count': t.pages.count(),
             'submissions': t.stats.get('submissions', 0),
             'created_at': t.created_at.isoformat(),
-            'url': f'/tests/{t.id}/' if t.status == t.STATUS_PUBLISHED else f'/constructor/{t.id}/?company={username}',
+            'url': f'/tests/{t.id}/' if t.status == t.STATUS_PUBLISHED else f'/constructor/{t.id}/?owner={username}',
             'edit_url': f'/constructor/{t.id}/',
         }
         for t in tests

@@ -289,8 +289,8 @@
     window.ALFA_APP_BOOTSTRAP = {
       path: "{{ app_path|escapejs }}",
       testId: {% if test_id %}{{ test_id }}{% else %}null{% endif %},
-      companyUsername: "{{ company_username|escapejs }}",
-      isCompany: {% if is_company %}true{% else %}false{% endif %},
+      ownerUsername: "{{ owner_username|escapejs }}",
+      isAuthenticated: {% if is_authenticated %}true{% else %}false{% endif %},
       page: "constructor"
     };
   </script>
