@@ -77,9 +77,11 @@
             : '';
 
         const contactRows = [];
+        if (company.username) contactRows.push(['Аккаунт', `@${company.username}`, null]);
         if (company.contact_email) contactRows.push(['Email', company.contact_email, null]);
         if (company.phone) contactRows.push(['Телефон', company.phone, null]);
         if (company.website) contactRows.push(['Сайт', company.website, company.website]);
+        if (company.address) contactRows.push(['Адрес', company.address, null]);
 
         const contactsHtml = contactRows.length
             ? `<div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:20px 22px;margin-bottom:16px;">
@@ -94,12 +96,12 @@
           <!-- Hero card -->
           <div style="border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow);margin-bottom:20px;">
             <div style="height:88px;background:linear-gradient(120deg,var(--brand) 0%,color-mix(in srgb,var(--brand) 60%,#7c3aed) 100%);"></div>
-            <div style="padding:0 28px 22px;">
-              <div style="display:flex;align-items:flex-end;gap:18px;margin-top:-38px;">
-                <div style="width:80px;height:80px;border-radius:16px;background:var(--brand-soft);border:4px solid var(--surface);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+            <div style="padding:14px 28px 22px;">
+              <div style="display:flex;align-items:center;gap:18px;">
+                <div style="width:80px;height:80px;border-radius:16px;background:var(--brand-soft);border:4px solid var(--surface);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;margin-top:-52px;">
                   ${avatarHtml}
                 </div>
-                <div style="flex:1;min-width:0;padding-bottom:6px;">
+                <div style="flex:1;min-width:0;">
                   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                     <h1 style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0;">${esc(company.name)}</h1>
                     ${verifiedHtml}
@@ -149,18 +151,15 @@
         el.innerHTML = `
           <div style="border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow);margin-bottom:20px;">
             <div style="height:88px;background:linear-gradient(120deg,var(--brand) 0%,color-mix(in srgb,var(--brand) 55%,#ff7a45) 100%);"></div>
-            <div style="padding:0 28px 24px;">
-              <div style="display:flex;align-items:flex-end;gap:18px;margin-top:-42px;">
-                <div style="position:relative;flex-shrink:0;">
+            <div style="padding:14px 28px 24px;">
+              <div style="display:flex;align-items:center;gap:18px;">
+                <div style="position:relative;flex-shrink:0;margin-top:-56px;">
                   <div style="width:90px;height:90px;border-radius:50%;background:var(--brand-soft);border:4px solid var(--surface);display:flex;align-items:center;justify-content:center;overflow:hidden;">${avatarHtml}</div>
                 </div>
-                <div style="flex:1;padding-bottom:6px;">
+                <div style="flex:1;">
                   <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
                     <h1 style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0;">${esc(c.name)}</h1>
                     <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--brand-soft);color:var(--brand-text);">Кандидат</span>
-                  </div>
-                  <div style="margin-top:8px;font-size:13px;color:var(--muted);">
-                    <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;">@${esc(c.username)}</span>
                   </div>
                 </div>
               </div>
@@ -178,7 +177,13 @@
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">${skillsHtml}</div>
               </div>
             </div>
-            <div>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:20px 22px;">
+                <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:14px;">Контакты</div>
+                <div class="info-list">
+                  <div><span>Аккаунт</span><strong style="font-family:'JetBrains Mono',monospace;font-size:12.5px;">@${esc(c.username)}</strong></div>
+                </div>
+              </div>
               <div style="font-size:12px;color:var(--faint);text-align:center;padding:8px 0;">На платформе с ${esc(formatDate(c.created_at))}</div>
             </div>
           </div>
