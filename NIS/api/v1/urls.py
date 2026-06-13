@@ -8,6 +8,7 @@ import tests.tests_catalog.views as tests_catalog_views
 import articles.constructor.views as article_constructor_views
 import articles.articles_cabinet.views as article_cabinet_views
 import articles.articles_catalog.views as article_catalog_views
+import articles.articles_app.views as article_read_views
 import users.views as user_views
 
 urlpatterns = [
@@ -24,6 +25,7 @@ urlpatterns = [
 
     # Articles
     path('articles/catalog/',                   article_catalog_views.api_articles_catalog),
+    path('articles/<int:article_id>/vote/',     article_read_views.api_article_vote),
     path('articles/my/',                       article_cabinet_views.api_my_articles),
     path('articles/create/',                   article_constructor_views.api_article_create),
     path('articles/<int:article_id>/',         article_constructor_views.api_article_update),

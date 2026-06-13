@@ -25,3 +25,13 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title or f'Article #{self.id}'
+
+
+class ArticleVote(models.Model):
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='article_votes')
+    voter_username = models.SlugField(max_length=50)
+    direction = models.SmallIntegerField()  # 1 = up, -1 = down
+
+    class Meta:
+        db_table = 'article_votes'
+        unique_together = ('article', 'voter_username')
