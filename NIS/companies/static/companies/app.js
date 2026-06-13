@@ -261,6 +261,9 @@
             contactsList.innerHTML = '';
 
             const rows = [];
+            if (company.username) {
+                rows.push(['Аккаунт', `@${company.username}`]);
+            }
             if (company.contact_email) {
                 rows.push(['Email', company.contact_email]);
             }
