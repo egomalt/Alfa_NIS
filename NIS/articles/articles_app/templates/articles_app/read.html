@@ -1,0 +1,18 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>(function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();</script>
+  <title>{{ article.title|default:"Статья" }} — Career</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/career.css' %}">
+  <script src="{% static 'main/theme.js' %}" defer></script>
+  <script src="{% static 'js/career.js' %}" defer></script>
+</head>
+<body>
+  <p style="padding:80px;text-align:center;color:var(--muted);">Скоро здесь будет страница чтения статьи.</p>
+</body>
+</html>

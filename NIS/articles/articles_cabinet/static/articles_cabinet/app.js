@@ -33,6 +33,22 @@
         location.href = '/';
     }
 
+    async function deleteArticle(id, e) {
+        e.stopPropagation();
+        if (!confirm('Удалить статью? Это действие нельзя отменить.')) return;
+        try {
+            const res = await fetch(`/api/v1/articles/${id}/delete/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': CSRF() },
+            });
+            if ((await res.json()).ok) {
+                allArticles = allArticles.filter(a => a.id !== id);
+                renderStats();
+                renderGrid();
+            }
+        } catch {}
+    }
+
     async function publishArticle(id, e) {
         e.stopPropagation();
         const btn = e.currentTarget;
@@ -116,6 +132,9 @@
                       Редактировать
                     </button>
                     ${publishBtn}
+                    <button class="art-cover-btn" data-delete="${a.id}" onclick="event.stopPropagation()" style="border-color:rgba(220,50,50,.4);">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                    </button>
                   </div>
                 </div>
                 <div class="art-body">
@@ -136,6 +155,9 @@
 
         grid.querySelectorAll('[data-publish]').forEach(btn => {
             btn.addEventListener('click', e => publishArticle(Number(btn.dataset.publish), e));
+        });
+        grid.querySelectorAll('[data-delete]').forEach(btn => {
+            btn.addEventListener('click', e => deleteArticle(Number(btn.dataset.delete), e));
         });
     }
 

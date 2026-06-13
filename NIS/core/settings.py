@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'articles.constructor',
     'articles.articles_app',
     'articles.articles_cabinet',
+    'articles.articles_catalog',
     'home',
     'django.contrib.contenttypes',
     'django.contrib.staticfiles',

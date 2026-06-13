@@ -22,9 +22,9 @@
 
     /* Filters */
     .art-filters { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
-    .art-filter-btn { height: 32px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .12s; font-family: inherit; }
+    .art-filter-btn { height: 32px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .12s, color .12s, border-color .12s; font-family: inherit; }
     .art-filter-btn:hover { border-color: var(--brand); color: var(--brand-text); }
-    .art-filter-btn.active { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+    .art-filter-btn.active { background: var(--brand); border-color: var(--brand); color: var(--on-brand); font-weight: 600; }
     .art-filter-count { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); margin-left: auto; }
 
     /* Grid */
@@ -86,12 +86,13 @@
     <nav class="cr-nav">
       <a href="/" class="cr-nav-link">Главная</a>
       <a href="/companies/" class="cr-nav-link">Компании</a>
+      <a href="/articles/" class="cr-nav-link">Статьи</a>
       <a href="/tests/" class="cr-nav-link">Тесты</a>
     </nav>
-    <div style="display:flex;align-items:center;height:64px;margin-left:8px;padding-left:12px;border-left:1px solid var(--line);gap:2px;">
+    <div style="display:flex;align-items:center;margin-left:8px;padding-left:12px;border-left:1px solid var(--line);gap:4px;">
       <a href="/cabinet/user/" class="cr-nav-link">Профиль</a>
       <a href="/cabinet/user/tests/" class="cr-nav-link">Тесты</a>
-      <a href="/cabinet/user/articles/" class="cr-nav-link" style="font-weight:600;color:var(--text);border-bottom:2px solid var(--brand);">Статьи</a>
+      <a href="/cabinet/user/articles/" class="cr-nav-link active">Статьи</a>
     </div>
     <div class="cr-navbar-spacer"></div>
     <button type="button" data-theme-toggle class="cr-theme-btn">

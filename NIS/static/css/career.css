@@ -101,6 +101,7 @@ input, textarea, select {
   text-decoration: none;
   color: var(--text);
   flex-shrink: 0;
+  margin-right: 16px;
 }
 .cr-brand-mark {
   display: flex;
@@ -126,36 +127,37 @@ input, textarea, select {
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 8px;
   height: 64px;
   padding: 0 32px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
+.cr-brand { margin-right: 16px; }
 
 .cr-nav {
   display: flex;
   align-items: center;
-  height: 64px;
+  gap: 4px;
 }
 
 .cr-nav-link {
   display: inline-flex;
   align-items: center;
-  height: 64px;
+  height: 40px;
   padding: 0 14px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--muted);
+  color: var(--text-2);
   text-decoration: none;
-  border-bottom: 2px solid transparent;
-  transition: color .15s;
+  border-radius: 9px;
+  transition: background .12s, color .12s;
 }
-.cr-nav-link:hover { color: var(--text); }
+.cr-nav-link:hover { background: var(--surface-2); color: var(--text); }
 .cr-nav-link.active {
   color: var(--text);
   font-weight: 600;
-  border-bottom-color: var(--brand);
+  background: var(--surface-2);
 }
 
 .cr-navbar-spacer { flex: 1; }
@@ -182,9 +184,10 @@ input, textarea, select {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 4px 12px 4px 4px;
+  height: 36px;
+  padding: 0 12px 0 8px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 9px;
   text-decoration: none;
   color: var(--text);
   transition: border-color .15s;
@@ -196,13 +199,13 @@ input, textarea, select {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   background: var(--brand-soft);
   color: var(--brand-text);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -215,7 +218,7 @@ input, textarea, select {
   line-height: 1.3;
 }
 .cr-user-role {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--muted);
   line-height: 1.2;
 }
