@@ -50,3 +50,11 @@ def user_cabinet(request):
     if account is None or account.role != ROLE_USER:
         return redirect('/authorization/signup/')
     return render(request, 'cabinet/user.html', {'username': account.username})
+
+
+@ensure_csrf_cookie
+def user_articles_cabinet(request):
+    account = get_current_account(request)
+    if account is None or account.role != ROLE_USER:
+        return redirect('/authorization/signup/')
+    return render(request, 'cabinet/user_articles.html', {'username': account.username})

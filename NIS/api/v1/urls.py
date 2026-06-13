@@ -18,6 +18,10 @@ urlpatterns = [
     path('candidates/<slug:username>/update/', user_views.api_candidate_update, name='v1_api_candidate_update'),
     path('candidates/<slug:username>/avatar/', user_views.api_candidate_avatar, name='v1_api_candidate_avatar'),
 
+    # Articles
+    path('articles/my/',                      user_views.api_my_articles),
+    path('articles/<int:article_id>/publish/', user_views.api_article_publish),
+
     # Companies
     path('companies/',                              company_views.api_companies_list),
     path('companies/<slug:username>/',              company_views.api_company_detail),
