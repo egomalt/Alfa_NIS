@@ -1113,7 +1113,7 @@ input, textarea, select {
   display: grid;
   grid-template-columns: 1fr 300px;
   gap: 20px;
-  padding: 24px 28px;
+  padding: 24px 0;
 }
 .left-column { display: flex; flex-direction: column; gap: 20px; }
 .right-column { display: flex; flex-direction: column; gap: 20px; }

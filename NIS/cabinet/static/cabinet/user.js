@@ -115,9 +115,9 @@
 
         <div style="border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow);">
           <div style="height:88px;background:linear-gradient(120deg,var(--brand) 0%,color-mix(in srgb,var(--brand) 55%,#ff7a45) 100%);"></div>
-          <div style="padding:0 28px 24px;">
-            <div style="display:flex;align-items:flex-end;gap:18px;margin-top:-42px;">
-              <div style="position:relative;flex-shrink:0;">
+          <div style="padding:14px 28px 24px;">
+            <div style="display:flex;align-items:center;gap:18px;">
+              <div style="position:relative;flex-shrink:0;margin-top:-56px;">
                 <div style="width:90px;height:90px;border-radius:50%;background:var(--brand-soft);border:4px solid var(--surface);display:flex;align-items:center;justify-content:center;overflow:hidden;">${avatarInner}</div>
                 <button id="cd-avatar-btn" title="Сменить фото"
                   style="position:absolute;bottom:3px;right:3px;width:26px;height:26px;border-radius:50%;background:var(--text);color:var(--bg);border:2px solid var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;"
@@ -125,13 +125,13 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 </button>
               </div>
-              <div style="flex:1;padding-bottom:6px;">
+              <div style="flex:1;">
                 <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
                   <h1 style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0;">${esc(c.name)}</h1>
                   <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--brand-soft);color:var(--brand-text);">Кандидат</span>
                 </div>
               </div>
-              <div style="display:flex;gap:9px;flex-shrink:0;padding-bottom:6px;">
+              <div style="display:flex;gap:9px;flex-shrink:0;">
                 <button id="cd-edit-btn"
                   style="height:36px;padding:0 15px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);color:var(--text);font-size:13.5px;font-weight:600;cursor:pointer;"
                   onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">Редактировать</button>
