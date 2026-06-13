@@ -87,15 +87,15 @@ input, textarea, select, button { font-family: inherit; }
 .nav-links { display: flex; align-items: center; gap: 4px; flex: 1; }
 .nav-link {
   display: flex; align-items: center;
-  height: 40px; padding: 0 14px;
-  border-radius: 9px;
+  height: 64px; padding: 0 14px;
   font-size: 14px; font-weight: 500;
   color: var(--text-2); text-decoration: none;
-  transition: background .12s, color .12s;
-  cursor: pointer; border: none; background: transparent;
+  border-bottom: 2px solid transparent;
+  transition: color .12s;
+  cursor: pointer; border-top: none; border-left: none; border-right: none; background: transparent;
 }
-.nav-link:hover { background: var(--surface-2); color: var(--text); }
-.nav-link.active { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--brand); border-radius: 0; }
+.nav-link:hover { color: var(--text); }
+.nav-link.active { color: var(--text); font-weight: 600; border-bottom-color: var(--brand); }
 .nav-right { display: flex; align-items: center; gap: 10px; }
 .btn-theme {
   height: 36px; width: 36px;
