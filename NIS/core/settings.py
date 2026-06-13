@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     'profiles',
     'tests.constructor',
     'tests.tests_app',
+    'articles',
     'home',
     'django.contrib.contenttypes',
     'django.contrib.staticfiles',
