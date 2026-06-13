@@ -299,6 +299,9 @@
     }
 
     const STATUS_LABELS = { draft: 'Черновик', published: 'Опубликован' };
+    const LEVEL_LABELS  = { junior: 'Junior', middle: 'Middle', senior: 'Senior' };
+    const CAT_LABELS    = { frontend: 'Frontend', backend: 'Backend', devops: 'DevOps', analytics: 'Аналитика', other: 'Другое' };
+    const LEVEL_CLASSES = { junior: 'cr-badge-green', middle: 'cr-badge-amber', senior: 'cr-badge-brand' };
 
     function syncTestsPage(company, tests, stats) {
         setText('stat-total-tests', String(stats?.total_tests ?? 0));

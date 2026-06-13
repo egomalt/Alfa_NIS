@@ -10,6 +10,11 @@ from tests.constructor.models import Test, TestPage
 
 
 @ensure_csrf_cookie
+def tests_catalog_shell(request):
+    return render(request, 'tests_app/tests_catalog.html')
+
+
+@ensure_csrf_cookie
 def user_tests_cabinet(request):
     from authorization.models import ROLE_USER
     from authorization.views import get_current_account
@@ -166,3 +171,25 @@ def api_test_submit(request, test_id):
         'total': total,
         'results': results,
     })
+
+
+@require_GET
+def api_tests_catalog(request):
+    from companies.models import Company
+    company_names = {c.username: c.name for c in Company.objects.all()}
+    tests = Test.objects.filter(status=Test.STATUS_PUBLISHED).prefetch_related('pages')
+    result = []
+    for test in tests:
+        stats = test.stats or {}
+        result.append({
+            'id': test.id,
+            'title': test.title,
+            'description': test.description,
+            'company_username': test.company_username,
+            'company_name': company_names.get(test.company_username, test.company_username),
+            'level': stats.get('level', ''),
+            'category': stats.get('category', ''),
+            'page_count': test.pages.count(),
+            'url': f'/tests/{test.id}/',
+        })
+    return JsonResponse({'ok': True, 'tests': result})
