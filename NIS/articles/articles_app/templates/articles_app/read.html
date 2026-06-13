@@ -10,124 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <style>
-  :root {
-    --shadow-md: 0 4px 12px rgba(16,24,40,.09), 0 12px 32px rgba(16,24,40,.11);
-  }
-  [data-theme="dark"] {
-    --shadow-md: 0 4px 12px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.36);
-  }
-  * { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
-  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
-  html { scroll-behavior: smooth; }
-  body { font-family: 'Onest', system-ui, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
-  a { text-decoration: none; color: inherit; }
-  input, button { font-family: inherit; }
-
-  /* Progress bar */
-  .progress-bar { position: fixed; top: 64px; left: 0; right: 0; height: 3px; background: var(--line); z-index: 49; }
-  .progress-fill { height: 100%; background: var(--brand); width: 0%; transition: width .1s linear; }
-
-  /* Cover */
-  .cover { position: relative; height: 420px; overflow: hidden; }
-  .cover-bg { position: absolute; inset: 0; }
-  .cover-pattern { position: absolute; inset: 0; }
-  .cover-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(14,17,23,.7) 0%, transparent 60%); }
-  .breadcrumb { position: absolute; top: 24px; left: 32px; display: flex; align-items: center; gap: 6px; }
-  .bc-link { display: flex; align-items: center; gap: 5px; height: 30px; padding: 0 12px; border-radius: 7px; background: rgba(255,255,255,.15); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.9); font-size: 12.5px; cursor: pointer; transition: background .15s; text-decoration: none; }
-  .bc-link:hover { background: rgba(255,255,255,.24); }
-  .bc-sep { color: rgba(255,255,255,.4); font-size: 13px; }
-  .bc-current { color: rgba(255,255,255,.65); font-size: 12.5px; }
-  .cover-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 32px; }
-  .cover-tags { display: flex; gap: 7px; margin-bottom: 14px; }
-  .cover-tag { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 6px; background: rgba(255,255,255,.18); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.92); }
-  .cover-title { font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1.2; color: #fff; max-width: 720px; }
-
-  /* Layout */
-  .layout { max-width: 1160px; margin: 0 auto; padding: 44px 32px 100px; display: grid; grid-template-columns: 1fr 300px; gap: 48px; align-items: start; }
-  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } .art-sidebar { display: none; } }
-
-  /* Article */
-  .article { min-width: 0; }
-
-  /* Meta row */
-  .meta-row { display: flex; align-items: center; gap: 16px; margin-bottom: 36px; padding-bottom: 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-  .author-block { display: flex; align-items: center; gap: 11px; }
-  .author-av { width: 40px; height: 40px; border-radius: 10px; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .author-name { font-size: 14.5px; font-weight: 700; }
-  .author-sub { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
-  .meta-divider { width: 1px; height: 36px; background: var(--line); flex-shrink: 0; }
-  .meta-item { display: flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
-  .meta-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-  .btn-share { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 12.5px; font-weight: 500; cursor: pointer; transition: all .15s; }
-  .btn-share:hover { border-color: var(--brand); color: var(--brand-text); background: var(--brand-soft); }
-  .btn-save { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); cursor: pointer; transition: all .15s; }
-  .btn-save:hover { border-color: var(--brand); color: var(--brand-text); background: var(--brand-soft); }
-
-  /* Prose */
-  .prose { font-size: 17px; line-height: 1.85; color: var(--text-2); }
-  .prose p { margin-bottom: 1.3em; }
-  .prose h2 { font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -.025em; margin: 2.2em 0 .6em; line-height: 1.25; }
-  .prose h3 { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -.015em; margin: 1.8em 0 .5em; line-height: 1.3; }
-  .prose strong { font-weight: 700; color: var(--text); }
-  .prose em { font-style: italic; }
-  .prose a { color: var(--brand-text); text-decoration: underline; text-underline-offset: 3px; }
-  .prose blockquote { border-left: 3px solid var(--brand); margin: 1.8em 0; padding: 6px 0 6px 24px; color: var(--muted); font-size: 18px; font-style: italic; line-height: 1.7; }
-  .prose ul, .prose ol { padding-left: 26px; margin-bottom: 1.3em; }
-  .prose li { margin-bottom: .45em; }
-  .prose code { font-family: 'JetBrains Mono', monospace; font-size: 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; color: var(--brand-text); }
-  .prose pre { background: #161B23; border-radius: 14px; padding: 24px 26px; margin: 1.8em 0; overflow-x: auto; border: 1px solid var(--line); }
-  .prose pre code { background: none; border: none; padding: 0; font-size: 14px; color: #e8ebf1; line-height: 1.7; }
-  .prose hr { border: none; border-top: 1px solid var(--line); margin: 2.5em 0; }
-  .prose .lead { font-size: 19px; color: var(--text); font-weight: 500; line-height: 1.7; margin-bottom: 1.8em; }
-
-  /* Vote widget */
-  .vote-row { margin: 48px 0 36px; display: flex; align-items: center; gap: 12px; }
-  .vote-widget { display: flex; align-items: center; gap: 0; background: var(--surface); border: 1.5px solid var(--line-2); border-radius: 999px; overflow: hidden; }
-  .vote-btn { display: flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border: none; background: transparent; color: var(--muted); font-size: 14px; font-weight: 700; cursor: pointer; transition: background .12s, color .12s; font-family: 'Onest', sans-serif; }
-  .vote-btn:hover { background: var(--surface-2); }
-  .vote-btn.up.active { color: var(--brand-text); background: var(--brand-soft); }
-  .vote-btn.down.active { color: #6b3fa0; background: rgba(107,63,160,.1); }
-  .vote-sep { width: 1px; height: 22px; background: var(--line-2); flex-shrink: 0; }
-  .vote-count { padding: 0 14px; font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text-2); min-width: 36px; text-align: center; transition: color .15s; }
-  .vote-count.up { color: var(--brand-text); }
-  .vote-count.down { color: #6b3fa0; }
-
-  /* Author card */
-  .author-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 28px; margin-bottom: 36px; }
-  .author-card-top { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
-  .author-card-av { width: 52px; height: 52px; border-radius: 13px; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .author-card-name { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
-  .author-card-role { font-size: 13px; color: var(--muted); }
-  .author-bio { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
-  .author-stats { display: flex; gap: 20px; }
-  .author-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; }
-  .author-stat-label { font-size: 11.5px; color: var(--faint); margin-top: 1px; }
-
-  /* Sidebar */
-  .art-sidebar { position: sticky; top: 80px; display: flex; flex-direction: column; gap: 20px; }
-  .sidebar-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
-  .sidebar-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); margin-bottom: 14px; }
-
-  /* TOC */
-  .toc-list { display: flex; flex-direction: column; gap: 2px; }
-  .toc-item { display: flex; gap: 8px; align-items: baseline; padding: 5px 8px; border-radius: 7px; cursor: pointer; transition: background .12s; text-decoration: none; color: inherit; }
-  .toc-item:hover { background: var(--surface-2); }
-  .toc-item.active { background: var(--brand-soft); }
-  .toc-item.active .toc-text { color: var(--brand-text); font-weight: 600; }
-  .toc-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--faint); flex-shrink: 0; min-width: 18px; }
-  .toc-text { font-size: 13px; color: var(--text-2); line-height: 1.4; }
-  .toc-item.h3 { padding-left: 20px; }
-  .toc-item.h3 .toc-text { font-size: 12px; color: var(--muted); }
-
-  /* Related */
-  .related-list { display: flex; flex-direction: column; gap: 12px; }
-  .related-item { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; padding: 6px; margin: -6px; border-radius: 9px; transition: background .12s; text-decoration: none; color: inherit; }
-  .related-item:hover { background: var(--surface-2); }
-  .related-thumb { width: 52px; height: 52px; border-radius: 9px; flex-shrink: 0; }
-  .related-title { font-size: 13px; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .related-meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
-  </style>
+  <link rel="stylesheet" href="{% static 'articles_app/css/app.css' %}">
   <script src="{% static 'main/theme.js' %}" defer></script>
   <script src="{% static 'js/career.js' %}?v=20260613-1" defer></script>
 </head>
@@ -193,10 +76,8 @@
 <!-- Layout -->
 <div class="layout">
 
-  <!-- Article -->
   <article class="article">
 
-    <!-- Meta -->
     <div class="meta-row">
       <div class="author-block">
         <div class="author-av" style="background:{{ av_bg }};color:{{ av_fg }};">{{ initial }}</div>
@@ -232,12 +113,10 @@
       </div>
     </div>
 
-    <!-- Content -->
     <div class="prose" id="article-content">
       {% if article.content %}{{ article.content|safe }}{% endif %}
     </div>
 
-    <!-- Vote -->
     <div class="vote-row">
       <div class="vote-widget">
         <button class="vote-btn up {% if user_vote == 1 %}active{% endif %}" id="btn-up" onclick="vote('up')">
@@ -253,7 +132,6 @@
       </div>
     </div>
 
-    <!-- Author card -->
     <div class="author-card">
       <div class="author-card-top">
         <div class="author-card-av" style="background:{{ av_bg }};color:{{ av_fg }};">{{ initial }}</div>
@@ -281,7 +159,6 @@
 
   </article>
 
-  <!-- Sidebar -->
   <aside class="art-sidebar">
     <div class="sidebar-card" id="toc-card" style="display:none;">
       <div class="sidebar-title">Содержание</div>
@@ -312,75 +189,7 @@
 const ARTICLE_ID = {{ article.id }};
 const IS_LOGGED_IN = {{ is_logged_in|yesno:"true,false" }};
 let userVote = {{ user_vote|default:"null" }};
-
-// Progress bar
-window.addEventListener('scroll', () => {
-  const doc = document.documentElement;
-  const scrolled = doc.scrollTop || document.body.scrollTop;
-  const total = doc.scrollHeight - doc.clientHeight;
-  document.getElementById('progress-fill').style.width = (total > 0 ? (scrolled / total) * 100 : 0) + '%';
-  updateTOC();
-}, { passive: true });
-
-// Auto-build TOC from headings
-(function buildTOC() {
-  const headings = [...document.querySelectorAll('#article-content h2, #article-content h3')]
-    .filter(h => h.textContent.trim());
-  if (!headings.length) return;
-  const toc = document.getElementById('toc');
-  headings.forEach((h, i) => {
-    if (!h.id) h.id = 'toc-h' + i;
-    const item = document.createElement('a');
-    item.className = 'toc-item' + (h.tagName === 'H3' ? ' h3' : '');
-    item.href = '#' + h.id;
-    item.innerHTML = `<span class="toc-num">${String(i + 1).padStart(2,'0')}</span><span class="toc-text">${h.textContent.trim()}</span>`;
-    toc.appendChild(item);
-  });
-  document.getElementById('toc-card').style.display = '';
-})();
-
-function updateTOC() {
-  const items = document.querySelectorAll('#article-content h2[id], #article-content h3[id]');
-  let active = null;
-  items.forEach(h => {
-    if (h.getBoundingClientRect().top <= 120) active = h.id;
-  });
-  document.querySelectorAll('.toc-item').forEach(item => {
-    item.classList.toggle('active', item.getAttribute('href') === '#' + active);
-  });
-}
-
-// Vote
-async function vote(dir) {
-  if (!IS_LOGGED_IN) { location.href = '/authorization/signin/?next=' + encodeURIComponent(location.pathname); return; }
-  const direction = dir === 'up' ? 1 : -1;
-  try {
-    const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-    const res = await fetch(`/api/v1/articles/${ARTICLE_ID}/vote/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-      body: JSON.stringify({ direction }),
-    });
-    const data = await res.json();
-    if (!data.ok) return;
-    userVote = data.user_vote;
-    const counter = document.getElementById('vote-count');
-    counter.textContent = data.score;
-    counter.className = 'vote-count' + (userVote === 1 ? ' up' : userVote === -1 ? ' down' : '');
-    document.getElementById('btn-up').classList.toggle('active', userVote === 1);
-    document.getElementById('btn-down').classList.toggle('active', userVote === -1);
-  } catch (e) { /* ignore */ }
-}
-
-// Share / copy link
-function copyLink() {
-  navigator.clipboard.writeText(location.href).catch(() => {});
-  const btn = document.getElementById('btn-share-top');
-  const orig = btn.innerHTML;
-  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Скопировано';
-  btn.style.cssText = 'border-color:var(--green-text);color:var(--green-text);background:var(--green-soft);';
-  setTimeout(() => { btn.innerHTML = orig; btn.style.cssText = ''; }, 1800);
-}
 </script>
+<script src="{% static 'articles_app/js/app.js' %}"></script>
 </body>
 </html>
