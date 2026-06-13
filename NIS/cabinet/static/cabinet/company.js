@@ -195,6 +195,7 @@
         if (contactsList) {
             contactsList.innerHTML = '';
             const rows = [];
+            if (company.username) rows.push(['Аккаунт', `@${company.username}`]);
             if (company.contact_email) rows.push(['Email', company.contact_email]);
             if (company.phone) rows.push(['Телефон', company.phone]);
             if (company.website) rows.push(['Сайт', company.website]);
@@ -528,6 +529,7 @@
 
         const logoutBtn = document.getElementById('company-logout-btn');
         if (logoutBtn) {
+            logoutBtn.hidden = false;
             logoutBtn.addEventListener('click', async () => {
                 await fetch('/api/v1/auth/signout/', { method: 'POST', headers: { 'X-CSRFToken': getCsrfToken() } });
                 window.location.assign('/');
