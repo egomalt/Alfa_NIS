@@ -28,6 +28,7 @@ urlpatterns = [
     # Tests — constructor (CRUD)
     path('tests/',                              constructor_views.api_tests_list),
     path('tests/create/',                       constructor_views.api_tests_create),
+    path('tests/catalog/',                      test_views.api_tests_catalog),
     path('tests/<int:test_id>/',                constructor_views.api_test_detail),
     path('tests/<int:test_id>/publish/',        constructor_views.api_test_publish),
     path('tests/pages/<int:page_id>/run/',      constructor_views.api_code_run),
