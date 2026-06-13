@@ -4,6 +4,7 @@ import authorization.views as auth_views
 import companies.views as company_views
 import tests.constructor.views as constructor_views
 import tests.tests_app.views as test_views
+import articles.views as article_views
 import users.views as user_views
 
 urlpatterns = [
@@ -19,8 +20,8 @@ urlpatterns = [
     path('candidates/<slug:username>/avatar/', user_views.api_candidate_avatar, name='v1_api_candidate_avatar'),
 
     # Articles
-    path('articles/my/',                      user_views.api_my_articles),
-    path('articles/<int:article_id>/publish/', user_views.api_article_publish),
+    path('articles/my/',                      article_views.api_my_articles),
+    path('articles/<int:article_id>/publish/', article_views.api_article_publish),
 
     # Companies
     path('companies/',                              company_views.api_companies_list),
