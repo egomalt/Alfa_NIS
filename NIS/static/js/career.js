@@ -11,7 +11,13 @@
     try {
       const res = await fetch('/api/v1/auth/me/');
       const data = await res.json();
-      if (!data.ok || !data.account) return;
+      if (!data.ok || !data.account) {
+        const next = encodeURIComponent(location.pathname);
+        el.innerHTML = `
+          <a href="/authorization/signin/?next=${next}" class="mini-link-button">Войти</a>
+          <a href="/authorization/signup/?next=${next}" class="mini-link-button" style="background:var(--brand);color:var(--on-brand);border-color:transparent;">Регистрация</a>`;
+        return;
+      }
       const a = data.account;
       const avatarInner = a.avatar
         ? `<img src="${esc(a.avatar)}" alt="">`

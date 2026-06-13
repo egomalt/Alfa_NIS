@@ -428,9 +428,15 @@ main {
   fetch('/api/v1/auth/me/')
     .then(r => r.json())
     .then(data => {
-      if (!data.ok || !data.account) return;
-      const a = data.account;
       const chip = document.getElementById('nav-user-chip');
+      if (!data.ok || !data.account) {
+        const next = encodeURIComponent(location.pathname);
+        chip.innerHTML = `
+          <a href="/authorization/signin/?next=${next}" style="display:inline-flex;align-items:center;height:34px;padding:0 13px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none;background:var(--surface);">Войти</a>
+          <a href="/authorization/signup/?next=${next}" style="display:inline-flex;align-items:center;height:34px;padding:0 13px;border:1px solid transparent;border-radius:8px;font-size:13px;font-weight:500;color:#fff;text-decoration:none;background:var(--brand);">Регистрация</a>`;
+        return;
+      }
+      const a = data.account;
       const avatarInner = a.avatar
         ? `<img src="${esc(a.avatar)}" alt="">`
         : esc((a.name||a.username||'?')[0].toUpperCase());
