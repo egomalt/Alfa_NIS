@@ -1,0 +1,106 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token }}">
+<script>
+  (function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<title>Решения — Career</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{% static 'css/career.css' %}">
+<style>
+.cc-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 64px); }
+.cc-sidebar { border-right: 1px solid var(--line); background: var(--surface); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
+.cc-company-chip { display: flex; align-items: center; gap: 10px; padding: 10px 10px 18px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.cc-company-avatar { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background: var(--brand-soft); color: var(--brand-text); font-weight: 700; font-size: 16px; flex-shrink: 0; }
+.cc-side-link { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 10px; font-size: 13.5px; color: var(--text-2); text-decoration: none; transition: background .12s, color .12s; }
+.cc-side-link:hover { background: var(--surface-2); }
+.cc-side-link.active { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
+.cc-side-link svg { flex-shrink: 0; opacity: .75; }
+.cc-side-link.active svg { opacity: 1; }
+.cs-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px; }
+.cs-stat-card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 16px 18px; }
+.cs-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
+.cs-stat-label { font-size: 12.5px; color: var(--muted); }
+.cs-filter-btn { height: 32px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .12s; }
+.cs-filter-btn:hover { border-color: var(--brand); color: var(--brand-text); }
+.cs-filter-btn.active { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.cs-sub-card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 18px 20px; margin-bottom: 12px; }
+.cs-sub-card.liked { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
+.cs-sub-top { display: flex; align-items: center; gap: 12px; }
+.cs-cand-av { width: 36px; height: 36px; border-radius: 9px; background: var(--surface-2); color: var(--text-2); font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cs-status-pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; margin-left: auto; white-space: nowrap; }
+.cs-btn-like { width: 34px; height: 34px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface); color: var(--faint); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .12s; flex-shrink: 0; }
+.cs-btn-like:hover { border-color: var(--brand); color: var(--brand-text); }
+.cs-btn-like.liked { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-text); }
+.cs-sub-body { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.cs-file-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--bg); margin-bottom: 10px; }
+.cs-file-row svg { flex-shrink: 0; color: var(--muted); }
+.cs-btn-download { height: 28px; padding: 0 11px; border: 1px solid var(--line-2); border-radius: 7px; background: var(--surface); color: var(--text-2); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .12s; text-decoration: none; display: inline-flex; align-items: center; }
+.cs-btn-download:hover { border-color: var(--brand); color: var(--brand-text); }
+.cs-btn-accept { height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: var(--green-text); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+.cs-btn-accept:hover { opacity: .88; }
+.cs-btn-reject { height: 34px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .12s; }
+.cs-btn-reject:hover { border-color: var(--red-text); color: var(--red-text); }
+.cs-btn-winner { height: 34px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .12s; }
+.cs-btn-winner:hover { border-color: var(--amber-text); color: var(--amber-text); }
+.cs-btn-winner.is-winner { background: var(--amber-soft); border-color: var(--amber-text); color: var(--amber-text); }
+.cs-winner-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--amber-soft); color: var(--amber-text); }
+.cs-empty { padding: 64px; text-align: center; border: 2px dashed var(--line-2); border-radius: 16px; }
+.cs-btn-contact { height: 34px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .12s; }
+.cs-btn-contact:hover { border-color: var(--brand); color: var(--brand-text); }
+#cs-contact-popup { position: absolute; z-index: 999; width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+</style>
+<script>
+  window.ALFA_APP_BOOTSTRAP = { username: "{{ username|escapejs }}", contestId: {{ contest_id }}, page: "contests" };
+</script>
+<script src="{% static 'main/theme.js' %}" defer></script>
+<script src="{% static 'js/career.js' %}?v=20260613-1" defer></script>
+<script type="module" src="{% static 'contests/contests_cabinet/contest_submissions.js' %}?v=20260718-1"></script>
+</head>
+<body>
+
+{% include 'partials/navbar.html' with chip_id='company-user-chip' %}
+
+<div class="cc-layout">
+  {% include 'contests/contests_cabinet/_sidebar.html' with active='contests' username=username %}
+
+  <main style="padding:28px 32px 60px;overflow-y:auto;">
+    <a href="/cabinet/company/contests/"
+      style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text-2);font-size:13px;text-decoration:none;margin-bottom:16px;"
+      onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-2)'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
+      Все конкурсы
+    </a>
+
+    <div id="cs-page-header" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div id="cs-title" style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:5px;">Загрузка…</div>
+        <div style="font-size:14px;color:var(--muted);display:flex;align-items:center;gap:8px;">
+          <span id="cs-status-chip" style="font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--green-soft);color:var(--green-text);" hidden></span>
+          <span id="cs-deadline-text"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cs-stats" id="cs-stats"></div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+      <button class="cs-filter-btn active" data-f="all">Все</button>
+      <button class="cs-filter-btn" data-f="pending">На проверке</button>
+      <button class="cs-filter-btn" data-f="accepted">Приняты</button>
+      <button class="cs-filter-btn" data-f="rejected">Отклонены</button>
+      <button class="cs-filter-btn" data-f="liked">Понравившиеся ♥</button>
+      <span id="cs-filter-count" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-left:auto;"></span>
+    </div>
+
+    <div id="cs-sub-list"></div>
+  </main>
+</div>
+
+</body>
+</html>

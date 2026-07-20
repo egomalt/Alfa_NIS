@@ -112,6 +112,10 @@
         setText('topbar-company-name', company.name || 'Компания');
         const initial = (company.name || 'A').charAt(0).toUpperCase();
         setText('topbar-avatar-placeholder', initial);
+        const sName = document.getElementById('sidebar-name');
+        const sAv = document.getElementById('sidebar-avatar');
+        if (sName) sName.textContent = company.name || company.username || '';
+        if (sAv) sAv.textContent = initial;
         const avatar = document.getElementById('topbar-avatar');
         const placeholder = document.getElementById('topbar-avatar-placeholder');
         if (avatar && placeholder) {

@@ -1,0 +1,230 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token }}">
+<script>
+  (function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<title>Конструктор конкурса — Career</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{% static 'css/career.css' %}">
+<style>
+html, body { height: 100%; }
+.ccon-app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+.ccon-topbar { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.ccon-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); }
+.ccon-logo-icon { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; background: var(--brand); }
+.ccon-divider { width: 1px; height: 24px; background: var(--line); flex-shrink: 0; }
+.ccon-btn-back { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; cursor: pointer; text-decoration: none; transition: color .15s; }
+.ccon-btn-back:hover { color: var(--text); }
+.ccon-badge-draft { font-size: 12px; color: var(--muted); padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; white-space: nowrap; }
+.ccon-badge-pub { font-size: 12px; color: var(--green-text); padding: 3px 9px; border: 1px solid var(--green-text); border-radius: 999px; white-space: nowrap; background: var(--green-soft); }
+.ccon-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: color .15s; }
+.ccon-btn:hover { color: var(--text); }
+.ccon-btn-save { height: 34px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.ccon-btn-save.saved { border-color: var(--green-text); color: var(--green-text); background: var(--green-soft); }
+.ccon-btn-publish { height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: var(--brand); color: var(--on-brand); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
+.ccon-btn-publish:hover { background: var(--brand-strong); }
+.ccon-body { display: grid; grid-template-columns: 260px 1fr; flex: 1; min-height: 0; overflow: hidden; }
+.ccon-sidebar { border-right: 1px solid var(--line); background: var(--surface); padding: 16px; overflow-y: auto; }
+.ccon-sidebar-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); margin-bottom: 10px; }
+.ccon-sec-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--text-2); transition: background .1s, color .1s; }
+.ccon-sec-item:hover { background: var(--surface-2); }
+.ccon-sec-item.active { background: var(--brand-soft); color: var(--brand-text); }
+.ccon-sec-item svg { flex-shrink: 0; opacity: .75; }
+.ccon-sec-item.active svg { opacity: 1; }
+.ccon-sec-num { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 5px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; flex-shrink: 0; background: var(--surface-2); color: var(--text-2); }
+.ccon-sec-item.active .ccon-sec-num { background: var(--brand); color: #fff; }
+.ccon-hint-box { border: 1px dashed var(--line-2); border-radius: 12px; padding: 14px; font-size: 12.5px; color: var(--muted); line-height: 1.6; margin-top: 16px; }
+.ccon-editor { display: flex; flex-direction: column; background: var(--bg); overflow-y: auto; }
+.ccon-editor-content { padding: 32px; max-width: 760px; display: flex; flex-direction: column; gap: 26px; }
+.ccon-panel { display: none; flex-direction: column; gap: 20px; }
+.ccon-panel.active { display: flex; }
+.ccon-field-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin-bottom: 8px; }
+.ccon-field-hint { font-size: 12px; color: var(--faint); margin-top: 6px; }
+.ccon-inp { width: 100%; height: 44px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); color: var(--text); font-size: 15px; outline: none; transition: border-color .15s; box-sizing: border-box; }
+.ccon-inp:focus { border-color: var(--brand); }
+.ccon-ta { width: 100%; padding: 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); color: var(--text); font-size: 14px; line-height: 1.65; outline: none; transition: border-color .15s; resize: vertical; box-sizing: border-box; font-family: inherit; }
+.ccon-ta:focus { border-color: var(--brand); }
+.ccon-sel-wrap { position: relative; }
+.ccon-sel-wrap select { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; padding: 0 34px 0 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); color: var(--text); font-size: 14.5px; outline: none; cursor: pointer; transition: border-color .15s; box-sizing: border-box; font-family: inherit; }
+.ccon-sel-wrap select:focus { border-color: var(--brand); }
+.ccon-sel-wrap svg { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.ccon-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ccon-rule-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ccon-rule-num { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: var(--surface-2); color: var(--text-2); font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.ccon-rule-inp { flex: 1; height: 40px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface); color: var(--text); font-size: 14px; outline: none; transition: border-color .15s; font-family: inherit; }
+.ccon-rule-inp:focus { border-color: var(--brand); }
+.ccon-btn-rm-rule { height: 36px; width: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--faint); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color .15s, color .15s; flex-shrink: 0; }
+.ccon-btn-rm-rule:hover { border-color: var(--red-text); color: var(--red-text); }
+.ccon-btn-add-rule { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px dashed var(--line-2); border-radius: 8px; background: transparent; color: var(--muted); font-size: 13px; cursor: pointer; transition: border-color .15s, color .15s; font-family: inherit; }
+.ccon-btn-add-rule:hover { border-color: var(--brand); color: var(--brand-text); }
+.ccon-type-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.ccon-type-card { border: 1.5px solid var(--line-2); border-radius: 12px; padding: 14px; cursor: pointer; transition: all .12s; }
+.ccon-type-card:hover { border-color: var(--brand); }
+.ccon-type-card.active { border-color: var(--brand); background: var(--brand-soft); }
+.ccon-file-drop { border: 2px dashed var(--line-2); border-radius: 12px; padding: 22px; text-align: center; background: var(--surface); cursor: pointer; transition: border-color .15s; margin-bottom: 10px; }
+.ccon-file-drop:hover { border-color: var(--brand); }
+.ccon-attach-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); margin-bottom: 8px; }
+.ccon-attach-row svg { flex-shrink: 0; color: var(--muted); }
+.ccon-btn-rm-attach { width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--faint); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color .15s, color .15s; flex-shrink: 0; }
+.ccon-btn-rm-attach:hover { border-color: var(--red-text); color: var(--red-text); }
+</style>
+<script>
+  window.ALFA_APP_BOOTSTRAP = {
+    username: "{{ username|escapejs }}",
+    contestId: {% if contest_id %}{{ contest_id }}{% else %}null{% endif %},
+    page: "constructor"
+  };
+</script>
+<script src="{% static 'main/theme.js' %}" defer></script>
+<script src="{% static 'js/career.js' %}?v=20260613-1" defer></script>
+<script type="module" src="{% static 'contests/contests_cabinet/contest_constructor.js' %}?v=20260718-1"></script>
+</head>
+<body>
+
+<div class="ccon-app">
+  <header class="ccon-topbar">
+    <a href="/" class="ccon-logo">
+      <span class="ccon-logo-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><rect x="3.5" y="13" width="4.3" height="8" rx="1.4"/><rect x="9.85" y="8" width="4.3" height="13" rx="1.4"/><rect x="16.2" y="3" width="4.3" height="18" rx="1.4"/></svg></span>
+      <span style="font-weight:700;font-size:14px;">Career</span>
+    </a>
+    <a href="/cabinet/company/contests/" class="ccon-btn-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
+      Назад
+    </a>
+    <div class="ccon-divider"></div>
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"/></svg>
+      <span id="ccon-name-display" style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Новый конкурс</span>
+      <span id="ccon-badge" class="ccon-badge-draft">Черновик</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;margin-left:auto;">
+      <button class="ccon-btn" id="ccon-preview-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Предпросмотр
+      </button>
+      <button class="ccon-btn-save" id="ccon-save-btn">Сохранить</button>
+      <button class="ccon-btn-publish" id="ccon-publish-btn">Опубликовать</button>
+      <button type="button" data-theme-toggle class="cr-theme-btn" style="height:34px;width:34px;border-radius:8px;">
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.3 6.3 0 0 0 10.5 10.5Z"/></svg>
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="ccon-body">
+    <aside class="ccon-sidebar">
+      <div class="ccon-sidebar-label">Разделы</div>
+      <div id="ccon-sec-list"></div>
+      <div class="ccon-hint-box">Конкурс — это один кейс с дедлайном. Участники регистрируются, изучают условия и присылают решение до указанной даты.</div>
+    </aside>
+
+    <div class="ccon-editor">
+      <div class="ccon-editor-content">
+
+        <!-- Основное -->
+        <div class="ccon-panel" data-panel="basics">
+          <div>
+            <div class="ccon-field-label">Название конкурса</div>
+            <input class="ccon-inp" id="ccon-title" placeholder="Введите название конкурса">
+          </div>
+          <div class="ccon-row2">
+            <div>
+              <div class="ccon-field-label">Категория</div>
+              <div class="ccon-sel-wrap">
+                <select id="ccon-cat">
+                  <option value="Backend">Backend</option>
+                  <option value="Frontend">Frontend</option>
+                  <option value="DevOps">DevOps</option>
+                  <option value="Аналитика">Аналитика</option>
+                  <option value="Дизайн">Дизайн</option>
+                  <option value="Карьера">Карьера</option>
+                </select>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+            </div>
+            <div>
+              <div class="ccon-field-label">Уровень</div>
+              <div class="ccon-sel-wrap">
+                <select id="ccon-level">
+                  <option value="Junior">Junior</option>
+                  <option value="Middle" selected>Middle</option>
+                  <option value="Senior">Senior</option>
+                </select>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="ccon-row2">
+            <div>
+              <div class="ccon-field-label">Дедлайн приёма решений</div>
+              <input class="ccon-inp" type="date" id="ccon-deadline">
+              <div class="ccon-field-hint">После этой даты приём решений закрывается автоматически</div>
+            </div>
+            <div>
+              <div class="ccon-field-label">Приз / вознаграждение <span style="font-weight:400;text-transform:none;color:var(--faint);">— необязательно</span></div>
+              <input class="ccon-inp" id="ccon-prize" placeholder="например: офер на стажировку">
+            </div>
+          </div>
+          <div>
+            <div class="ccon-field-label">Краткое описание</div>
+            <textarea class="ccon-ta" id="ccon-excerpt" rows="3" placeholder="Одна-две фразы для карточки конкурса в списке"></textarea>
+          </div>
+        </div>
+
+        <!-- Кейс и данные -->
+        <div class="ccon-panel" data-panel="case">
+          <div>
+            <div class="ccon-field-label">Стартовые файлы <span style="font-weight:400;text-transform:none;color:var(--faint);">— данные, шаблон, код для старта</span></div>
+            <div class="ccon-file-drop" id="ccon-file-drop" onclick="document.getElementById('ccon-attach-input').click()">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6M9 15l3 3 3-3"/></svg>
+              <div style="font-size:13.5px;font-weight:600;margin-bottom:3px;">Нажмите или перетащите файлы</div>
+              <div style="font-size:12px;color:var(--muted);">Датасеты, шаблон проекта, ТЗ — до 100 МБ на файл</div>
+            </div>
+            <input type="file" id="ccon-attach-input" multiple style="display:none;">
+            <div id="ccon-attach-list"></div>
+            <div class="ccon-field-hint">Эти файлы увидят и смогут скачать все зарегистрированные участники</div>
+          </div>
+          <div>
+            <div class="ccon-field-label">Описание кейса</div>
+            <textarea class="ccon-ta" id="ccon-case" rows="14" placeholder="Опишите бизнес-контекст, входные данные, что нужно сделать и в каком формате прислать решение…"></textarea>
+          </div>
+        </div>
+
+        <!-- Правила -->
+        <div class="ccon-panel" data-panel="rules">
+          <div>
+            <div class="ccon-field-label">Правила участия</div>
+            <div id="ccon-rules-list"></div>
+            <button class="ccon-btn-add-rule" id="ccon-add-rule-btn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              Добавить правило
+            </button>
+          </div>
+        </div>
+
+        <!-- Решение -->
+        <div class="ccon-panel" data-panel="submission">
+          <div>
+            <div class="ccon-field-label">Формат решения участника</div>
+            <div class="ccon-type-cards" id="ccon-type-cards"></div>
+            <div class="ccon-field-hint">Как именно кандидаты будут присылать решение на этот кейс</div>
+          </div>
+          <div>
+            <div class="ccon-field-label">Инструкция к полю решения</div>
+            <input class="ccon-inp" id="ccon-sub-hint" placeholder="Например: Прикрепите файл с решением (PDF, ZIP, DOCX до 25 МБ)">
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

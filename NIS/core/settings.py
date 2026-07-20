@@ -23,6 +23,8 @@ INSTALLED_APPS = [
     'articles.articles_app',
     'articles.articles_cabinet',
     'articles.articles_catalog',
+    'contests.contests_cabinet',
+    'contests.contests_app',
     'home',
     'django.contrib.contenttypes',
     'django.contrib.staticfiles',
@@ -46,7 +48,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

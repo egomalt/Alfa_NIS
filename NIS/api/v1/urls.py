@@ -10,6 +10,7 @@ import articles.articles_cabinet.views as article_cabinet_views
 import articles.articles_catalog.views as article_catalog_views
 import articles.articles_app.views as article_read_views
 import users.views as user_views
+import contests.contests_cabinet.api_views as contest_views
 
 urlpatterns = [
     # Auth
@@ -50,4 +51,18 @@ urlpatterns = [
     # Tests — taking (view & submit)
     path('tests/<int:test_id>/view/',           test_views.api_test_view),
     path('tests/<int:test_id>/submit/',         test_views.api_test_submit),
+
+    # Contests — company cabinet
+    path('contests/company/',                                         contest_views.api_company_contests),
+    path('contests/',                                                 contest_views.api_contest_create),
+    path('contests/catalog/',                                         contest_views.api_contests_catalog),
+    path('contests/<int:contest_id>/',                                contest_views.api_contest_detail),
+    path('contests/<int:contest_id>/publish/',                        contest_views.api_contest_publish),
+    path('contests/<int:contest_id>/submissions/',                    contest_views.api_contest_submissions),
+    path('contests/<int:contest_id>/submissions/<int:sub_id>/',       contest_views.api_submission_update),
+    path('contests/<int:contest_id>/submissions/<int:sub_id>/like/',  contest_views.api_submission_like),
+    path('contests/<int:contest_id>/submissions/<int:sub_id>/winner/', contest_views.api_submission_winner),
+    # Contests — public / candidate
+    path('contests/<int:contest_id>/submit/',                         contest_views.api_contest_submit),
+    path('contests/<int:contest_id>/my-submissions/',                 contest_views.api_my_submissions),
 ]
