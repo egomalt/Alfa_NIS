@@ -1,6 +1,6 @@
 const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
 const USERNAME = BOOTSTRAP.username || '';
-const CONTEST_ID = BOOTSTRAP.contestId || null;
+let contestId = BOOTSTRAP.contestId || null;
 
 function csrf() {
   return document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -148,13 +148,13 @@ async function doSave() {
     btn.textContent = 'Сохранение…';
     btn.disabled = true;
     let res;
-    if (CONTEST_ID) {
-      res = await api(`/api/v1/contests/${CONTEST_ID}/`, { method: 'PUT', body: JSON.stringify(body) });
+    if (contestId) {
+      res = await api(`/api/v1/contests/${contestId}/`, { method: 'PUT', body: JSON.stringify(body) });
     } else {
       res = await api('/api/v1/contests/', { method: 'POST', body: JSON.stringify(body) });
       if (res.contest?.id) {
-        history.replaceState({}, '', `/cabinet/company/contests/${res.contest.id}/edit/`);
-        BOOTSTRAP.contestId = res.contest.id;
+        contestId = res.contest.id;
+        history.replaceState({}, '', `/cabinet/company/contests/${contestId}/edit/`);
       }
     }
     btn.textContent = '✓ Сохранено';
@@ -169,10 +169,9 @@ async function doSave() {
 
 async function doPublish() {
   await doSave();
-  const id = CONTEST_ID || BOOTSTRAP.contestId;
-  if (!id) { alert('Сначала сохраните конкурс'); return; }
+  if (!contestId) { alert('Сначала сохраните конкурс'); return; }
   try {
-    await api(`/api/v1/contests/${id}/publish/`, { method: 'POST' });
+    await api(`/api/v1/contests/${contestId}/publish/`, { method: 'POST' });
     currentStatus = 'active';
     updateBadge();
   } catch (err) {
@@ -181,9 +180,9 @@ async function doPublish() {
 }
 
 async function load() {
-  if (!CONTEST_ID) return;
+  if (!contestId) return;
   try {
-    const data = await api(`/api/v1/contests/${CONTEST_ID}/`);
+    const data = await api(`/api/v1/contests/${contestId}/`);
     fillForm(data.contest || data);
   } catch (_) {}
 }
@@ -202,8 +201,7 @@ document.getElementById('ccon-attach-input').addEventListener('change', e => {
   renderAttachments();
 });
 document.getElementById('ccon-preview-btn').addEventListener('click', () => {
-  const id = CONTEST_ID || BOOTSTRAP.contestId;
-  if (id) location.href = `/contests/${id}/`;
+  if (contestId) location.href = `/contests/${contestId}/`;
   else alert('Сохраните конкурс для предпросмотра');
 });
 
