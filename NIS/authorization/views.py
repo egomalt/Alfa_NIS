@@ -120,6 +120,7 @@ def api_me(request):
             'username': account.username,
             'name': account.name,
             'role': account.role,
+            'email': account.email or '',
             'avatar': avatar,
             'profile_url': _cabinet_url(account),
         },

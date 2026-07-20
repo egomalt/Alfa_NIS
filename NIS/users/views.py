@@ -40,12 +40,19 @@ def api_candidate_update(request, username):
         return JsonResponse({'ok': False, 'message': 'Неверный JSON'}, status=400)
 
     name = (body.get('name') or '').strip()
+    email = (body.get('email') or '').strip()
     bio = body.get('bio', '')
     skills_raw = body.get('skills', None)
 
+    changed_fields = []
     if name:
         account.name = name
-        account.save(update_fields=['name'])
+        changed_fields.append('name')
+    if email:
+        account.email = email
+        changed_fields.append('email')
+    if changed_fields:
+        account.save(update_fields=changed_fields)
 
     profile, _ = UserProfile.objects.get_or_create(username=username)
     profile.bio = bio

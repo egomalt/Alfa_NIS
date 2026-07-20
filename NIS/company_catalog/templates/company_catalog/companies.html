@@ -75,10 +75,19 @@
   let verifiedOnly=false;
   let selectedIndustries=new Set();
 
+  function stars(avg){
+    if(avg===null||avg===undefined)return'';
+    const full=Math.round(avg);
+    let s='';
+    for(let i=1;i<=5;i++)s+=`<span style="color:${i<=full?'var(--amber-text)':'var(--line-2)'};font-size:13px;">★</span>`;
+    return`<span style="display:inline-flex;align-items:center;gap:2px;">${s}<span style="font-size:12px;font-weight:600;color:var(--text-2);margin-left:4px;">${avg}</span></span>`;
+  }
+
   function renderRow(c){
     const avatarHtml=c.avatar_url?`<img src="${esc(c.avatar_url)}" alt="">`:`${esc(initial(c.name))}`;
     const metaParts=[c.industry,c.city].filter(Boolean).join(' · ');
     const verified=c.is_verified?`<span class="cr-verified-dot" title="Верифицирована"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>`:'';
+    const ratingHtml=c.avg_rating?stars(c.avg_rating):'';
     return`<a href="${esc(c.profile_url)}" class="cr-catalog-row">
       <span class="cr-catalog-initial">${avatarHtml}</span>
       <div style="flex:1;min-width:0;">
@@ -89,6 +98,7 @@
         ${c.description?`<div class="cr-catalog-desc">${esc(c.description.slice(0,120))}${c.description.length>120?'…':''}</div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;">
+        ${ratingHtml}
         <span class="cr-tests-count">${esc(testsLabel(c.tests_count))}</span>
         <span style="font-size:13px;font-weight:600;color:var(--brand-text);">Открыть →</span>
       </div>
