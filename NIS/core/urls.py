@@ -14,6 +14,8 @@ urlpatterns = [
     path('', include('articles.articles_app.urls')),
     path('', include('articles.articles_cabinet.urls')),
     path('', include('articles.articles_catalog.urls')),
+    path('', include('contests.contests_cabinet.urls')),
+    path('', include('contests.contests_app.urls')),
     path('', include('company_catalog.urls')),
     path('', include('cabinet.urls')),
     # profiles must come last — catches /<username>/
