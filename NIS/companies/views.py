@@ -7,7 +7,7 @@ from authorization.models import Account, ROLE_USER
 from core.utils import serialize_form_errors
 
 from .forms import CompanyProfileForm, CompanyVerificationForm
-from .models import Company
+from .models import Company, CompanyRating
 
 
 @ensure_csrf_cookie
@@ -51,7 +51,15 @@ def app_shell(request, username):
     })
 
 
+def _company_rating(company):
+    from django.db.models import Avg
+    agg = company.ratings.aggregate(avg=Avg('rating'))
+    avg = agg['avg']
+    return round(avg, 1) if avg is not None else None, company.ratings.count()
+
+
 def _serialize_company(company):
+    avg_rating, rating_count = _company_rating(company)
     return {
         'id': company.id,
         'username': company.username,
@@ -74,13 +82,15 @@ def _serialize_company(company):
         'created_at': company.created_at.isoformat(),
         'updated_at': company.updated_at.isoformat(),
         'is_verified': company.is_verified,
+        'avg_rating': avg_rating,
+        'rating_count': rating_count,
     }
 
 
 
 @require_GET
 def api_companies_list(request):
-    from django.db.models import Count
+    from django.db.models import Avg, Count
     from tests.constructor.models import Test
 
     companies = Company.objects.exclude(registration_document='').order_by('-created_at')
@@ -90,6 +100,13 @@ def api_companies_list(request):
         .annotate(cnt=Count('id'))
     )
     published_counts = {row['owner_username']: row['cnt'] for row in counts}
+
+    ratings_qs = (
+        CompanyRating.objects
+        .values('company__username')
+        .annotate(avg=Avg('rating'), cnt=Count('id'))
+    )
+    ratings_map = {r['company__username']: (round(r['avg'], 1), r['cnt']) for r in ratings_qs}
 
     result = [
         {
@@ -102,6 +119,8 @@ def api_companies_list(request):
             'city': c.city,
             'tests_count': published_counts.get(c.username, 0),
             'profile_url': f'/{c.username}/',
+            'avg_rating': ratings_map.get(c.username, (None, 0))[0],
+            'rating_count': ratings_map.get(c.username, (None, 0))[1],
         }
         for c in companies
     ]
@@ -191,4 +210,40 @@ def api_company_tests(request, username):
             'submissions': submissions,
             'completion_rate': round(active / total * 100) if total else 0,
         },
+    })
+
+
+@require_http_methods(['POST'])
+def api_company_rate(request, username):
+    import json as _json
+    from authorization.models import ROLE_USER
+    from authorization.views import get_current_account
+    from django.db.models import Avg
+
+    account = get_current_account(request)
+    if account is None or account.role != ROLE_USER:
+        return JsonResponse({'ok': False, 'message': 'Только пользователи могут оставлять оценку'}, status=403)
+
+    try:
+        data = _json.loads(request.body)
+        rating = int(data.get('rating', 0))
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'message': 'Некорректные данные'}, status=400)
+
+    if rating < 1 or rating > 5:
+        return JsonResponse({'ok': False, 'message': 'Оценка должна быть от 1 до 5'}, status=400)
+
+    company = get_object_or_404(Company, username=username)
+    CompanyRating.objects.update_or_create(
+        company=company,
+        user_username=account.username,
+        defaults={'rating': rating},
+    )
+
+    agg = company.ratings.aggregate(avg=Avg('rating'))
+    avg = agg['avg']
+    return JsonResponse({
+        'ok': True,
+        'avg_rating': round(avg, 1) if avg is not None else None,
+        'rating_count': company.ratings.count(),
     })

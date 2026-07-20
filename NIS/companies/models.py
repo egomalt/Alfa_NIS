@@ -48,3 +48,16 @@ class Company(models.Model):
     @property
     def is_verified(self):
         return bool(self.registration_document)
+
+
+class CompanyRating(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='ratings')
+    user_username = models.SlugField(max_length=50)
+    rating = models.SmallIntegerField()
+
+    class Meta:
+        unique_together = [('company', 'user_username')]
+        db_table = 'company_ratings'
+
+    def __str__(self):
+        return f'{self.user_username} → {self.company.username}: {self.rating}'

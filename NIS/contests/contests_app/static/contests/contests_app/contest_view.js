@@ -212,6 +212,7 @@ function renderSubmitArea() {
 async function submitSolution() {
   if (!hasContact) { openContactModal(); return; }
   const type = contest?.submission_type || 'file';
+  let submitted = false;
   try {
     const fd = new FormData();
     fd.append('contest', CONTEST_ID);
@@ -235,19 +236,89 @@ async function submitSolution() {
     if (!res.ok) throw new Error(data.message || 'Ошибка');
     mySubmissions.unshift(data.submission || { status: 'pending', submitted_at: 'только что' });
     chosenFile = null;
-    renderMySubmissions();
-    renderSubmitArea();
+    submitted = true;
   } catch (err) {
     alert(err.message);
   }
+  if (!submitted) return;
+  try { renderMySubmissions(); } catch (_) {}
+  try { renderSubmitArea(); } catch (_) {}
+  if (contest?.company_username) openRatingModal(contest.company_username);
+}
+
+function openRatingModal(companyUsername) {
+  let selected = 0;
+  const existing = document.getElementById('cv-rating-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'cv-rating-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:16px;';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px 28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.18);">
+      <div style="font-size:22px;margin-bottom:6px;">🎉</div>
+      <div style="font-size:17px;font-weight:800;margin-bottom:6px;">Решение отправлено!</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:20px;">Оцените организацию конкурса от 1 до 5 звёзд</div>
+      <div id="cv-stars" style="display:flex;justify-content:center;gap:8px;margin-bottom:20px;">
+        ${[1,2,3,4,5].map(i => `<button data-star="${i}" style="font-size:32px;background:none;border:none;cursor:pointer;color:var(--line-2);padding:0;line-height:1;transition:color .1s;">★</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button id="cv-rating-skip" style="flex:1;height:42px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--text-2);font-size:14px;font-weight:500;cursor:pointer;">Пропустить</button>
+        <button id="cv-rating-submit" style="flex:1;height:42px;border:none;border-radius:10px;background:var(--brand);color:var(--on-brand);font-size:14px;font-weight:600;cursor:pointer;opacity:.5;" disabled>Отправить</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const stars = modal.querySelectorAll('[data-star]');
+  const submitBtn = modal.querySelector('#cv-rating-submit');
+
+  function paintStars(n) {
+    stars.forEach(s => {
+      s.style.color = Number(s.dataset.star) <= n ? 'var(--amber-text)' : 'var(--line-2)';
+    });
+  }
+
+  stars.forEach(s => {
+    s.addEventListener('mouseenter', () => paintStars(Number(s.dataset.star)));
+    s.addEventListener('mouseleave', () => paintStars(selected));
+    s.addEventListener('click', () => {
+      selected = Number(s.dataset.star);
+      paintStars(selected);
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+    });
+  });
+
+  modal.querySelector('#cv-rating-skip').addEventListener('click', () => modal.remove());
+  submitBtn.addEventListener('click', async () => {
+    if (!selected) return;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '…';
+    try {
+      await fetch(`/api/v1/companies/${companyUsername}/rate/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: selected }),
+      });
+    } catch (_) {}
+    modal.remove();
+  });
 }
 
 function openContactModal() { document.getElementById('cv-contact-modal').classList.add('open'); }
 function closeContactModal() { document.getElementById('cv-contact-modal').classList.remove('open'); }
 
 async function saveContact() {
-  const email = document.getElementById('cv-contact-email').value.trim();
-  if (!email) { document.getElementById('cv-contact-email').style.borderColor = 'var(--brand)'; return; }
+  const emailInput = document.getElementById('cv-contact-email');
+  const email = emailInput.value.trim();
+  if (!email) { emailInput.style.borderColor = 'var(--brand)'; return; }
+  try {
+    await apiFetch(`/api/v1/candidates/${me.username}/update/`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    me.email = email;
+  } catch (_) {}
   hasContact = true;
   closeContactModal();
   renderSubmitArea();
