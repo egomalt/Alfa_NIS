@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>(function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();</script>
+  <title>Конкурсы компании — Alfa Career</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/career.css' %}">
+  <script>
+    window.ALFA_APP_BOOTSTRAP = { username: "{{ username|escapejs }}" };
+  </script>
+  <script src="{% static 'main/theme.js' %}" defer></script>
+  <script src="{% static 'js/career.js' %}?v=20260613-1" defer></script>
+  <style>
+    main { max-width: 980px; margin: 0 auto; padding: 32px 32px 80px; }
+
+    .cc-back { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; cursor: pointer; margin-bottom: 18px; text-decoration: none; transition: color .12s; }
+    .cc-back:hover { color: var(--text); }
+
+    .cc-page-header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+    .cc-company-av { display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; background: var(--brand-soft); color: var(--brand-text); font-weight: 700; font-size: 19px; flex-shrink: 0; overflow: hidden; }
+    .cc-company-av img { width: 100%; height: 100%; object-fit: cover; }
+    .cc-page-title { font-size: 24px; font-weight: 800; letter-spacing: -.02em; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .cc-verified { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--green-soft); color: var(--green-text); font-size: 11px; }
+    .cc-page-sub { font-size: 13.5px; color: var(--muted); }
+
+    .cc-filters { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+    .cc-filter-btn { height: 32px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .12s; font-family: inherit; }
+    .cc-filter-btn:hover { border-color: var(--brand); color: var(--brand-text); }
+    .cc-filter-btn.active { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+    .cc-filter-count { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); margin-left: auto; }
+
+    .cc-card { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); margin-bottom: 12px; cursor: pointer; transition: border-color .15s, box-shadow .15s; text-decoration: none; color: inherit; }
+    .cc-card:hover { border-color: var(--line-2); box-shadow: var(--shadow); }
+    .cc-card-main { flex: 1; min-width: 0; }
+    .cc-card-title { font-size: 15.5px; font-weight: 700; margin-bottom: 4px; }
+    .cc-card-meta { font-size: 12.5px; color: var(--muted); }
+    .cc-mono { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-2); white-space: nowrap; }
+    .cc-status-pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+
+    .cc-empty { padding: 60px; text-align: center; border: 2px dashed var(--line-2); border-radius: 16px; }
+    .cc-empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .cc-empty-sub { font-size: 14px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+{% include 'partials/navbar.html' with chip_id='profile-user-chip' %}
+
+<main>
+  <a class="cc-back" id="cc-back-link" href="#">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
+    Профиль компании
+  </a>
+
+  <div class="cc-page-header">
+    <span class="cc-company-av" id="cc-company-av">?</span>
+    <div>
+      <div class="cc-page-title" id="cc-page-title">Конкурсы компании</div>
+      <div class="cc-page-sub">Все турниры с кейсами и дедлайнами от этой компании</div>
+    </div>
+  </div>
+
+  <div class="cc-filters">
+    <button class="cc-filter-btn active" data-f="all">Все</button>
+    <button class="cc-filter-btn" data-f="active">Активные</button>
+    <button class="cc-filter-btn" data-f="finished">Завершённые</button>
+    <span class="cc-filter-count" id="cc-count"></span>
+  </div>
+
+  <div id="cc-list">
+    <div style="padding:40px;text-align:center;color:var(--muted);">Загрузка…</div>
+  </div>
+</main>
+
+<script src="{% static 'profiles/company_contests.js' %}?v=20260722-1"></script>
+</body>
+</html>

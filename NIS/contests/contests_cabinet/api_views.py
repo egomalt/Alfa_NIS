@@ -355,3 +355,13 @@ def api_user_public_contests(request, username):
             'submitted_at': s.created_at.isoformat(),
         })
     return JsonResponse({'ok': True, 'submissions': result})
+
+
+@require_http_methods(['GET'])
+def api_company_public_contests(request, username):
+    from contests.contests_cabinet.models import Contest
+    qs = Contest.objects.filter(
+        company_username=username,
+        status__in=[Contest.STATUS_ACTIVE, Contest.STATUS_FINISHED, Contest.STATUS_REVIEW],
+    ).order_by('-created_at')
+    return JsonResponse({'ok': True, 'contests': [_contest_to_dict(c) for c in qs]})

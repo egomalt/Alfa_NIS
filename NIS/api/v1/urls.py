@@ -43,6 +43,7 @@ urlpatterns = [
     path('companies/<slug:username>/verification/', company_views.api_company_verification),
     path('companies/<slug:username>/tests/',        company_views.api_company_tests),
     path('companies/<slug:username>/rate/',         company_views.api_company_rate),
+    path('companies/<slug:username>/contests/',     contest_views.api_company_public_contests),
 
     # Tests — constructor (CRUD)
     path('tests/',                              constructor_views.api_tests_list),
