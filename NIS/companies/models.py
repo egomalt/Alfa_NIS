@@ -3,6 +3,17 @@ from django.db import models
 
 
 class Company(models.Model):
+    VERIF_NONE = 'none'
+    VERIF_PENDING = 'pending'
+    VERIF_APPROVED = 'approved'
+    VERIF_REJECTED = 'rejected'
+    VERIF_CHOICES = [
+        (VERIF_NONE, 'Документ не загружен'),
+        (VERIF_PENDING, 'На проверке'),
+        (VERIF_APPROVED, 'Одобрено'),
+        (VERIF_REJECTED, 'Отклонено'),
+    ]
+
     username = models.SlugField(
         max_length=50,
         unique=True,
@@ -36,6 +47,10 @@ class Company(models.Model):
     direction_2 = models.CharField(max_length=120, blank=True)
     direction_3 = models.CharField(max_length=120, blank=True)
     direction_4 = models.CharField(max_length=120, blank=True)
+    verification_status = models.CharField(max_length=20, choices=VERIF_CHOICES, default=VERIF_NONE, db_index=True)
+    verification_reason = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -47,7 +62,7 @@ class Company(models.Model):
 
     @property
     def is_verified(self):
-        return bool(self.registration_document)
+        return self.verification_status == self.VERIF_APPROVED
 
 
 class CompanyRating(models.Model):

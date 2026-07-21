@@ -27,7 +27,7 @@
           <div class="cr-user-avatar">${avatarInner}</div>
           <div>
             <div class="cr-user-name">${esc(a.name || a.username)}</div>
-            <div class="cr-user-role">${a.role === 'company' ? 'Компания' : 'Кандидат'}</div>
+            <div class="cr-user-role">${a.role === 'company' ? 'Компания' : a.role === 'moderator' ? 'Администратор' : 'Кандидат'}</div>
           </div>
         </a>`;
     } catch(_) {}

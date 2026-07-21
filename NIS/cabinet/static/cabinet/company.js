@@ -132,13 +132,84 @@
     });
   }
 
-  function showVerifyGate() {
+  function showVerifyGate(company) {
     var gate = el('cp-verify-gate');
     var content = el('cp-profile-content');
     var editBtn = el('cp-edit-btn');
     if (gate) gate.style.display = '';
     if (content) content.style.display = 'none';
     if (editBtn) editBtn.style.display = 'none';
+    renderVerifyGate(company || state.company || {});
+  }
+
+  // Перерисовывает блок верификации по статусу: none / pending / rejected
+  function renderVerifyGate(company) {
+    var status = company.verification_status || 'none';
+    var statusEl = el('cp-verify-status');
+    var iconEl = el('cp-verify-icon');
+    var titleEl = el('cp-verify-title');
+    var subEl = el('cp-verify-sub');
+    var reasonEl = el('cp-verify-reason');
+    var uploadEl = el('cp-verify-upload');
+    var submitBtn = el('cp-submit-doc-btn');
+
+    if (reasonEl) reasonEl.innerHTML = '';
+
+    if (status === 'pending') {
+      // Документ на проверке — модерация ещё не приняла решение
+      if (statusEl) {
+        statusEl.textContent = 'Документ на проверке';
+        statusEl.style.background = 'var(--amber-soft)';
+        statusEl.style.color = 'var(--amber-text)';
+      }
+      if (iconEl) {
+        iconEl.style.background = 'var(--amber-soft)';
+        iconEl.style.color = 'var(--amber-text)';
+        iconEl.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+      }
+      if (titleEl) titleEl.textContent = 'Документ отправлен на проверку';
+      if (subEl) subEl.textContent = 'Модератор проверит документ и подтвердит компанию. Обычно это занимает до 1–2 рабочих дней. После одобрения откроются создание тестов, конкурсов и другие функции.';
+      if (uploadEl) uploadEl.style.display = 'none';
+      return;
+    }
+
+    if (status === 'rejected') {
+      // Заявка отклонена — показываем причину и даём загрузить повторно
+      if (statusEl) {
+        statusEl.textContent = 'Заявка отклонена';
+        statusEl.style.background = 'var(--red-soft)';
+        statusEl.style.color = 'var(--red-text)';
+      }
+      if (iconEl) {
+        iconEl.style.background = 'var(--red-soft)';
+        iconEl.style.color = 'var(--red-text)';
+        iconEl.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>';
+      }
+      if (titleEl) titleEl.textContent = 'Документ не прошёл проверку';
+      if (subEl) subEl.textContent = 'Исправьте замечания и загрузите документ повторно.';
+      if (reasonEl && company.verification_reason) {
+        reasonEl.innerHTML = '<div class="cp-flash error" style="margin-bottom:16px;"><strong>Причина отклонения:</strong> ' + esc(company.verification_reason) + '</div>';
+      }
+      if (uploadEl) uploadEl.style.display = '';
+      if (submitBtn) submitBtn.textContent = 'Отправить повторно';
+      return;
+    }
+
+    // status === 'none' — документ ещё не загружали
+    if (statusEl) {
+      statusEl.textContent = 'Профиль не подтверждён';
+      statusEl.style.background = 'var(--amber-soft)';
+      statusEl.style.color = 'var(--amber-text)';
+    }
+    if (iconEl) {
+      iconEl.style.background = 'var(--amber-soft)';
+      iconEl.style.color = 'var(--amber-text)';
+      iconEl.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>';
+    }
+    if (titleEl) titleEl.textContent = 'Подтвердите, что компания реальна';
+    if (subEl) subEl.textContent = 'Загрузите документ, подтверждающий деятельность компании (выписка ЕГРЮЛ, свидетельство о регистрации и т.п.), чтобы открыть создание тестов, конкурсов и другие функции.';
+    if (uploadEl) uploadEl.style.display = '';
+    if (submitBtn) submitBtn.textContent = 'Отправить на проверку';
   }
 
   function showProfileContent(company) {
@@ -217,9 +288,12 @@
       .then(function (data) {
         state.company = data.company;
         chosenFile = null;
+        var wrap = el('cp-file-chosen-wrap');
+        if (wrap) wrap.innerHTML = '';
         renderSidebar(data.company);
         renderHero(data.company);
-        showProfileContent(data.company);
+        // Компания ушла на ручную модерацию — показываем состояние «на проверке»
+        showVerifyGate(data.company);
       })
       .catch(function (err) {
         flashVerify(err.message, 'error');
@@ -388,7 +462,7 @@
         if (company.is_verified) {
           showProfileContent(company);
         } else {
-          showVerifyGate();
+          showVerifyGate(company);
         }
       })
       .catch(function (err) {

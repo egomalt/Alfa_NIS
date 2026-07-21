@@ -187,25 +187,28 @@
 
       <!-- Verify gate -->
       <div class="cp-verify-gate" id="cp-verify-gate" style="display:none;">
-        <div class="cp-verify-status">Профиль не подтверждён</div>
+        <div class="cp-verify-status" id="cp-verify-status">Профиль не подтверждён</div>
         <div class="cp-verify-head">
-          <span class="cp-verify-icon">
+          <span class="cp-verify-icon" id="cp-verify-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
           </span>
           <div>
-            <div class="cp-verify-title">Подтвердите, что компания реальна</div>
-            <div class="cp-verify-sub">Загрузите документ, подтверждающий деятельность компании (выписка ЕГРЮЛ, свидетельство о регистрации и т.п.), чтобы открыть создание тестов, конкурсов и другие функции.</div>
+            <div class="cp-verify-title" id="cp-verify-title">Подтвердите, что компания реальна</div>
+            <div class="cp-verify-sub" id="cp-verify-sub">Загрузите документ, подтверждающий деятельность компании (выписка ЕГРЮЛ, свидетельство о регистрации и т.п.), чтобы открыть создание тестов, конкурсов и другие функции.</div>
           </div>
         </div>
-        <div class="cp-dropzone" id="cp-dropzone">
-          <div class="cp-dropzone-title">Загрузите документ</div>
-          <div class="cp-dropzone-sub">PDF, JPG или PNG, до 10 МБ</div>
-          <input type="file" id="cp-doc-input" accept=".pdf,.jpg,.jpeg,.png" style="display:none;">
-          <button class="cp-btn-secondary" onclick="document.getElementById('cp-doc-input').click()">Выбрать файл</button>
+        <div id="cp-verify-reason"></div>
+        <div id="cp-verify-upload">
+          <div class="cp-dropzone" id="cp-dropzone">
+            <div class="cp-dropzone-title">Загрузите документ</div>
+            <div class="cp-dropzone-sub">PDF, до 10 МБ</div>
+            <input type="file" id="cp-doc-input" accept=".pdf" style="display:none;">
+            <button class="cp-btn-secondary" onclick="document.getElementById('cp-doc-input').click()">Выбрать файл</button>
+          </div>
+          <div id="cp-file-chosen-wrap"></div>
+          <div id="cp-verify-flash" style="margin-bottom:8px;"></div>
+          <button class="cp-btn-primary" id="cp-submit-doc-btn" disabled>Отправить на проверку</button>
         </div>
-        <div id="cp-file-chosen-wrap"></div>
-        <div id="cp-verify-flash" style="margin-bottom:8px;"></div>
-        <button class="cp-btn-primary" id="cp-submit-doc-btn" disabled>Отправить на проверку</button>
       </div>
 
       <!-- Profile content (после верификации) -->
@@ -307,6 +310,6 @@
   </main>
 </div>
 
-<script src="{% static 'cabinet/company.js' %}?v=20260721-2"></script>
+<script src="{% static 'cabinet/company.js' %}?v=20260722-1"></script>
 </body>
 </html>

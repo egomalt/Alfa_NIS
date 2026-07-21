@@ -6,7 +6,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from core.utils import serialize_form_errors
 from .forms import AccountLoginForm, AccountRegistrationForm
-from .models import Account, ROLE_COMPANY, ROLE_USER
+from .models import Account, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER
 
 SESSION_KEY = 'account_username'
 
@@ -61,6 +61,8 @@ def api_register(request):
 
 
 def _cabinet_url(account):
+    if account.role == ROLE_MODERATOR:
+        return '/administration/'
     if account.role == ROLE_COMPANY:
         return '/cabinet/company/'
     return '/cabinet/user/'
@@ -84,6 +86,21 @@ def api_login(request):
                 },
             },
             status=404,
+        )
+
+    # Истёкший бан снимаем автоматически, активный — блокирует вход
+    account.refresh_ban_state()
+    if account.is_banned:
+        if account.ban_until is None:
+            msg = 'Аккаунт заблокирован навсегда.'
+        else:
+            until = account.ban_until.strftime('%d.%m.%Y')
+            msg = f'Аккаунт заблокирован до {until}.'
+        if account.ban_reason:
+            msg += f' Причина: {account.ban_reason}'
+        return JsonResponse(
+            {'ok': False, 'errors': {'username': [{'message': msg, 'code': 'banned'}]}},
+            status=403,
         )
 
     request.session[SESSION_KEY] = account.username
