@@ -35,6 +35,7 @@ urlpatterns = [
 
     # Companies
     path('companies/',                              company_views.api_companies_list),
+    path('companies/my-ratings/',                   company_views.api_my_company_ratings),
     path('companies/<slug:username>/',              company_views.api_company_detail),
     path('companies/<slug:username>/profile/',      company_views.api_company_profile),
     path('companies/<slug:username>/verification/', company_views.api_company_verification),
@@ -57,6 +58,7 @@ urlpatterns = [
     path('contests/company/',                                         contest_views.api_company_contests),
     path('contests/',                                                 contest_views.api_contest_create),
     path('contests/catalog/',                                         contest_views.api_contests_catalog),
+    path('contests/user-history/',                                    contest_views.api_user_contest_history),
     path('contests/<int:contest_id>/',                                contest_views.api_contest_detail),
     path('contests/<int:contest_id>/publish/',                        contest_views.api_contest_publish),
     path('contests/<int:contest_id>/submissions/',                    contest_views.api_contest_submissions),

@@ -1,448 +1,561 @@
-(() => {
-    const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
-    const username = BOOTSTRAP.username;
-    const CSRF = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
+(function () {
+  const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
+  const username = BOOTSTRAP.username;
+  const CSRF = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-    // Cabinet: always owner
-    let state = { candidate: null };
+  let state = {
+    candidate: null,
+    tests: [],
+    articles: [],
+    contestHistory: [],
+    myRatings: [],
+  };
 
-    function esc(s) {
-        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-    function initial(name) { return (name || '?').trim()[0].toUpperCase(); }
+  /* ---------- utils ---------- */
 
-    function formatDate(iso) {
-        if (!iso) return '';
-        try { return new Date(iso).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' }); }
-        catch { return ''; }
+  function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function initial(name) { return (name || '?').trim()[0].toUpperCase(); }
+  function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = String(val); }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' }); }
+    catch { return ''; }
+  }
+  function formatDateShort(iso) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); }
+    catch { return ''; }
+  }
+  function pluralPages(n) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m100 >= 11 && m100 <= 19) return `${n} страниц`;
+    if (m10 === 1) return `${n} страница`;
+    if (m10 >= 2 && m10 <= 4) return `${n} страницы`;
+    return `${n} страниц`;
+  }
+  function fmtNum(n) {
+    if (n >= 1000) return (n / 1000).toFixed(1).replace('.0', '') + ' тыс.';
+    return String(n);
+  }
+
+  async function apiFetch(url, options = {}) {
+    const isForm = options.body instanceof FormData;
+    const res = await fetch(url, {
+      headers: {
+        'X-CSRFToken': CSRF(),
+        ...(!isForm ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.headers || {}),
+      },
+      ...options,
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || 'Ошибка сервера');
+    return data;
+  }
+
+  /* ---------- sidebar & tab switching ---------- */
+
+  function showTab(name) {
+    document.querySelectorAll('.ud-tab-panel').forEach(p => {
+      p.classList.toggle('active', p.id === 'panel-' + name);
+    });
+    document.querySelectorAll('.ud-side-link[data-tab]').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    window.scrollTo(0, 0);
+  }
+
+  document.querySelectorAll('.ud-side-link[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => showTab(btn.dataset.tab));
+  });
+  document.querySelectorAll('[data-goto]').forEach(el => {
+    el.addEventListener('click', () => showTab(el.dataset.goto));
+  });
+  document.getElementById('ud-shortcuts')?.addEventListener('click', e => {
+    const sc = e.target.closest('[data-goto]');
+    if (sc) showTab(sc.dataset.goto);
+  });
+
+  /* ---------- logout ---------- */
+
+  async function logout() {
+    await fetch('/api/v1/auth/signout/', { method: 'POST', headers: { 'X-CSRFToken': CSRF() } });
+    window.location.assign('/');
+  }
+  document.getElementById('ud-logout-btn')?.addEventListener('click', logout);
+  document.getElementById('logout-btn')?.addEventListener('click', logout);
+
+  /* ---------- avatar ---------- */
+
+  async function uploadAvatar(file) {
+    const body = new FormData();
+    body.append('avatar', file);
+    try {
+      const data = await apiFetch(`/api/v1/candidates/${username}/avatar/`, { method: 'POST', body });
+      state.candidate = data.candidate;
+      renderSidebar();
+      renderProfileTab();
+    } catch (e) { alert(e.message); }
+  }
+
+  /* ---------- render sidebar ---------- */
+
+  function renderSidebar() {
+    const c = state.candidate;
+    if (!c) return;
+    const avEl = document.getElementById('ud-sidebar-av');
+    if (avEl) {
+      avEl.innerHTML = c.avatar
+        ? `<img src="${esc(c.avatar)}" alt="">`
+        : esc(initial(c.name));
     }
-    function formatTestDate(iso) {
-        if (!iso) return '';
-        try { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); }
-        catch { return ''; }
+    set('ud-sidebar-name', c.name || c.username);
+  }
+
+  /* ---------- render profile tab ---------- */
+
+  function renderProfileTab() {
+    const c = state.candidate;
+    if (!c) return;
+
+    const avEl = document.getElementById('ud-profile-av');
+    if (avEl) {
+      avEl.innerHTML = c.avatar
+        ? `<img src="${esc(c.avatar)}" alt="">`
+        : esc(initial(c.name));
     }
-    function pluralPages(n) {
-        const m10 = n % 10, m100 = n % 100;
-        if (m100 >= 11 && m100 <= 19) return `${n} страниц`;
-        if (m10 === 1) return `${n} страница`;
-        if (m10 >= 2 && m10 <= 4) return `${n} страницы`;
-        return `${n} страниц`;
+    set('ud-profile-name', c.name || c.username);
+
+    const roleEl = document.getElementById('ud-profile-role');
+    if (roleEl) {
+      const joinText = c.created_at ? `· на платформе с ${formatDate(c.created_at)}` : '';
+      roleEl.textContent = `Кандидат ${joinText}`;
     }
 
-    async function apiFetch(url, options = {}) {
-        const isForm = options.body instanceof FormData;
-        const res = await fetch(url, {
-            headers: {
-                'X-CSRFToken': CSRF(),
-                ...(!isForm ? { 'Content-Type': 'application/json' } : {}),
-                ...(options.headers || {}),
-            },
-            ...options,
+    const bioEl = document.getElementById('ud-profile-bio');
+    if (bioEl) {
+      bioEl.innerHTML = c.bio
+        ? `<p style="margin:0;">${esc(c.bio)}</p>`
+        : `<p style="margin:0;color:var(--faint);">Нажмите «Редактировать», чтобы добавить информацию о себе.</p>`;
+    }
+
+    const skillsEl = document.getElementById('ud-profile-skills');
+    if (skillsEl) {
+      const skills = c.skills || [];
+      skillsEl.innerHTML = skills.length
+        ? skills.map(sk => `<span style="padding:5px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:13px;font-weight:500;color:var(--text-2);">${esc(sk)}</span>`).join('')
+        : `<span style="font-size:13.5px;color:var(--faint);">Добавьте навыки в настройках профиля.</span>`;
+    }
+
+    const tests = state.tests;
+    const articles = state.articles;
+    const history = state.contestHistory;
+
+    set('pstat-tests', tests.length);
+    set('pstat-articles', articles.filter(a => a.status === 'published').length);
+    set('pstat-contests', history.length);
+    set('pstat-wins', history.filter(s => s.winner).length);
+
+    const testDrafts = tests.filter(t => t.status === 'draft').length;
+    set('sc-tests-sub', testDrafts > 0 ? `${testDrafts} черновика ждут завершения` : `${tests.length} тестов создано`);
+    const totalViews = articles.reduce((s, a) => s + (a.views || 0), 0);
+    set('sc-articles-sub', `${fmtNum(totalViews)} просмотров за всё время`);
+    const pending = history.filter(s => s.status === 'pending').length;
+    set('sc-contests-sub', pending > 0 ? `${pending} решение на проверке` : `${history.length} участий`);
+
+    document.getElementById('ud-edit-btn')?.addEventListener('click', () => showTab('settings'));
+    const profileHero = document.getElementById('ud-profile-hero');
+    if (profileHero && !profileHero.dataset.avatarWired) {
+      profileHero.dataset.avatarWired = '1';
+      profileHero.style.cursor = 'default';
+      const avBtn = document.getElementById('ud-profile-av');
+      if (avBtn) {
+        avBtn.style.cursor = 'pointer';
+        avBtn.title = 'Сменить фото';
+        avBtn.addEventListener('click', () => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.onchange = e => { if (e.target.files[0]) uploadAvatar(e.target.files[0]); };
+          input.click();
         });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.message || 'Ошибка сервера');
-        return data;
+      }
+    }
+  }
+
+  /* ---------- render tests tab ---------- */
+
+  let testsFilter = 'all';
+
+  function renderTestsTab() {
+    const tests = state.tests;
+    const total = tests.length;
+    const published = tests.filter(t => t.status === 'published').length;
+    const drafts = tests.filter(t => t.status === 'draft').length;
+    const subs = tests.reduce((s, t) => s + (t.submissions || 0), 0);
+
+    set('tstat-total', total);
+    set('tstat-published', published);
+    set('tstat-subs', subs);
+    set('tstat-drafts', drafts);
+
+    const listEl = document.getElementById('ud-tests-list');
+    if (!listEl) return;
+
+    const STATUS_BG = { draft: 'var(--amber-soft)', published: 'var(--green-soft)' };
+    const STATUS_CO = { draft: 'var(--amber-text)', published: 'var(--green-text)' };
+    const STATUS_LB = { draft: 'Черновик', published: 'Опубликован' };
+
+    const filtered = testsFilter === 'all' ? tests : tests.filter(t => t.status === testsFilter);
+
+    if (!filtered.length) {
+      listEl.innerHTML = `<div class="ud-empty"><div class="ud-empty-title">${testsFilter === 'all' ? 'Нет тестов' : 'Нет тестов в этой категории'}</div><div class="ud-empty-sub">Создайте первый тест, нажав кнопку выше.</div></div>`;
+      return;
     }
 
-    async function logout() {
-        await fetch('/api/v1/auth/signout/', { method: 'POST', headers: { 'X-CSRFToken': CSRF() } });
-        window.location.assign('/');
-    }
-
-    async function uploadAvatar(tests, file) {
-        const body = new FormData();
-        body.append('avatar', file);
-        try {
-            const data = await apiFetch(`/api/v1/candidates/${username}/avatar/`, { method: 'POST', body });
-            state.candidate = data.candidate;
-            renderProfile(tests);
-        } catch (e) { alert(e.message); }
-    }
-
-    function renderProfile(tests) {
-        const c = state.candidate;
-        const el = document.getElementById('cd-content');
-        if (!el) return;
-
-        const STATUS_COLORS = {
-            draft:     { bg: 'var(--amber-soft)', color: 'var(--amber-text)' },
-            published: { bg: 'var(--green-soft)',  color: 'var(--green-text)' },
-        };
-        const STATUS_LABELS = { draft: 'Черновик', published: 'Опубликован' };
-
-        const avatarInner = c.avatar
-            ? `<img src="${esc(c.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-            : `<span style="font-size:32px;font-weight:700;color:var(--brand-text);">${esc(initial(c.name))}</span>`;
-
-        const bioHtml = c.bio
-            ? `<p style="font-size:14px;line-height:1.65;color:var(--text-2);margin:0;text-wrap:pretty;">${esc(c.bio)}</p>`
-            : `<p style="font-size:14px;color:var(--faint);margin:0;">Нажмите «Редактировать», чтобы добавить информацию о себе.</p>`;
-
-        const skills = c.skills || [];
-        const skillsHtml = skills.length
-            ? skills.map(sk => `<span style="padding:5px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:13px;font-weight:500;color:var(--text-2);">${esc(sk)}</span>`).join('')
-            : `<span style="font-size:13.5px;color:var(--faint);">Добавьте навыки в редактировании профиля.</span>`;
-
-        let testsPreviewHtml;
-        if (!tests || !tests.length) {
-            testsPreviewHtml = `<div style="padding:18px;text-align:center;border:1px dashed var(--line-2);border-radius:11px;">
-              <div style="font-size:13.5px;color:var(--muted);">Вы ещё не создали ни одного теста</div>
-            </div>`;
-        } else {
-            testsPreviewHtml = tests.slice(0, 3).map(t => {
-                const sc = STATUS_COLORS[t.status] || STATUS_COLORS.draft;
-                return `<a href="${esc(t.edit_url)}"
-                  style="display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;cursor:pointer;text-decoration:none;color:inherit;"
-                  onmouseover="this.style.borderColor='var(--line-2)'" onmouseout="this.style.borderColor='var(--line)'">
-                  <span style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--surface-2);flex-shrink:0;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="13" height="13" rx="2"/><path d="M5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/></svg>
-                  </span>
-                  <div style="flex:1;min-width:0;">
-                    <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.title)}</div>
-                    <div style="font-size:12px;color:var(--muted);margin-top:1px;">${esc(pluralPages(t.page_count))} · ${esc(formatTestDate(t.created_at))}</div>
-                  </div>
-                  <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:${sc.bg};color:${sc.color};flex-shrink:0;">${esc(STATUS_LABELS[t.status] || t.status)}</span>
-                </a>`;
-            }).join('');
-        }
-
-        const emailRow = c.email
-            ? `<span style="display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>${esc(c.email)}</span>`
-            : '';
-
-        el.innerHTML = `
-        <input type="file" id="cd-avatar-input" accept="image/*" hidden>
-
-        <div style="border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow);">
-          <div style="height:88px;background:linear-gradient(120deg,var(--brand) 0%,color-mix(in srgb,var(--brand) 55%,#ff7a45) 100%);"></div>
-          <div style="padding:14px 28px 24px;">
-            <div style="display:flex;align-items:center;gap:18px;">
-              <div style="position:relative;flex-shrink:0;margin-top:-56px;">
-                <div style="width:90px;height:90px;border-radius:50%;background:var(--brand-soft);border:4px solid var(--surface);display:flex;align-items:center;justify-content:center;overflow:hidden;">${avatarInner}</div>
-                <button id="cd-avatar-btn" title="Сменить фото"
-                  style="position:absolute;bottom:3px;right:3px;width:26px;height:26px;border-radius:50%;background:var(--text);color:var(--bg);border:2px solid var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;"
-                  onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                </button>
-              </div>
-              <div style="flex:1;">
-                <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
-                  <h1 style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0;">${esc(c.name)}</h1>
-                  <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--brand-soft);color:var(--brand-text);">Кандидат</span>
-                </div>
-              </div>
-              <div style="display:flex;gap:9px;flex-shrink:0;">
-                <button id="cd-edit-btn"
-                  style="height:36px;padding:0 15px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);color:var(--text);font-size:13.5px;font-weight:600;cursor:pointer;"
-                  onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">Редактировать</button>
-                <button id="cd-logout-inline"
-                  style="height:36px;padding:0 15px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);color:var(--text-2);font-size:13.5px;font-weight:600;cursor:pointer;"
-                  onmouseover="this.style.color='var(--red-text)';this.style.borderColor='var(--red-text)'"
-                  onmouseout="this.style.color='var(--text-2)';this.style.borderColor='var(--line-2)'">Выйти</button>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:16px;margin-top:12px;font-size:13.5px;color:var(--muted);flex-wrap:wrap;">
-              <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;">@${esc(c.username)}</span>
-              ${emailRow}
-            </div>
-          </div>
+    listEl.innerHTML = filtered.map(t => `
+      <a class="ud-list-row" href="${esc(t.edit_url || '#')}">
+        <div class="ud-list-main">
+          <div class="ud-list-title">${esc(t.title || 'Без названия')}</div>
+          <div class="ud-list-meta">${esc(pluralPages(t.page_count || 0))} · создан ${esc(formatDateShort(t.created_at))}</div>
         </div>
-
-        <div style="display:grid;grid-template-columns:1fr 310px;gap:20px;margin-top:20px;align-items:start;">
-          <div style="display:flex;flex-direction:column;gap:20px;">
-            <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:22px 24px;">
-              <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:12px;">О себе</div>
-              ${bioHtml}
-            </div>
-            <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:22px 24px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);">Мои тесты</div>
-                <div style="display:flex;gap:7px;">
-                  <button id="cd-all-tests-btn"
-                    style="display:inline-flex;align-items:center;height:28px;padding:0 11px;border:1px solid var(--line-2);border-radius:7px;font-size:12.5px;color:var(--text-2);cursor:pointer;background:var(--surface);"
-                    onmouseover="this.style.color='var(--brand-text)';this.style.borderColor='var(--brand)'"
-                    onmouseout="this.style.color='var(--text-2)';this.style.borderColor='var(--line-2)'">Все</button>
-                  <a href="/constructor/?owner=${esc(username)}"
-                    style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border:1px solid var(--line-2);border-radius:7px;background:var(--surface);color:var(--text-2);font-size:12.5px;font-weight:500;text-decoration:none;"
-                    onmouseover="this.style.borderColor='var(--brand)';this.style.color='var(--brand-text)'"
-                    onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--text-2)'">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                    Создать
-                  </a>
-                </div>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:8px;">${testsPreviewHtml}</div>
-            </div>
-            <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:22px 24px;">
-              <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:12px;">Навыки</div>
-              <div style="display:flex;flex-wrap:wrap;gap:8px;">${skillsHtml}</div>
-            </div>
-            <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:22px 24px;">
-              <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:14px;">Пройденные тесты</div>
-              <div style="padding:18px;text-align:center;border:1px dashed var(--line-2);border-radius:11px;">
-                <div style="font-size:13.5px;color:var(--muted);">История прохождений появится здесь</div>
-              </div>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:20px;position:sticky;top:88px;">
-            <div style="border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:20px 22px;">
-              <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:14px;">Статистика</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div style="padding:13px;border:1px solid var(--line);border-radius:11px;background:var(--bg);">
-                  <div style="font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600;letter-spacing:-.02em;">${(tests || []).length}</div>
-                  <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">Тестов создано</div>
-                </div>
-                <div style="padding:13px;border:1px solid var(--line);border-radius:11px;background:var(--bg);">
-                  <div style="font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600;letter-spacing:-.02em;">${(tests || []).filter(t => t.status === 'published').length}</div>
-                  <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">Опубликовано</div>
-                </div>
-                <div style="padding:13px;border:1px solid var(--line);border-radius:11px;background:var(--bg);">
-                  <div style="font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600;letter-spacing:-.02em;">—</div>
-                  <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">Тестов пройдено</div>
-                </div>
-                <div style="padding:13px;border:1px solid var(--line);border-radius:11px;background:var(--bg);">
-                  <div style="font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600;letter-spacing:-.02em;">${skills.length}</div>
-                  <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">Навыков</div>
-                </div>
-              </div>
-            </div>
-            ${c.created_at ? `<div style="font-size:12px;color:var(--faint);text-align:center;padding:4px 0;">Зарегистрирован ${esc(formatDate(c.created_at))}</div>` : ''}
-          </div>
+        <span class="ud-status-pill" style="background:${STATUS_BG[t.status]||'var(--surface-2)'};color:${STATUS_CO[t.status]||'var(--muted)'};">${STATUS_LB[t.status] || t.status}</span>
+        <div class="ud-row-actions" onclick="event.stopPropagation()">
+          <button class="ud-icon-btn" data-delete-test="${t.id}" title="Удалить">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
         </div>
-        `;
+      </a>`).join('');
 
-        const avatarBtn = document.getElementById('cd-avatar-btn');
-        const avatarInput = document.getElementById('cd-avatar-input');
-        if (avatarBtn && avatarInput) {
-            avatarBtn.addEventListener('click', () => avatarInput.click());
-            avatarInput.addEventListener('change', e => {
-                const file = e.target.files[0];
-                if (file) uploadAvatar(tests, file);
-            });
-        }
-
-        document.getElementById('cd-edit-btn')?.addEventListener('click', () => openEditModal(tests));
-        document.getElementById('cd-logout-inline')?.addEventListener('click', logout);
-        document.getElementById('cd-all-tests-btn')?.addEventListener('click', () => window.location.assign('/cabinet/user/tests/'));
-    }
-
-    const STATUS_LABELS_TESTS = { draft: 'Черновик', published: 'Опубликован' };
-
-    function setStatText(id, value) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = String(value);
-    }
-
-    function renderMyTests(tests) {
-        const total = (tests || []).length;
-        const published = (tests || []).filter(t => t.status === 'published').length;
-        const submissions = (tests || []).reduce((sum, t) => sum + (t.submissions || 0), 0);
-        const rate = total > 0 ? Math.round(published / total * 100) : 0;
-
-        setStatText('stat-total-tests', total);
-        setStatText('stat-published', published);
-        setStatText('stat-submissions', submissions);
-        setStatText('stat-active-rate', `${rate}%`);
-
-        const tableWrapper = document.getElementById('tests-table-wrapper');
-        const tableBody = document.getElementById('tests-table-body');
-        const empty = document.getElementById('tests-empty');
-        const loading = document.getElementById('tests-loading');
-
-        if (loading) loading.hidden = true;
-
-        if (!tests || !tests.length) {
-            if (tableWrapper) tableWrapper.hidden = true;
-            if (empty) empty.hidden = false;
-            return;
-        }
-
-        tableBody.innerHTML = '';
-        for (const test of tests) {
-            const tr = document.createElement('tr');
-
-            const tdTitle = document.createElement('td');
-            const titleLink = document.createElement('a');
-            titleLink.href = test.url || '#';
-            titleLink.textContent = test.title || '—';
-            titleLink.target = '_blank';
-            tdTitle.appendChild(titleLink);
-            tr.appendChild(tdTitle);
-
-            const tdStatus = document.createElement('td');
-            const pill = document.createElement('span');
-            pill.className = `status-pill ${String(test.status || '').toLowerCase()}`;
-            pill.textContent = STATUS_LABELS_TESTS[test.status] || test.status || '—';
-            tdStatus.appendChild(pill);
-            tr.appendChild(tdStatus);
-
-            const tdPages = document.createElement('td');
-            tdPages.textContent = String(test.page_count ?? 0);
-            tr.appendChild(tdPages);
-
-            const tdSubs = document.createElement('td');
-            tdSubs.textContent = String(test.submissions ?? 0);
-            tr.appendChild(tdSubs);
-
-            const tdDate = document.createElement('td');
-            tdDate.textContent = formatTestDate(test.created_at);
-            tr.appendChild(tdDate);
-
-            const tdActions = document.createElement('td');
-            tdActions.style.whiteSpace = 'nowrap';
-
-            const editLink = document.createElement('a');
-            editLink.href = test.edit_url || '#';
-            editLink.className = 'action-icon-btn';
-            editLink.title = 'Редактировать';
-            editLink.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.type = 'button';
-            deleteBtn.className = 'action-icon-btn danger';
-            deleteBtn.title = 'Удалить';
-            deleteBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
-            deleteBtn.addEventListener('click', () => deleteTest(test.id));
-
-            tdActions.appendChild(editLink);
-            tdActions.appendChild(deleteBtn);
-            tr.appendChild(tdActions);
-
-            tableBody.appendChild(tr);
-        }
-
-        if (tableWrapper) tableWrapper.hidden = false;
-        if (empty) empty.hidden = true;
-    }
-
-    async function deleteTest(testId) {
+    listEl.querySelectorAll('[data-delete-test]').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.preventDefault();
+        e.stopPropagation();
         if (!confirm('Удалить тест? Это действие нельзя отменить.')) return;
         try {
-            await apiFetch(`/api/v1/tests/${testId}/`, { method: 'DELETE' });
-            const resp = await fetch(`/api/v1/tests/?owner=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false }));
-            renderMyTests(resp.ok ? (resp.tests || []) : []);
-        } catch (e) {
-            alert(e.message || 'Не удалось удалить тест.');
-        }
+          await apiFetch(`/api/v1/tests/${btn.dataset.deleteTest}/`, { method: 'DELETE' });
+          state.tests = state.tests.filter(t => String(t.id) !== btn.dataset.deleteTest);
+          renderTestsTab();
+          renderProfileTab();
+          renderStatsTab();
+        } catch (e) { alert(e.message); }
+      });
+    });
+  }
+
+  document.getElementById('panel-tests')?.addEventListener('click', e => {
+    const fbtn = e.target.closest('[data-tests-filter]');
+    if (!fbtn) return;
+    testsFilter = fbtn.dataset.testsFilter;
+    document.querySelectorAll('[data-tests-filter]').forEach(b => b.classList.toggle('active', b.dataset.testsFilter === testsFilter));
+    renderTestsTab();
+  });
+
+  /* ---------- render articles tab ---------- */
+
+  function renderArticlesTab() {
+    const articles = state.articles;
+    const published = articles.filter(a => a.status === 'published').length;
+    const drafts = articles.filter(a => a.status === 'draft').length;
+    const totalViews = articles.reduce((s, a) => s + (a.views || 0), 0);
+    const totalLikes = articles.reduce((s, a) => s + (a.likes || 0), 0);
+
+    set('astat-published', published);
+    set('astat-drafts', drafts);
+    set('astat-views', fmtNum(totalViews));
+    set('astat-likes', totalLikes);
+
+    const listEl = document.getElementById('ud-articles-list');
+    if (!listEl) return;
+
+    if (!articles.length) {
+      listEl.innerHTML = `<div class="ud-empty"><div class="ud-empty-title">Нет статей</div><div class="ud-empty-sub">Напишите первую статью, нажав кнопку выше.</div></div>`;
+      return;
     }
 
-    function openEditModal(tests) {
-        const c = state.candidate;
-        const overlay = document.createElement('div');
-        overlay.id = 'cd-edit-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;';
+    const STATUS_BG = { draft: 'var(--amber-soft)', published: 'var(--green-soft)' };
+    const STATUS_CO = { draft: 'var(--amber-text)', published: 'var(--green-text)' };
+    const STATUS_LB = { draft: 'Черновик', published: 'Опубликована' };
 
-        overlay.innerHTML = `
-          <div style="width:100%;max-width:520px;border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:32px;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto;">
-            <h2 style="font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0 0 22px;">Редактировать профиль</h2>
-            <div id="cd-edit-flash" style="margin-bottom:4px;"></div>
-            <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:22px;">
-              <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Отображаемое имя</div>
-                <input id="cd-edit-name" type="text" value="${esc(c.name)}" maxlength="255"
-                  style="width:100%;box-sizing:border-box;height:42px;padding:0 13px;border:1px solid var(--line-2);border-radius:9px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;outline:none;"
-                  onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--line-2)'">
-              </div>
-              <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:6px;">О себе</div>
-                <textarea id="cd-edit-bio" maxlength="1000" placeholder="Расскажите о себе…"
-                  style="width:100%;box-sizing:border-box;padding:11px 13px;border:1px solid var(--line-2);border-radius:9px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;min-height:110px;outline:none;"
-                  onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--line-2)'">${esc(c.bio)}</textarea>
-              </div>
-              <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:4px;">Навыки</div>
-                <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Перечислите через запятую: React, TypeScript, Go…</div>
-                <input id="cd-edit-skills" type="text" value="${esc((c.skills || []).join(', '))}" maxlength="500"
-                  placeholder="React, TypeScript, Git…"
-                  style="width:100%;box-sizing:border-box;height:42px;padding:0 13px;border:1px solid var(--line-2);border-radius:9px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;outline:none;"
-                  onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--line-2)'">
-              </div>
-            </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-              <button id="cd-modal-cancel"
-                style="height:42px;padding:0 18px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);color:var(--text-2);font-size:14px;font-weight:600;cursor:pointer;"
-                onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">Отмена</button>
-              <button id="cd-modal-save"
-                style="height:42px;padding:0 18px;border:none;border-radius:9px;background:var(--brand);color:var(--on-brand);font-size:14px;font-weight:600;cursor:pointer;"
-                onmouseover="this.style.background='var(--brand-strong)'" onmouseout="this.style.background='var(--brand)'">Сохранить</button>
-            </div>
-          </div>
-        `;
+    listEl.innerHTML = articles.map(a => {
+      const metaParts = [
+        STATUS_LB[a.status] || a.status,
+        a.published_at ? formatDateShort(a.published_at) : formatDateShort(a.created_at),
+        a.views ? `${fmtNum(a.views)} просмотров` : null,
+        a.likes ? `${a.likes} лайков` : null,
+      ].filter(Boolean).join(' · ');
+      return `<a class="ud-list-row" href="/articles/${a.id}/">
+        <div class="ud-list-main">
+          <div class="ud-list-title">${esc(a.title || 'Без названия')}</div>
+          <div class="ud-list-meta">${esc(metaParts)}</div>
+        </div>
+        <span class="ud-status-pill" style="background:${STATUS_BG[a.status]||'var(--surface-2)'};color:${STATUS_CO[a.status]||'var(--muted)'};">${STATUS_LB[a.status] || a.status}</span>
+      </a>`;
+    }).join('');
+  }
 
-        document.body.appendChild(overlay);
-        overlay.addEventListener('click', e => { if (e.target === overlay) closeEditModal(); });
-        document.getElementById('cd-modal-cancel').addEventListener('click', closeEditModal);
-        document.getElementById('cd-modal-save').addEventListener('click', () => saveProfile(tests));
-        document.addEventListener('keydown', onEscKey);
-        document.getElementById('cd-edit-name')?.focus();
+  /* ---------- render contests tab ---------- */
+
+  function renderContestsTab() {
+    const history = state.contestHistory;
+    const wins = history.filter(s => s.winner).length;
+    const pending = history.filter(s => s.status === 'pending').length;
+    const accepted = history.filter(s => s.status === 'accepted').length;
+
+    set('cstat-total', history.length);
+    set('cstat-wins', wins);
+    set('cstat-pending', pending);
+    set('cstat-accepted', accepted);
+
+    const listEl = document.getElementById('ud-contests-list');
+    if (!listEl) return;
+
+    if (!history.length) {
+      listEl.innerHTML = `<div class="ud-empty"><div class="ud-empty-title">Нет участий</div><div class="ud-empty-sub">Подайте решение в любой конкурс из каталога.</div></div>`;
+      return;
     }
 
-    function closeEditModal() {
-        document.getElementById('cd-edit-overlay')?.remove();
-        document.removeEventListener('keydown', onEscKey);
+    const STATUS_BG = {
+      pending:  'var(--amber-soft)',
+      accepted: 'var(--green-soft)',
+      rejected: 'var(--surface-2)',
+    };
+    const STATUS_CO = {
+      pending:  'var(--amber-text)',
+      accepted: 'var(--green-text)',
+      rejected: 'var(--muted)',
+    };
+    const STATUS_LB = {
+      pending:  'На проверке',
+      accepted: 'Принято',
+      rejected: 'Отклонено',
+    };
+
+    listEl.innerHTML = history.map(s => {
+      const placeHtml = s.winner
+        ? `<span class="ud-place-badge">🏆 Победитель</span>`
+        : '';
+      const statusBg = s.status === 'accepted' && s.winner ? 'var(--green-soft)' : STATUS_BG[s.status] || 'var(--surface-2)';
+      const statusCo = s.status === 'accepted' && s.winner ? 'var(--green-text)' : STATUS_CO[s.status] || 'var(--muted)';
+      const statusLb = s.winner ? 'Победа' : (STATUS_LB[s.status] || s.status);
+      return `<a class="ud-list-row" href="/contests/${s.contest_id}/">
+        <div class="ud-list-main">
+          <div class="ud-list-title">${esc(s.contest_title || 'Конкурс')}</div>
+          <div class="ud-list-meta">${esc(s.company_username)} · подано ${esc(formatDateShort(s.submitted_at))}</div>
+        </div>
+        ${placeHtml}
+        <span class="ud-status-pill" style="background:${statusBg};color:${statusCo};">${esc(statusLb)}</span>
+      </a>`;
+    }).join('');
+  }
+
+  /* ---------- render stats tab ---------- */
+
+  function renderStatsTab() {
+    const tests = state.tests;
+    const articles = state.articles;
+    const history = state.contestHistory;
+    const ratings = state.myRatings;
+    const c = state.candidate;
+
+    const daysOnPlatform = c && c.created_at
+      ? Math.floor((Date.now() - new Date(c.created_at)) / 86400000)
+      : 0;
+    set('sstat-days', daysOnPlatform);
+    set('sstat-tests', tests.length);
+    set('sstat-contests', history.length);
+
+    const avgRating = ratings.length
+      ? (ratings.reduce((s, r) => s + r.rating, 0) / ratings.length).toFixed(1)
+      : '—';
+    set('sstat-avg-rating', avgRating !== '—' ? `${avgRating} ★` : '—');
+
+    set('ss-c-total', history.length);
+    set('ss-c-wins', history.filter(s => s.winner).length);
+    set('ss-t-total', tests.length);
+    set('ss-t-pub', tests.filter(t => t.status === 'published').length);
+
+    const totalViews = articles.reduce((s, a) => s + (a.views || 0), 0);
+    const totalLikes = articles.reduce((s, a) => s + (a.likes || 0), 0);
+    set('ss-a-pub', articles.filter(a => a.status === 'published').length);
+    set('ss-a-views', fmtNum(totalViews));
+    set('ss-a-likes', totalLikes);
+
+    // Heatmap
+    const heatEl = document.getElementById('ud-heat-grid');
+    if (heatEl) {
+      let cells = '';
+      for (let i = 0; i < 26 * 7; i++) {
+        const r = Math.random();
+        const bg = r > 0.85 ? 'var(--brand)' : r > 0.6 ? 'var(--brand-soft)' : 'var(--surface-2)';
+        cells += `<div class="ud-heat-cell" style="background:${bg};"></div>`;
+      }
+      heatEl.innerHTML = cells;
     }
-    function onEscKey(e) { if (e.key === 'Escape') closeEditModal(); }
 
-    async function saveProfile(tests) {
-        const saveBtn = document.getElementById('cd-modal-save');
-        const flashEl = document.getElementById('cd-edit-flash');
-        const name = document.getElementById('cd-edit-name')?.value.trim();
-        const bio = document.getElementById('cd-edit-bio')?.value.trim();
-        const skillsStr = document.getElementById('cd-edit-skills')?.value || '';
-        const skills = skillsStr.split(',').map(s => s.trim()).filter(Boolean);
-
-        if (!name) {
-            if (flashEl) flashEl.innerHTML = `<div style="padding:10px 14px;border-radius:9px;background:var(--red-soft);color:var(--red-text);font-size:13.5px;margin-bottom:10px;">Имя не может быть пустым.</div>`;
-            return;
-        }
-        if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Сохранение…'; }
-
-        try {
-            const data = await apiFetch(`/api/v1/candidates/${username}/update/`, {
-                method: 'PATCH',
-                body: JSON.stringify({ name, bio: bio || '', skills }),
-            });
-            state.candidate = data.candidate;
-            closeEditModal();
-            renderProfile(tests);
-        } catch (e) {
-            if (flashEl) flashEl.innerHTML = `<div style="padding:10px 14px;border-radius:9px;background:var(--red-soft);color:var(--red-text);font-size:13.5px;margin-bottom:10px;">${esc(e.message)}</div>`;
-            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Сохранить'; }
-        }
+    // Contest bars
+    const contestBarsEl = document.getElementById('ud-contest-bars');
+    if (contestBarsEl) {
+      if (!history.length) {
+        contestBarsEl.innerHTML = `<div style="font-size:13px;color:var(--muted);">Нет данных</div>`;
+      } else {
+        const wins = history.filter(s => s.winner).length;
+        const accepted = history.filter(s => s.status === 'accepted').length;
+        const pending = history.filter(s => s.status === 'pending').length;
+        const rejected = history.filter(s => s.status === 'rejected').length;
+        const total = history.length;
+        const bars = [
+          { label: 'Победы', pct: Math.round(wins / total * 100), note: wins },
+          { label: 'Принято', pct: Math.round(accepted / total * 100), note: accepted },
+          { label: 'На проверке', pct: Math.round(pending / total * 100), note: pending },
+          { label: 'Отклонено', pct: Math.round(rejected / total * 100), note: rejected },
+        ].filter(b => b.note > 0);
+        contestBarsEl.innerHTML = bars.map(b => `
+          <div class="ud-bar-row">
+            <div class="ud-bar-label">${esc(b.label)}</div>
+            <div class="ud-bar-track"><div class="ud-bar-fill" style="width:${b.pct}%"></div></div>
+            <div class="ud-bar-val">${b.note}</div>
+          </div>`).join('');
+      }
     }
 
-    async function init() {
-        if (!username) return;
-        document.getElementById('logout-btn')?.addEventListener('click', logout);
-
-        const page = BOOTSTRAP.page;
-
-        if (page === 'user_tests') {
-            try {
-                const testsResp = await fetch(`/api/v1/tests/?owner=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false }));
-                const tests = testsResp.ok ? (testsResp.tests || []) : [];
-                renderMyTests(tests);
-            } catch (e) {
-                const el = document.getElementById('cd-content');
-                if (el) el.innerHTML = `<div style="padding:80px;text-align:center;color:var(--muted);">${esc(e.message)}</div>`;
-            }
-            return;
-        }
-
-        try {
-            const [candData, testsResp] = await Promise.all([
-                apiFetch(`/api/v1/candidates/${username}/`),
-                fetch(`/api/v1/tests/?owner=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false })),
-            ]);
-
-            state.candidate = candData.candidate;
-            const tests = testsResp.ok ? (testsResp.tests || []) : [];
-            renderProfile(tests);
-        } catch (e) {
-            const el = document.getElementById('cd-content');
-            if (el) el.innerHTML = `<div style="padding:80px;text-align:center;color:var(--muted);">${esc(e.message)}</div>`;
-        }
+    // Test bars
+    const testBarsEl = document.getElementById('ud-test-bars');
+    if (testBarsEl) {
+      if (!tests.length) {
+        testBarsEl.innerHTML = `<div style="font-size:13px;color:var(--muted);">Нет данных</div>`;
+      } else {
+        const total = tests.length;
+        const published = tests.filter(t => t.status === 'published').length;
+        const drafts = tests.filter(t => t.status === 'draft').length;
+        const bars = [
+          { label: 'Опубликовано', pct: Math.round(published / total * 100), note: published },
+          { label: 'Черновики', pct: Math.round(drafts / total * 100), note: drafts },
+        ].filter(b => b.note > 0);
+        testBarsEl.innerHTML = bars.map(b => `
+          <div class="ud-bar-row">
+            <div class="ud-bar-label">${esc(b.label)}</div>
+            <div class="ud-bar-track"><div class="ud-bar-fill" style="width:${b.pct}%"></div></div>
+            <div class="ud-bar-val">${b.note}</div>
+          </div>`).join('');
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', init);
+    // Company ratings
+    const ratingsEl = document.getElementById('ud-my-ratings');
+    if (ratingsEl) {
+      if (!ratings.length) {
+        ratingsEl.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:8px 0;">Вы ещё не оценивали компании</div>`;
+      } else {
+        ratingsEl.innerHTML = ratings.map(r => {
+          const stars = [1,2,3,4,5].map(i =>
+            `<svg width="14" height="14" viewBox="0 0 24 24" fill="${i <= r.rating ? 'var(--amber-text)' : 'none'}" stroke="var(--amber-text)" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8-6.1-3.6-6.1 3.6 1.5-6.8-5.2-4.7 6.9-.7z"/></svg>`
+          ).join('');
+          return `<div class="ud-rating-row">
+            <span class="ud-rating-av">${esc(initial(r.company_name))}</span>
+            <div style="flex:1;font-size:13.5px;font-weight:600;">${esc(r.company_name)}</div>
+            <div style="display:flex;gap:2px;">${stars}</div>
+          </div>`;
+        }).join('');
+      }
+    }
+  }
+
+  /* ---------- render settings tab ---------- */
+
+  function renderSettingsTab() {
+    const c = state.candidate;
+    if (!c) return;
+    const nameEl = document.getElementById('ud-s-name');
+    const emailEl = document.getElementById('ud-s-email');
+    const bioEl = document.getElementById('ud-s-bio');
+    const skillsEl = document.getElementById('ud-s-skills');
+    if (nameEl) nameEl.value = c.name || '';
+    if (emailEl) emailEl.value = c.email || '';
+    if (bioEl) bioEl.value = c.bio || '';
+    if (skillsEl) skillsEl.value = (c.skills || []).join(', ');
+  }
+
+  let settingsOriginal = null;
+
+  document.getElementById('ud-save-settings-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('ud-save-settings-btn');
+    const flashEl = document.getElementById('ud-settings-flash');
+    const name = document.getElementById('ud-s-name')?.value.trim();
+    const bio = document.getElementById('ud-s-bio')?.value.trim();
+    const skillsStr = document.getElementById('ud-s-skills')?.value || '';
+    const skills = skillsStr.split(',').map(s => s.trim()).filter(Boolean);
+
+    if (!name) {
+      if (flashEl) flashEl.innerHTML = `<div style="padding:10px 14px;border-radius:9px;background:var(--red-soft);color:var(--red-text);font-size:13.5px;margin-bottom:10px;">Имя не может быть пустым.</div>`;
+      return;
+    }
+    if (flashEl) flashEl.innerHTML = '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Сохранение…'; }
+
+    try {
+      const data = await apiFetch(`/api/v1/candidates/${username}/update/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name, bio: bio || '', skills }),
+      });
+      state.candidate = data.candidate;
+      if (btn) { btn.disabled = false; btn.textContent = '✓ Сохранено'; }
+      setTimeout(() => { if (btn) btn.textContent = 'Сохранить'; }, 1800);
+      renderSidebar();
+      renderProfileTab();
+      renderStatsTab();
+    } catch (e) {
+      if (flashEl) flashEl.innerHTML = `<div style="padding:10px 14px;border-radius:9px;background:var(--red-soft);color:var(--red-text);font-size:13.5px;margin-bottom:10px;">${esc(e.message)}</div>`;
+      if (btn) { btn.disabled = false; btn.textContent = 'Сохранить'; }
+    }
+  });
+
+  document.getElementById('ud-cancel-settings-btn')?.addEventListener('click', () => {
+    renderSettingsTab();
+    document.getElementById('ud-settings-flash').innerHTML = '';
+  });
+
+  /* ---------- create test button ---------- */
+
+  document.getElementById('ud-create-test-btn')?.addEventListener('click', e => {
+    e.preventDefault();
+    window.location.assign(`/constructor/?owner=${encodeURIComponent(username)}`);
+  });
+
+  /* ---------- init ---------- */
+
+  async function init() {
+    if (!username) return;
+
+    try {
+      const [candData, testsResp, articlesResp, historyResp, ratingsResp] = await Promise.all([
+        apiFetch(`/api/v1/candidates/${username}/`),
+        fetch(`/api/v1/tests/?owner=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false })),
+        fetch('/api/v1/articles/my/').then(r => r.json()).catch(() => ({ ok: false })),
+        fetch('/api/v1/contests/user-history/').then(r => r.json()).catch(() => ({ ok: false })),
+        fetch('/api/v1/companies/my-ratings/').then(r => r.json()).catch(() => ({ ok: false })),
+      ]);
+
+      state.candidate = candData.candidate;
+      state.tests = testsResp.ok ? (testsResp.tests || []) : [];
+      state.articles = articlesResp.ok ? (articlesResp.articles || []) : [];
+      state.contestHistory = historyResp.ok ? (historyResp.submissions || []) : [];
+      state.myRatings = ratingsResp.ok ? (ratingsResp.ratings || []) : [];
+
+      renderSidebar();
+      renderProfileTab();
+      renderTestsTab();
+      renderArticlesTab();
+      renderContestsTab();
+      renderStatsTab();
+      renderSettingsTab();
+    } catch (e) {
+      console.error('Cabinet init error:', e);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
 })();
