@@ -18,6 +18,7 @@ urlpatterns = [
     path('', include('contests.contests_app.urls')),
     path('', include('company_catalog.urls')),
     path('', include('cabinet.urls')),
+    path('', include('administration.dashboard.urls')),
     # profiles must come last — catches /<username>/
     path('', include('profiles.urls')),
 ]

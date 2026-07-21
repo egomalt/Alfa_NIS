@@ -87,6 +87,9 @@ def _serialize_company(company):
         'created_at': company.created_at.isoformat(),
         'updated_at': company.updated_at.isoformat(),
         'is_verified': company.is_verified,
+        'verification_status': company.verification_status,
+        'verification_reason': company.verification_reason,
+        'submitted_at': company.submitted_at.isoformat() if company.submitted_at else None,
         'avg_rating': avg_rating,
         'rating_count': rating_count,
         'rating_dist': rating_dist,
@@ -99,7 +102,7 @@ def api_companies_list(request):
     from django.db.models import Avg, Count
     from tests.constructor.models import Test
 
-    companies = Company.objects.exclude(registration_document='').order_by('-created_at')
+    companies = Company.objects.filter(verification_status=Company.VERIF_APPROVED).order_by('-created_at')
     counts = (
         Test.objects.filter(status=Test.STATUS_PUBLISHED)
         .values('owner_username')
@@ -159,11 +162,18 @@ def api_company_profile(request, username):
 
 @require_http_methods(['POST'])
 def api_company_verification(request, username):
+    from django.utils import timezone
     company = get_object_or_404(Company, username=username)
     form = CompanyVerificationForm(request.POST, request.FILES, instance=company)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
-    company = form.save()
+    company = form.save(commit=False)
+    # Загрузка документа отправляет компанию на ручную модерацию
+    company.verification_status = Company.VERIF_PENDING
+    company.verification_reason = ''
+    company.submitted_at = timezone.now()
+    company.verified_at = None
+    company.save()
     return JsonResponse({'ok': True, 'company': _serialize_company(company), 'next_url': '/cabinet/company/'})
 
 

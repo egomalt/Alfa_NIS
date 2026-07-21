@@ -11,6 +11,10 @@ import articles.articles_catalog.views as article_catalog_views
 import articles.articles_app.views as article_read_views
 import users.views as user_views
 import contests.contests_cabinet.api_views as contest_views
+import administration.dashboard.api_views as admin_overview_views
+import administration.verification.api_views as admin_verification_views
+import administration.moderation.api_views as admin_moderation_views
+import administration.reports.api_views as admin_reports_views
 
 urlpatterns = [
     # Auth
@@ -71,4 +75,17 @@ urlpatterns = [
     # Contests — public / candidate
     path('contests/<int:contest_id>/submit/',                         contest_views.api_contest_submit),
     path('contests/<int:contest_id>/my-submissions/',                 contest_views.api_my_submissions),
+
+    # Administration — только для модераторов
+    path('admin/overview/',                              admin_overview_views.api_overview),
+    path('admin/verifications/',                         admin_verification_views.api_verifications),
+    path('admin/verifications/<slug:username>/approve/', admin_verification_views.api_verification_approve),
+    path('admin/verifications/<slug:username>/reject/',  admin_verification_views.api_verification_reject),
+    path('admin/users/',                                 admin_moderation_views.api_users),
+    path('admin/users/<slug:username>/ban/',             admin_moderation_views.api_user_ban),
+    path('admin/users/<slug:username>/warn/',            admin_moderation_views.api_user_warn),
+    path('admin/users/<slug:username>/unban/',           admin_moderation_views.api_user_unban),
+    path('admin/reports/',                               admin_reports_views.api_reports),
+    path('admin/reports/<int:report_id>/resolve/',       admin_reports_views.api_report_resolve),
+    path('admin/reports/<int:report_id>/dismiss/',       admin_reports_views.api_report_dismiss),
 ]
