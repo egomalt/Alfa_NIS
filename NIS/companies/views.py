@@ -52,14 +52,19 @@ def app_shell(request, username):
 
 
 def _company_rating(company):
-    from django.db.models import Avg
-    agg = company.ratings.aggregate(avg=Avg('rating'))
+    from django.db.models import Avg, Count
+    agg = company.ratings.aggregate(avg=Avg('rating'), cnt=Count('id'))
     avg = agg['avg']
-    return round(avg, 1) if avg is not None else None, company.ratings.count()
+    total = agg['cnt'] or 0
+    dist = {}
+    if total:
+        for row in company.ratings.values('rating').annotate(c=Count('id')):
+            dist[row['rating']] = round(row['c'] / total * 100)
+    return round(avg, 1) if avg is not None else None, total, dist
 
 
 def _serialize_company(company):
-    avg_rating, rating_count = _company_rating(company)
+    avg_rating, rating_count, rating_dist = _company_rating(company)
     return {
         'id': company.id,
         'username': company.username,
@@ -84,6 +89,7 @@ def _serialize_company(company):
         'is_verified': company.is_verified,
         'avg_rating': avg_rating,
         'rating_count': rating_count,
+        'rating_dist': rating_dist,
     }
 
 

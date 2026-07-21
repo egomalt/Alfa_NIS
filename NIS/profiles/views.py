@@ -29,6 +29,18 @@ def profile_view(request, username):
 
 
 @ensure_csrf_cookie
+def company_contests_view(request, username):
+    from companies.models import Company
+    try:
+        company = Company.objects.get(username=username)
+    except Company.DoesNotExist:
+        raise Http404
+    if not company.is_verified:
+        raise Http404
+    return render(request, 'profiles/company_contests.html', {'username': username})
+
+
+@ensure_csrf_cookie
 def user_articles_view(request, username):
     try:
         account = Account.objects.get(username=username, role=ROLE_USER)

@@ -4,36 +4,77 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script>
-    (function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();
-  </script>
-  <title>Alfa Career — Профиль компании</title>
+  <script>(function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();</script>
+  <title>Профиль компании — Alfa Career</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
   <script>
-    window.ALFA_APP_BOOTSTRAP = {
-      username: "{{ username|escapejs }}",
-      type: "company"
-    };
+    window.ALFA_APP_BOOTSTRAP = { username: "{{ username|escapejs }}", type: "company" };
   </script>
   <script src="{% static 'main/theme.js' %}" defer></script>
   <script src="{% static 'js/career.js' %}?v=20260613-1" defer></script>
-  <script type="module" src="{% static 'profiles/app.js' %}?v=20260613-1"></script>
+  <style>
+    main { max-width: 980px; margin: 0 auto; padding: 32px 32px 80px; }
+
+    .pc-cover { height: 150px; border-radius: 20px 20px 0 0; background: linear-gradient(135deg,#D62839 0%,#7a1020 100%); position: relative; overflow: hidden; }
+    .pc-cover svg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .5; }
+    .pc-hero-card { border: 1px solid var(--line); border-radius: 20px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 22px; }
+    .pc-hero-body { padding: 0 30px 26px; }
+    .pc-hero-av { width: 92px; height: 92px; border-radius: 22px; background: var(--brand-soft); color: var(--brand-text); font-weight: 800; font-size: 36px; display: flex; align-items: center; justify-content: center; border: 4px solid var(--surface); margin-top: -46px; margin-bottom: 14px; overflow: hidden; }
+    .pc-hero-av img { width: 100%; height: 100%; object-fit: cover; }
+    .pc-hero-name { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pc-verified { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--green-soft); color: var(--green-text); font-size: 12px; }
+    .pc-hero-meta { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pc-rating-inline { display: flex; align-items: center; gap: 4px; font-weight: 700; color: var(--text); }
+    .pc-hero-bio { font-size: 14px; line-height: 1.6; color: var(--text-2); margin-top: 16px; max-width: 640px; }
+    .pc-tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .pc-tag { font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); }
+
+    .pc-stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 22px; }
+    .pc-stat-card { display: flex; flex-direction: column; gap: 5px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+    .pc-stat-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
+    .pc-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; }
+
+    .pc-section { border: 1px solid var(--line); border-radius: 18px; background: var(--surface); padding: 24px 26px; margin-bottom: 20px; }
+    .pc-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; gap: 12px; }
+    .pc-section-title { font-size: 16px; font-weight: 700; }
+    .pc-link-more { font-size: 13px; font-weight: 600; color: var(--brand-text); cursor: pointer; text-decoration: none; }
+    .pc-link-more:hover { text-decoration: underline; }
+
+    .pc-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; cursor: pointer; transition: background .12s; text-decoration: none; color: inherit; }
+    .pc-row:hover { background: var(--surface-2); }
+    .pc-row:last-child { margin-bottom: 0; }
+    .pc-row-main { flex: 1; min-width: 0; }
+    .pc-row-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .pc-row-meta { font-size: 12.5px; color: var(--muted); }
+    .pc-status-pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+    .pc-mono { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-2); white-space: nowrap; }
+
+    .pc-rating-hero { display: flex; align-items: center; gap: 28px; }
+    .pc-rating-score { font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 700; line-height: 1; }
+    .pc-rating-stars { display: flex; gap: 3px; margin: 6px 0 4px; }
+    .pc-rating-count { font-size: 12.5px; color: var(--muted); }
+    .pc-rating-dist { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .pc-dist-row { display: grid; grid-template-columns: 40px 1fr 34px; align-items: center; gap: 10px; }
+    .pc-dist-label { font-size: 12.5px; color: var(--text-2); }
+    .pc-dist-track { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+    .pc-dist-fill { height: 100%; background: var(--amber-text); border-radius: 999px; transition: width .4s; }
+    .pc-dist-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); text-align: right; }
+
+    .pc-empty { font-size: 13.5px; color: var(--muted); }
+  </style>
 </head>
 <body>
-<div style="display:flex;flex-direction:column;min-height:100vh;">
 
-  {% include 'partials/navbar.html' with chip_id='profile-user-chip' %}
+{% include 'partials/navbar.html' with chip_id='profile-user-chip' %}
 
-  <main style="flex:1;">
-    <div style="max-width:1080px;margin:0 auto;padding:32px 32px 80px;">
-      <div id="profile-content">
-        <div style="padding:80px;text-align:center;color:var(--muted);">Загрузка…</div>
-      </div>
-    </div>
-  </main>
+<main>
+  <div id="profile-content">
+    <div style="padding:80px;text-align:center;color:var(--muted);">Загрузка…</div>
+  </div>
+</main>
 
-</div>
+<script src="{% static 'profiles/company.js' %}?v=20260722-1"></script>
 </body>
 </html>
