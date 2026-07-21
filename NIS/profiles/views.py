@@ -26,3 +26,12 @@ def profile_view(request, username):
         return render(request, 'profiles/user.html', {'username': username})
 
     raise Http404
+
+
+@ensure_csrf_cookie
+def user_articles_view(request, username):
+    try:
+        account = Account.objects.get(username=username, role=ROLE_USER)
+    except Account.DoesNotExist:
+        raise Http404
+    return render(request, 'profiles/user_articles.html', {'username': username})
