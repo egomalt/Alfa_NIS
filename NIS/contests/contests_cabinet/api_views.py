@@ -306,3 +306,29 @@ def api_my_submissions(request, contest_id):
         contest_id=contest_id, candidate_username=account.username
     )
     return JsonResponse({'ok': True, 'submissions': [_sub_to_dict(s) for s in subs]})
+
+
+@require_http_methods(['GET'])
+def api_user_contest_history(request):
+    account = get_current_account(request)
+    if account is None:
+        return JsonResponse({'ok': True, 'submissions': []})
+    subs = (
+        ContestSubmission.objects
+        .filter(candidate_username=account.username)
+        .select_related('contest')
+        .order_by('-created_at')
+    )
+    result = []
+    for s in subs:
+        c = s.contest
+        result.append({
+            'id': s.id,
+            'contest_id': c.id,
+            'contest_title': c.title,
+            'company_username': c.company_username,
+            'status': s.status,
+            'winner': s.winner,
+            'submitted_at': s.created_at.isoformat(),
+        })
+    return JsonResponse({'ok': True, 'submissions': result})

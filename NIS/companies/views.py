@@ -213,6 +213,25 @@ def api_company_tests(request, username):
     })
 
 
+@require_GET
+def api_my_company_ratings(request):
+    from authorization.views import get_current_account
+    account = get_current_account(request)
+    if not account:
+        return JsonResponse({'ok': True, 'ratings': []})
+    ratings = (
+        CompanyRating.objects
+        .filter(user_username=account.username)
+        .select_related('company')
+        .order_by('-id')
+    )
+    result = [
+        {'company_username': r.company.username, 'company_name': r.company.name, 'rating': r.rating}
+        for r in ratings
+    ]
+    return JsonResponse({'ok': True, 'ratings': result})
+
+
 @require_http_methods(['POST'])
 def api_company_rate(request, username):
     import json as _json
