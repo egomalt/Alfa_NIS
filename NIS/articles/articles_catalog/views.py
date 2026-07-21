@@ -27,3 +27,26 @@ def api_articles_catalog(request):
             'published_at': a.published_at.isoformat() if a.published_at else None,
         })
     return JsonResponse({'ok': True, 'articles': data})
+
+
+def _serialize_article(a):
+    return {
+        'id': a.id,
+        'title': a.title,
+        'excerpt': a.excerpt,
+        'tags': a.tags or [],
+        'read_time': a.read_time,
+        'views': a.views,
+        'likes': a.likes,
+        'cover_index': a.cover_index,
+        'author_username': a.author_username,
+        'published_at': a.published_at.isoformat() if a.published_at else None,
+    }
+
+
+def api_user_articles(request, username):
+    articles = Article.objects.filter(
+        author_username=username,
+        status=Article.STATUS_PUBLISHED,
+    ).order_by('-published_at')
+    return JsonResponse({'ok': True, 'articles': [_serialize_article(a) for a in articles]})

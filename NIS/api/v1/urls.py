@@ -20,9 +20,11 @@ urlpatterns = [
     path('auth/me/',      auth_views.api_me,        name='v1_api_me'),
 
     # Candidates
-    path('candidates/<slug:username>/',        user_views.api_candidate_detail, name='v1_api_candidate_detail'),
-    path('candidates/<slug:username>/update/', user_views.api_candidate_update, name='v1_api_candidate_update'),
-    path('candidates/<slug:username>/avatar/', user_views.api_candidate_avatar, name='v1_api_candidate_avatar'),
+    path('candidates/<slug:username>/update/',   user_views.api_candidate_update, name='v1_api_candidate_update'),
+    path('candidates/<slug:username>/avatar/',   user_views.api_candidate_avatar, name='v1_api_candidate_avatar'),
+    path('candidates/<slug:username>/articles/', article_catalog_views.api_user_articles),
+    path('candidates/<slug:username>/contests/', contest_views.api_user_public_contests),
+    path('candidates/<slug:username>/',          user_views.api_candidate_detail, name='v1_api_candidate_detail'),
 
     # Articles
     path('articles/catalog/',                   article_catalog_views.api_articles_catalog),
