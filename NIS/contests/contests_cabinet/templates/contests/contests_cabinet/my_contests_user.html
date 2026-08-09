@@ -1,0 +1,22 @@
+{% extends 'cabinet/base_user.html' %}
+
+{% block title %}Конкурсы — Alfa Career{% endblock %}
+
+{% block panel %}
+<div class="ud-tab-panel" id="panel-contests">
+  <div class="ud-page-header">
+    <div>
+      <div class="ud-page-title">Конкурсы</div>
+      <div class="ud-page-sub">История вашего участия в конкурсах компаний</div>
+    </div>
+    <a class="ud-btn-secondary" href="/contests/">Все конкурсы</a>
+  </div>
+  <div class="ud-stats-row">
+    <div class="ud-stat-card"><div class="ud-stat-value" id="cstat-total">—</div><div class="ud-stat-label">Участий</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="cstat-wins">—</div><div class="ud-stat-label">Побед</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="cstat-pending">—</div><div class="ud-stat-label">На проверке</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="cstat-accepted">—</div><div class="ud-stat-label">Принято</div></div>
+  </div>
+  <div id="ud-contests-list"></div>
+</div>
+{% endblock %}

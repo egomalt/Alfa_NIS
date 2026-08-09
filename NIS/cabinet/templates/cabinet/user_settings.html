@@ -1,0 +1,39 @@
+{% extends 'cabinet/base_user.html' %}
+
+{% block title %}Настройки — Alfa Career{% endblock %}
+
+{% block panel %}
+<div class="ud-tab-panel" id="panel-settings">
+  <div class="ud-page-header">
+    <div>
+      <div class="ud-page-title">Настройки</div>
+      <div class="ud-page-sub">Личная информация и контакты</div>
+    </div>
+  </div>
+  <div class="ud-section">
+    <div id="ud-settings-flash" style="margin-bottom:4px;"></div>
+    <div class="ud-form-grid">
+      <div class="ud-form-field full">
+        <label class="ud-form-label">Отображаемое имя</label>
+        <input id="ud-s-name" class="ud-form-input" type="text" maxlength="255" placeholder="Ваше имя">
+      </div>
+      <div class="ud-form-field full">
+        <label class="ud-form-label">Email</label>
+        <input id="ud-s-email" class="ud-form-input" type="email" disabled>
+      </div>
+      <div class="ud-form-field full">
+        <label class="ud-form-label">О себе</label>
+        <textarea id="ud-s-bio" class="ud-form-textarea" maxlength="1000" placeholder="Расскажите о себе…"></textarea>
+      </div>
+      <div class="ud-form-field full">
+        <label class="ud-form-label">Навыки <span style="font-weight:400;color:var(--muted);">(через запятую: React, TypeScript, Go…)</span></label>
+        <input id="ud-s-skills" class="ud-form-input" type="text" maxlength="500" placeholder="React, TypeScript, Git…">
+      </div>
+    </div>
+    <div class="ud-form-actions">
+      <button class="ud-btn-primary" id="ud-save-settings-btn">Сохранить</button>
+      <button class="ud-btn-secondary" id="ud-cancel-settings-btn">Отмена</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

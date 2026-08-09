@@ -100,6 +100,7 @@
   /* ---------- render profile tab ---------- */
 
   function renderProfileTab() {
+    if (!document.getElementById('ud-profile-hero')) return;
     const c = state.candidate;
     if (!c) return;
 
@@ -172,6 +173,7 @@
   let testsFilter = 'all';
 
   function renderTestsTab() {
+    if (!document.getElementById('ud-tests-list')) return;
     const tests = state.tests;
     const total = tests.length;
     const published = tests.filter(t => t.status === 'published').length;
@@ -238,6 +240,7 @@
   /* ---------- render articles tab ---------- */
 
   function renderArticlesTab() {
+    if (!document.getElementById('ud-articles-list')) return;
     const articles = state.articles;
     const published = articles.filter(a => a.status === 'published').length;
     const drafts = articles.filter(a => a.status === 'draft').length;
@@ -281,6 +284,7 @@
   /* ---------- render contests tab ---------- */
 
   function renderContestsTab() {
+    if (!document.getElementById('ud-contests-list')) return;
     const history = state.contestHistory;
     const wins = history.filter(s => s.winner).length;
     const pending = history.filter(s => s.status === 'pending').length;
@@ -336,6 +340,7 @@
   /* ---------- render stats tab ---------- */
 
   function renderStatsTab() {
+    if (!document.getElementById('ud-heat-grid')) return;
     const tests = state.tests;
     const articles = state.articles;
     const history = state.contestHistory;
@@ -448,6 +453,7 @@
   /* ---------- render settings tab ---------- */
 
   function renderSettingsTab() {
+    if (!document.getElementById('ud-s-name')) return;
     const c = state.candidate;
     if (!c) return;
     const nameEl = document.getElementById('ud-s-name');

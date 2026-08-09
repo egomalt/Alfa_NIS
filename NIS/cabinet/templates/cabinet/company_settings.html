@@ -1,0 +1,64 @@
+{% extends 'cabinet/base_company.html' %}
+
+{% block title %}Настройки компании — Alfa Career{% endblock %}
+
+{% block panel %}
+<div class="cp-tab-panel" id="panel-settings">
+  <div class="cp-page-header">
+    <div>
+      <div class="cp-page-title">Настройки</div>
+      <div class="cp-page-sub">Информация о компании</div>
+    </div>
+  </div>
+  <div class="cp-section">
+    <div id="cp-settings-flash" style="margin-bottom:4px;"></div>
+    <div class="cp-form-grid">
+      <div class="cp-form-field full">
+        <label class="cp-form-label">Название компании</label>
+        <input id="cp-f-name" class="cp-form-input" type="text" maxlength="255">
+      </div>
+      <div class="cp-form-field">
+        <label class="cp-form-label">Индустрия</label>
+        <input id="cp-f-industry" class="cp-form-input" type="text" maxlength="100">
+      </div>
+      <div class="cp-form-field">
+        <label class="cp-form-label">Город</label>
+        <input id="cp-f-city" class="cp-form-input" type="text" maxlength="100">
+      </div>
+      <div class="cp-form-field">
+        <label class="cp-form-label">Email</label>
+        <input id="cp-f-email" class="cp-form-input" type="email">
+      </div>
+      <div class="cp-form-field">
+        <label class="cp-form-label">Телефон</label>
+        <input id="cp-f-phone" class="cp-form-input" type="text" maxlength="50">
+      </div>
+      <div class="cp-form-field">
+        <label class="cp-form-label">Сайт</label>
+        <input id="cp-f-website" class="cp-form-input" type="text" maxlength="200">
+      </div>
+      <div class="cp-form-field">
+        <label class="cp-form-label">Размер компании</label>
+        <input id="cp-f-size" class="cp-form-input" type="text" maxlength="50" placeholder="50–100 сотрудников">
+      </div>
+      <div class="cp-form-field full">
+        <label class="cp-form-label">Описание</label>
+        <textarea id="cp-f-desc" class="cp-form-textarea" maxlength="2000" rows="4" placeholder="Расскажите о компании…"></textarea>
+      </div>
+      <div class="cp-form-field full">
+        <label class="cp-form-label">Направления работы <span style="font-weight:400;color:var(--muted);">(до 4)</span></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <input id="cp-f-dir1" class="cp-form-input" type="text" maxlength="60" placeholder="Направление 1">
+          <input id="cp-f-dir2" class="cp-form-input" type="text" maxlength="60" placeholder="Направление 2">
+          <input id="cp-f-dir3" class="cp-form-input" type="text" maxlength="60" placeholder="Направление 3">
+          <input id="cp-f-dir4" class="cp-form-input" type="text" maxlength="60" placeholder="Направление 4">
+        </div>
+      </div>
+    </div>
+    <div class="cp-form-actions">
+      <button class="cp-btn-primary" id="cp-save-settings-btn">Сохранить</button>
+      <button class="cp-btn-secondary" id="cp-cancel-settings-btn">Отмена</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

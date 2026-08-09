@@ -1,0 +1,46 @@
+{% extends 'cabinet/base_company.html' %}
+
+{% block title %}Статистика компании — Alfa Career{% endblock %}
+
+{% block panel %}
+<div class="cp-tab-panel" id="panel-stats">
+  <div class="cp-page-header">
+    <div>
+      <div class="cp-page-title">Статистика</div>
+      <div class="cp-page-sub">Активность компании на платформе</div>
+    </div>
+    <a href="/export/company/statistics.pdf" class="cp-btn-secondary" style="text-decoration:none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+      Экспорт в PDF
+    </a>
+  </div>
+
+  <div class="cp-stats-row">
+    <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-contests">—</div><div class="cp-stat-label">Конкурсов создано</div></div>
+    <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-tests">—</div><div class="cp-stat-label">Тестов опубликовано</div></div>
+    <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-participants">—</div><div class="cp-stat-label">Участников привлечено</div></div>
+    <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-rating">—</div><div class="cp-stat-label">Оценка от кандидатов</div></div>
+  </div>
+
+  <div class="cp-section" id="cp-stats-rating-section" style="display:none;">
+    <div class="cp-section-title">Рейтинг компании</div>
+    <div class="cp-rating-hero">
+      <div>
+        <div class="cp-rating-score" id="cp-rating-score">—</div>
+        <div class="cp-rating-count" id="cp-rating-count"></div>
+      </div>
+      <div class="cp-rating-dist" id="cp-rating-dist"></div>
+    </div>
+  </div>
+
+  <div class="cp-section">
+    <div class="cp-section-title">Конкурсы</div>
+    <div id="cp-stats-contests"></div>
+  </div>
+
+  <div class="cp-section">
+    <div class="cp-section-title">Тесты</div>
+    <div id="cp-stats-tests"></div>
+  </div>
+</div>
+{% endblock %}

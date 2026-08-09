@@ -16,8 +16,14 @@ def cabinet_root(request):
     return redirect('/')
 
 
-@ensure_csrf_cookie
-def company_cabinet(request):
+_COMPANY_TEMPLATES = {
+    'profile': 'cabinet/company_profile.html',
+    'stats': 'cabinet/company_statistics.html',
+    'settings': 'cabinet/company_settings.html',
+}
+
+
+def _company_cabinet_page(request, page):
     account = get_current_account(request)
     if account is None or account.role != ROLE_COMPANY:
         return redirect('/authorization/signup/')
@@ -26,52 +32,29 @@ def company_cabinet(request):
         username=account.username,
         defaults={'name': account.name, 'contact_email': account.email},
     )
-    return render(request, 'cabinet/company.html', {'username': account.username, 'page': 'profile'})
+    return render(request, _COMPANY_TEMPLATES[page], {'username': account.username, 'page': page})
+
+
+@ensure_csrf_cookie
+def company_cabinet(request):
+    return _company_cabinet_page(request, 'profile')
 
 
 @ensure_csrf_cookie
 def company_statistics(request):
-    account = get_current_account(request)
-    if account is None or account.role != ROLE_COMPANY:
-        return redirect('/authorization/signup/')
-    from companies.models import Company
-    Company.objects.get_or_create(
-        username=account.username,
-        defaults={'name': account.name, 'contact_email': account.email},
-    )
-    return render(request, 'cabinet/company.html', {'username': account.username, 'page': 'stats'})
+    return _company_cabinet_page(request, 'stats')
 
 
 @ensure_csrf_cookie
 def company_settings(request):
-    account = get_current_account(request)
-    if account is None or account.role != ROLE_COMPANY:
-        return redirect('/authorization/signup/')
-    from companies.models import Company
-    Company.objects.get_or_create(
-        username=account.username,
-        defaults={'name': account.name, 'contact_email': account.email},
-    )
-    return render(request, 'cabinet/company.html', {'username': account.username, 'page': 'settings'})
+    return _company_cabinet_page(request, 'settings')
 
 
-@ensure_csrf_cookie
-def company_tests(request):
-    account = get_current_account(request)
-    if account is None or account.role != ROLE_COMPANY:
-        return redirect('/authorization/signup/')
-    from companies.models import Company
-    company, _ = Company.objects.get_or_create(
-        username=account.username,
-        defaults={'name': account.name, 'contact_email': account.email},
-    )
-    if not company.is_verified:
-        return redirect('/cabinet/company/')
-    return render(request, 'companies/tests.html', {
-        'app_path': request.path,
-        'owner_username': account.username,
-        'page': 'tests',
-    })
+_USER_TEMPLATES = {
+    'profile': 'cabinet/user_profile.html',
+    'stats': 'cabinet/user_statistics.html',
+    'settings': 'cabinet/user_settings.html',
+}
 
 
 @ensure_csrf_cookie
@@ -79,4 +62,5 @@ def user_cabinet(request, page='profile'):
     account = get_current_account(request)
     if account is None or account.role != ROLE_USER:
         return redirect('/authorization/signup/')
-    return render(request, 'cabinet/user.html', {'username': account.username, 'page': page})
+    template = _USER_TEMPLATES.get(page, _USER_TEMPLATES['profile'])
+    return render(request, template, {'username': account.username, 'page': page})

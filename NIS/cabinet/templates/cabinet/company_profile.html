@@ -1,0 +1,85 @@
+{% extends 'cabinet/base_company.html' %}
+
+{% block panel %}
+<div class="cp-tab-panel" id="panel-profile">
+  <div class="cp-page-header">
+    <div>
+      <div class="cp-page-title">Профиль компании</div>
+      <div class="cp-page-sub" id="cp-page-sub">Загрузка…</div>
+    </div>
+  </div>
+
+  <div class="cp-profile-hero">
+    <div class="cp-hero-av" id="cp-hero-av" title="Сменить аватар">?</div>
+    <div style="flex:1;">
+      <div class="cp-hero-name">
+        <span id="cp-hero-name">Компания</span>
+        <span class="cp-verified-badge" id="cp-verified-badge" style="display:none;">✓</span>
+      </div>
+      <div class="cp-hero-role" id="cp-hero-role">Компания</div>
+    </div>
+  </div>
+  <input type="file" id="cp-avatar-input" accept="image/*" hidden>
+
+  <!-- Verify gate -->
+  <div class="cp-verify-gate" id="cp-verify-gate" style="display:none;">
+    <div class="cp-verify-status" id="cp-verify-status">Профиль не подтверждён</div>
+    <div class="cp-verify-head">
+      <span class="cp-verify-icon" id="cp-verify-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
+      </span>
+      <div>
+        <div class="cp-verify-title" id="cp-verify-title">Подтвердите, что компания реальна</div>
+        <div class="cp-verify-sub" id="cp-verify-sub">Загрузите документ, подтверждающий деятельность компании (выписка ЕГРЮЛ, свидетельство о регистрации и т.п.), чтобы открыть создание тестов, конкурсов и другие функции.</div>
+      </div>
+    </div>
+    <div id="cp-verify-reason"></div>
+    <div id="cp-verify-upload">
+      <div class="cp-dropzone" id="cp-dropzone">
+        <div class="cp-dropzone-title">Загрузите документ</div>
+        <div class="cp-dropzone-sub">PDF, до 10 МБ</div>
+        <input type="file" id="cp-doc-input" accept=".pdf" style="display:none;">
+        <button class="cp-btn-secondary" onclick="document.getElementById('cp-doc-input').click()">Выбрать файл</button>
+      </div>
+      <div id="cp-file-chosen-wrap"></div>
+      <div id="cp-verify-flash" style="margin-bottom:8px;"></div>
+      <button class="cp-btn-primary" id="cp-submit-doc-btn" disabled>Отправить на проверку</button>
+    </div>
+  </div>
+
+  <!-- Profile content (после верификации) -->
+  <div id="cp-profile-content" style="display:none;">
+    <div class="cp-stats-row">
+      <div class="cp-stat-card"><div class="cp-stat-value" id="cpstat-contests">—</div><div class="cp-stat-label">Конкурсов создано</div></div>
+      <div class="cp-stat-card"><div class="cp-stat-value" id="cpstat-tests">—</div><div class="cp-stat-label">Тестов создано</div></div>
+      <div class="cp-stat-card"><div class="cp-stat-value" id="cpstat-participants">—</div><div class="cp-stat-label">Участников привлечено</div></div>
+      <div class="cp-stat-card"><div class="cp-stat-value" id="cpstat-rating">—</div><div class="cp-stat-label">Оценка от кандидатов</div></div>
+    </div>
+    <div class="cp-section">
+      <div class="cp-section-title">О компании</div>
+      <div class="cp-about-text" id="cp-about-text"></div>
+      <div class="cp-tag-row" id="cp-tag-row"></div>
+    </div>
+    <div class="cp-section">
+      <div class="cp-section-title">Недавняя активность</div>
+      <div class="cp-timeline" id="cp-timeline">
+        <div style="font-size:13.5px;color:var(--muted);padding:4px;">Активность появится здесь по мере работы на платформе</div>
+      </div>
+    </div>
+    <div class="cp-shortcuts">
+      <a href="/cabinet/company/contests/" class="cp-shortcut">
+        <div class="cp-shortcut-title">Конкурсы →</div>
+        <div class="cp-shortcut-sub" id="sc-contests-sub">Управление конкурсами</div>
+      </a>
+      <a href="/cabinet/company/tests/" class="cp-shortcut">
+        <div class="cp-shortcut-title">Тесты →</div>
+        <div class="cp-shortcut-sub" id="sc-tests-sub">Тесты для кандидатов</div>
+      </a>
+      <a href="/cabinet/company/statistics/" class="cp-shortcut">
+        <div class="cp-shortcut-title">Статистика →</div>
+        <div class="cp-shortcut-sub">Конкурсы, тесты, рейтинг</div>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

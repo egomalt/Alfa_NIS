@@ -1,0 +1,70 @@
+{% extends 'cabinet/base_user.html' %}
+
+{% block title %}Статистика — Alfa Career{% endblock %}
+
+{% block panel %}
+<div class="ud-tab-panel" id="panel-stats">
+  <div class="ud-page-header">
+    <div>
+      <div class="ud-page-title">Статистика</div>
+      <div class="ud-page-sub">Полная картина вашей активности на платформе</div>
+    </div>
+    <a href="/export/user/statistics.pdf" class="ud-btn-secondary" style="text-decoration:none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+      Экспорт в PDF
+    </a>
+  </div>
+
+  <div class="ud-stats-row">
+    <div class="ud-stat-card"><div class="ud-stat-value" id="sstat-days">—</div><div class="ud-stat-label">Дней на платформе</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="sstat-tests">—</div><div class="ud-stat-label">Тестов создано</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="sstat-contests">—</div><div class="ud-stat-label">Участий в конкурсах</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="sstat-avg-rating">—</div><div class="ud-stat-label">Средняя оценка компаниям</div></div>
+  </div>
+
+  <div class="ud-section">
+    <div class="ud-section-title">Активность за последние 26 недель</div>
+    <div class="ud-heat-grid" id="ud-heat-grid"></div>
+    <div class="ud-heat-legend">
+      меньше
+      <span class="ud-heat-cell" style="width:10px;height:10px;display:inline-block;"></span>
+      <span class="ud-heat-cell" style="width:10px;height:10px;display:inline-block;background:var(--brand-soft);"></span>
+      <span class="ud-heat-cell" style="width:10px;height:10px;display:inline-block;background:var(--brand);"></span>
+      больше
+    </div>
+  </div>
+
+  <div class="ud-two-col">
+    <div class="ud-section">
+      <div class="ud-section-title">Конкурсы</div>
+      <div class="ud-stats-row" style="grid-template-columns:repeat(2,1fr);margin-bottom:18px;">
+        <div class="ud-stat-card"><div class="ud-stat-value" id="ss-c-total">—</div><div class="ud-stat-label">Участий</div></div>
+        <div class="ud-stat-card"><div class="ud-stat-value" id="ss-c-wins">—</div><div class="ud-stat-label">Побед</div></div>
+      </div>
+      <div class="ud-bar-list" id="ud-contest-bars"></div>
+    </div>
+    <div class="ud-section">
+      <div class="ud-section-title">Тесты</div>
+      <div class="ud-stats-row" style="grid-template-columns:repeat(2,1fr);margin-bottom:18px;">
+        <div class="ud-stat-card"><div class="ud-stat-value" id="ss-t-total">—</div><div class="ud-stat-label">Создано</div></div>
+        <div class="ud-stat-card"><div class="ud-stat-value" id="ss-t-pub">—</div><div class="ud-stat-label">Опубликовано</div></div>
+      </div>
+      <div class="ud-bar-list" id="ud-test-bars"></div>
+    </div>
+  </div>
+
+  <div class="ud-section">
+    <div class="ud-section-title">Статьи</div>
+    <div class="ud-stats-row" style="grid-template-columns:repeat(3,1fr);">
+      <div class="ud-stat-card"><div class="ud-stat-value" id="ss-a-pub">—</div><div class="ud-stat-label">Опубликовано</div></div>
+      <div class="ud-stat-card"><div class="ud-stat-value" id="ss-a-views">—</div><div class="ud-stat-label">Просмотров</div></div>
+      <div class="ud-stat-card"><div class="ud-stat-value" id="ss-a-likes">—</div><div class="ud-stat-label">Реакций</div></div>
+    </div>
+  </div>
+
+  <div class="ud-section">
+    <div class="ud-section-title">Оценки, которые вы поставили компаниям</div>
+    <div id="ud-my-ratings"></div>
+  </div>
+</div>
+{% endblock %}
