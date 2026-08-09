@@ -58,26 +58,8 @@
 
   /* ---------- sidebar & tab switching ---------- */
 
-  function showTab(name) {
-    document.querySelectorAll('.ud-tab-panel').forEach(p => {
-      p.classList.toggle('active', p.id === 'panel-' + name);
-    });
-    document.querySelectorAll('.ud-side-link[data-tab]').forEach(b => {
-      b.classList.toggle('active', b.dataset.tab === name);
-    });
-    window.scrollTo(0, 0);
-  }
-
-  document.querySelectorAll('.ud-side-link[data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => showTab(btn.dataset.tab));
-  });
-  document.querySelectorAll('[data-goto]').forEach(el => {
-    el.addEventListener('click', () => showTab(el.dataset.goto));
-  });
-  document.getElementById('ud-shortcuts')?.addEventListener('click', e => {
-    const sc = e.target.closest('[data-goto]');
-    if (sc) showTab(sc.dataset.goto);
-  });
+  /* Навигация между разделами — переходы по ссылкам (отдельные адреса),
+     активный раздел задаётся сервером через переменную page. */
 
   /* ---------- logout ---------- */
 
@@ -166,7 +148,6 @@
     const pending = history.filter(s => s.status === 'pending').length;
     set('sc-contests-sub', pending > 0 ? `${pending} решение на проверке` : `${history.length} участий`);
 
-    document.getElementById('ud-edit-btn')?.addEventListener('click', () => showTab('settings'));
     const profileHero = document.getElementById('ud-profile-hero');
     if (profileHero && !profileHero.dataset.avatarWired) {
       profileHero.dataset.avatarWired = '1';

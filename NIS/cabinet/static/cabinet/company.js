@@ -340,19 +340,66 @@
   }
 
   // ---- Tab switching ----
-  function switchTab(tab) {
-    document.querySelectorAll('.cp-tab-panel').forEach(function (p) { p.classList.remove('active'); });
-    document.querySelectorAll('.cp-side-link[data-tab]').forEach(function (b) { b.classList.remove('active'); });
-    var panel = el('panel-' + tab);
-    if (panel) panel.classList.add('active');
-    document.querySelectorAll('.cp-side-link[data-tab="' + tab + '"]').forEach(function (b) { b.classList.add('active'); });
-    if (tab === 'settings') fillSettingsForm();
+  // ---- Stats tab ----
+  function pillStyle(status) {
+    if (status === 'active') return 'background:var(--green-soft);color:var(--green-text);';
+    if (status === 'review') return 'background:var(--amber-soft);color:var(--amber-text);';
+    return 'background:var(--surface-2);color:var(--muted);';
   }
 
-  function initTabs() {
-    document.querySelectorAll('.cp-side-link[data-tab]').forEach(function (btn) {
-      btn.addEventListener('click', function () { switchTab(btn.dataset.tab); });
-    });
+  function renderStatsTab() {
+    var c = state.company || {};
+    var contests = state.contests || [];
+    var tests = state.tests || [];
+    var publishedTests = tests.filter(function (t) { return t.status === 'published'; });
+    var totalParticipants = contests.reduce(function (s, x) { return s + (x.participants_count || 0); }, 0);
+
+    el('cpst2-contests').textContent = contests.length;
+    el('cpst2-tests').textContent = publishedTests.length;
+    el('cpst2-participants').textContent = totalParticipants;
+    el('cpst2-rating').textContent = c.avg_rating ? c.avg_rating.toFixed(1) + ' ★' : '—';
+
+    // Рейтинг + распределение
+    var section = el('cp-stats-rating-section');
+    if (c.avg_rating) {
+      section.style.display = '';
+      el('cp-rating-score').textContent = c.avg_rating.toFixed(1);
+      el('cp-rating-count').textContent = (c.rating_count || 0) + ' оценок от кандидатов';
+      var dist = c.rating_dist || {};
+      el('cp-rating-dist').innerHTML = [5, 4, 3, 2, 1].map(function (star) {
+        var pct = dist[star] || 0;
+        return '<div class="cp-dist-row"><div class="cp-dist-label">' + star + ' ★</div>'
+          + '<div class="cp-dist-track"><div class="cp-dist-fill" style="width:' + pct + '%"></div></div>'
+          + '<div class="cp-dist-val">' + pct + '%</div></div>';
+      }).join('');
+    } else {
+      section.style.display = 'none';
+    }
+
+    // Конкурсы
+    var CS = { draft: 'Черновик', active: 'Активен', review: 'На проверке', finished: 'Завершён' };
+    var cel = el('cp-stats-contests');
+    cel.innerHTML = contests.length
+      ? contests.map(function (x) {
+          var d = x.deadline ? new Date(x.deadline).toLocaleDateString('ru-RU') : '—';
+          var meta = [x.category, 'дедлайн ' + d].filter(Boolean).join(' · ');
+          return '<div class="cp-srow"><div class="cp-srow-main"><div class="cp-srow-title">' + esc(x.title)
+            + '</div><div class="cp-srow-meta">' + esc(meta) + '</div></div>'
+            + '<span class="cp-srow-val">' + (x.participants_count || 0) + ' уч.</span>'
+            + '<span class="cp-srow-pill" style="' + pillStyle(x.status) + '">' + (CS[x.status] || x.status) + '</span></div>';
+        }).join('')
+      : '<div class="cp-empty-note">Конкурсы ещё не создавались.</div>';
+
+    // Тесты
+    var TS = { draft: 'Черновик', published: 'Опубликован' };
+    var tel = el('cp-stats-tests');
+    tel.innerHTML = tests.length
+      ? tests.map(function (t) {
+          return '<div class="cp-srow"><div class="cp-srow-main"><div class="cp-srow-title">' + esc(t.title)
+            + '</div><div class="cp-srow-meta">' + (TS[t.status] || t.status) + '</div></div>'
+            + '<span class="cp-srow-val">' + (t.submissions || 0) + ' прох.</span></div>';
+        }).join('')
+      : '<div class="cp-empty-note">Тесты ещё не создавались.</div>';
   }
 
   // ---- Settings form ----
@@ -434,9 +481,11 @@
   }
 
   // ---- Init ----
+  // Активный раздел задаётся сервером (отдельные адреса), а не кликом по вкладке
+  var page = (window.ALFA_APP_BOOTSTRAP || {}).page || 'profile';
+
   function init() {
     initLogout();
-    initTabs();
     initVerifyDoc();
     initAvatarUpload();
     initSettingsButtons();
@@ -447,22 +496,26 @@
 
     Promise.all([companyFetch, contestsFetch, testsFetch])
       .then(function (results) {
-        var companyData = results[0];
-        var contestsData = results[1];
-        var testsData = results[2];
-
-        state.company = companyData.company;
-        state.contests = contestsData.contests || [];
-        state.tests = testsData.tests || [];
+        state.company = results[0].company;
+        state.contests = results[1].contests || [];
+        state.tests = results[2].tests || [];
 
         var company = state.company;
         renderSidebar(company);
-        renderHero(company);
+        // Разблокируем «Тесты»/«Конкурсы» на любой странице кабинета, если компания подтверждена
+        if (company.is_verified) unlockSidebarLinks();
 
-        if (company.is_verified) {
-          showProfileContent(company);
+        if (page === 'stats') {
+          renderStatsTab();
+        } else if (page === 'settings') {
+          fillSettingsForm();
         } else {
-          showVerifyGate(company);
+          renderHero(company);
+          if (company.is_verified) {
+            showProfileContent(company);
+          } else {
+            showVerifyGate(company);
+          }
         }
       })
       .catch(function (err) {

@@ -13,7 +13,7 @@
   <script>
     window.ALFA_APP_BOOTSTRAP = {
       username: "{{ username|escapejs }}",
-      page: "candidate"
+      page: "{{ page|default:'profile'|escapejs }}"
     };
   </script>
   <script src="{% static 'main/theme.js' %}" defer></script>
@@ -136,30 +136,30 @@
       </div>
     </div>
 
-    <button class="ud-side-link active" data-tab="profile">
+    <a href="/cabinet/user/" class="ud-side-link {% if page == 'profile' or not page %}active{% endif %}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21a8 8 0 1 0-16 0"/><circle cx="12" cy="8" r="4"/></svg>
       Профиль
-    </button>
-    <button class="ud-side-link" data-tab="tests">
+    </a>
+    <a href="/cabinet/user/tests/" class="ud-side-link {% if page == 'tests' %}active{% endif %}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       Мои тесты
-    </button>
-    <button class="ud-side-link" data-tab="articles">
+    </a>
+    <a href="/cabinet/user/articles/" class="ud-side-link {% if page == 'articles' %}active{% endif %}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       Мои статьи
-    </button>
-    <button class="ud-side-link" data-tab="contests">
+    </a>
+    <a href="/cabinet/user/contests/" class="ud-side-link {% if page == 'contests' %}active{% endif %}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"/></svg>
       Конкурсы
-    </button>
-    <button class="ud-side-link" data-tab="stats">
+    </a>
+    <a href="/cabinet/user/statistics/" class="ud-side-link {% if page == 'stats' %}active{% endif %}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-4"/></svg>
       Статистика
-    </button>
-    <button class="ud-side-link" data-tab="settings">
+    </a>
+    <a href="/cabinet/user/settings/" class="ud-side-link {% if page == 'settings' %}active{% endif %}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></svg>
       Настройки
-    </button>
+    </a>
 
     <div class="ud-side-spacer"></div>
     <a href="/" class="ud-side-link">
@@ -175,16 +175,16 @@
   <main class="ud-main">
 
     <!-- ===== ПРОФИЛЬ ===== -->
-    <div class="ud-tab-panel active" id="panel-profile">
+    <div class="ud-tab-panel {% if page == 'profile' or not page %}active{% endif %}" id="panel-profile">
       <div class="ud-page-header">
         <div>
           <div class="ud-page-title">Профиль</div>
           <div class="ud-page-sub">Обзор вашей активности на платформе</div>
         </div>
-        <button class="ud-btn-secondary" id="ud-edit-btn">
+        <a href="/cabinet/user/settings/" class="ud-btn-secondary" style="text-decoration:none;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           Редактировать
-        </button>
+        </a>
       </div>
 
       <div class="ud-profile-hero" id="ud-profile-hero">
@@ -213,23 +213,23 @@
       </div>
 
       <div class="ud-shortcuts" id="ud-shortcuts">
-        <div class="ud-shortcut" data-goto="tests">
+        <a href="/cabinet/user/tests/" class="ud-shortcut" style="text-decoration:none;color:inherit;">
           <div class="ud-shortcut-title">Мои тесты →</div>
           <div class="ud-shortcut-sub" id="sc-tests-sub">Загрузка…</div>
-        </div>
-        <div class="ud-shortcut" data-goto="articles">
+        </a>
+        <a href="/cabinet/user/articles/" class="ud-shortcut" style="text-decoration:none;color:inherit;">
           <div class="ud-shortcut-title">Мои статьи →</div>
           <div class="ud-shortcut-sub" id="sc-articles-sub">Загрузка…</div>
-        </div>
-        <div class="ud-shortcut" data-goto="contests">
+        </a>
+        <a href="/cabinet/user/contests/" class="ud-shortcut" style="text-decoration:none;color:inherit;">
           <div class="ud-shortcut-title">Конкурсы →</div>
           <div class="ud-shortcut-sub" id="sc-contests-sub">Загрузка…</div>
-        </div>
+        </a>
       </div>
     </div>
 
     <!-- ===== МОИ ТЕСТЫ ===== -->
-    <div class="ud-tab-panel" id="panel-tests">
+    <div class="ud-tab-panel {% if page == 'tests' %}active{% endif %}" id="panel-tests">
       <div class="ud-page-header">
         <div>
           <div class="ud-page-title">Мои тесты</div>
@@ -255,7 +255,7 @@
     </div>
 
     <!-- ===== МОИ СТАТЬИ ===== -->
-    <div class="ud-tab-panel" id="panel-articles">
+    <div class="ud-tab-panel {% if page == 'articles' %}active{% endif %}" id="panel-articles">
       <div class="ud-page-header">
         <div>
           <div class="ud-page-title">Мои статьи</div>
@@ -276,7 +276,7 @@
     </div>
 
     <!-- ===== КОНКУРСЫ ===== -->
-    <div class="ud-tab-panel" id="panel-contests">
+    <div class="ud-tab-panel {% if page == 'contests' %}active{% endif %}" id="panel-contests">
       <div class="ud-page-header">
         <div>
           <div class="ud-page-title">Конкурсы</div>
@@ -294,12 +294,16 @@
     </div>
 
     <!-- ===== СТАТИСТИКА ===== -->
-    <div class="ud-tab-panel" id="panel-stats">
+    <div class="ud-tab-panel {% if page == 'stats' %}active{% endif %}" id="panel-stats">
       <div class="ud-page-header">
         <div>
           <div class="ud-page-title">Статистика</div>
           <div class="ud-page-sub">Полная картина вашей активности на платформе</div>
         </div>
+        <a href="/export/user/statistics.pdf" class="ud-btn-secondary" style="text-decoration:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          Экспорт в PDF
+        </a>
       </div>
 
       <div class="ud-stats-row">
@@ -356,7 +360,7 @@
     </div>
 
     <!-- ===== НАСТРОЙКИ ===== -->
-    <div class="ud-tab-panel" id="panel-settings">
+    <div class="ud-tab-panel {% if page == 'settings' %}active{% endif %}" id="panel-settings">
       <div class="ud-page-header">
         <div>
           <div class="ud-page-title">Настройки</div>
@@ -393,6 +397,6 @@
   </main>
 </div>
 
-<script src="{% static 'cabinet/user.js' %}?v=20260721-1"></script>
+<script src="{% static 'cabinet/user.js' %}?v=20260722-2"></script>
 </body>
 </html>

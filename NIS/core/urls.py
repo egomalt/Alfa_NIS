@@ -19,6 +19,7 @@ urlpatterns = [
     path('', include('company_catalog.urls')),
     path('', include('cabinet.urls')),
     path('', include('administration.dashboard.urls')),
+    path('', include('exports.urls')),
     # profiles must come last — catches /<username>/
     path('', include('profiles.urls')),
 ]
