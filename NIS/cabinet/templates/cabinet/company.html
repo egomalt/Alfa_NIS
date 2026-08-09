@@ -13,7 +13,7 @@
   <script>
     window.ALFA_APP_BOOTSTRAP = {
       username: "{{ username|escapejs }}",
-      page: "profile"
+      page: "{{ page|default:'profile'|escapejs }}"
     };
   </script>
   <script src="{% static 'main/theme.js' %}" defer></script>
@@ -116,6 +116,25 @@
     .cp-flash.success { background: var(--green-soft); color: var(--green-text); }
     .cp-file-picker-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
     .cp-file-name { font-size: 12.5px; color: var(--muted); }
+
+    /* Статистика: рейтинг + списки */
+    .cp-rating-hero { display: flex; align-items: center; gap: 28px; }
+    .cp-rating-score { font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 700; line-height: 1; }
+    .cp-rating-count { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+    .cp-rating-dist { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .cp-dist-row { display: grid; grid-template-columns: 40px 1fr 34px; align-items: center; gap: 10px; }
+    .cp-dist-label { font-size: 12.5px; color: var(--text-2); }
+    .cp-dist-track { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+    .cp-dist-fill { height: 100%; background: var(--amber-text); border-radius: 999px; transition: width .4s; }
+    .cp-dist-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); text-align: right; }
+    .cp-srow { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; }
+    .cp-srow:last-child { margin-bottom: 0; }
+    .cp-srow-main { flex: 1; min-width: 0; }
+    .cp-srow-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .cp-srow-meta { font-size: 12.5px; color: var(--muted); }
+    .cp-srow-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-2); white-space: nowrap; }
+    .cp-srow-pill { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .cp-empty-note { font-size: 13.5px; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -132,10 +151,10 @@
       </div>
     </div>
 
-    <button class="cp-side-link active" data-tab="profile">
+    <a href="/cabinet/company/" class="cp-side-link {% if page == 'profile' or not page %}active{% endif %}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
       Профиль
-    </button>
+    </a>
     <a id="cp-link-tests" href="/cabinet/company/tests/" class="cp-side-link locked">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       Тесты
@@ -146,10 +165,14 @@
       Конкурсы
       <span class="cp-lock-ic" id="cp-lock-contests"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
     </a>
-    <button class="cp-side-link" data-tab="settings">
+    <a href="/cabinet/company/statistics/" class="cp-side-link {% if page == 'stats' %}active{% endif %}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-4"/></svg>
+      Статистика
+    </a>
+    <a href="/cabinet/company/settings/" class="cp-side-link {% if page == 'settings' %}active{% endif %}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></svg>
       Настройки
-    </button>
+    </a>
 
     <div class="cp-spacer"></div>
     <a href="/" class="cp-side-link">
@@ -165,7 +188,7 @@
   <main class="cp-main">
 
     <!-- ===== Профиль ===== -->
-    <div class="cp-tab-panel active" id="panel-profile">
+    <div class="cp-tab-panel {% if page == 'profile' or not page %}active{% endif %}" id="panel-profile">
       <div class="cp-page-header">
         <div>
           <div class="cp-page-title">Профиль компании</div>
@@ -239,16 +262,58 @@
             <div class="cp-shortcut-title">Тесты →</div>
             <div class="cp-shortcut-sub" id="sc-tests-sub">Тесты для кандидатов</div>
           </a>
-          <a href="#" class="cp-shortcut">
+          <a href="/cabinet/company/statistics/" class="cp-shortcut">
             <div class="cp-shortcut-title">Статистика →</div>
-            <div class="cp-shortcut-sub">Воронка, динамика, рейтинг</div>
+            <div class="cp-shortcut-sub">Конкурсы, тесты, рейтинг</div>
           </a>
         </div>
       </div>
     </div>
 
+    <!-- ===== Статистика ===== -->
+    <div class="cp-tab-panel {% if page == 'stats' %}active{% endif %}" id="panel-stats">
+      <div class="cp-page-header">
+        <div>
+          <div class="cp-page-title">Статистика</div>
+          <div class="cp-page-sub">Активность компании на платформе</div>
+        </div>
+        <a href="/export/company/statistics.pdf" class="cp-btn-secondary" style="text-decoration:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          Экспорт в PDF
+        </a>
+      </div>
+
+      <div class="cp-stats-row">
+        <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-contests">—</div><div class="cp-stat-label">Конкурсов создано</div></div>
+        <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-tests">—</div><div class="cp-stat-label">Тестов опубликовано</div></div>
+        <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-participants">—</div><div class="cp-stat-label">Участников привлечено</div></div>
+        <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-rating">—</div><div class="cp-stat-label">Оценка от кандидатов</div></div>
+      </div>
+
+      <div class="cp-section" id="cp-stats-rating-section" style="display:none;">
+        <div class="cp-section-title">Рейтинг компании</div>
+        <div class="cp-rating-hero">
+          <div>
+            <div class="cp-rating-score" id="cp-rating-score">—</div>
+            <div class="cp-rating-count" id="cp-rating-count"></div>
+          </div>
+          <div class="cp-rating-dist" id="cp-rating-dist"></div>
+        </div>
+      </div>
+
+      <div class="cp-section">
+        <div class="cp-section-title">Конкурсы</div>
+        <div id="cp-stats-contests"></div>
+      </div>
+
+      <div class="cp-section">
+        <div class="cp-section-title">Тесты</div>
+        <div id="cp-stats-tests"></div>
+      </div>
+    </div>
+
     <!-- ===== Настройки ===== -->
-    <div class="cp-tab-panel" id="panel-settings">
+    <div class="cp-tab-panel {% if page == 'settings' %}active{% endif %}" id="panel-settings">
       <div class="cp-page-header">
         <div>
           <div class="cp-page-title">Настройки</div>
@@ -310,6 +375,6 @@
   </main>
 </div>
 
-<script src="{% static 'cabinet/company.js' %}?v=20260722-1"></script>
+<script src="{% static 'cabinet/company.js' %}?v=20260722-3"></script>
 </body>
 </html>

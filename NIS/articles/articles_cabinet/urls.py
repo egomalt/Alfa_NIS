@@ -1,7 +1,4 @@
-from django.urls import path
-
-from . import views
-
-urlpatterns = [
-    path('cabinet/user/articles/', views.articles_cabinet, name='user_articles_cabinet'),
-]
+# Раздел «Мои статьи» кандидата переехал в единый сайдбарный кабинет
+# (cabinet.views.user_cabinet, page='articles', адрес /cabinet/user/articles/).
+# Старая отдельная страница отключена; API статей (api_my_articles) живёт в api/v1/urls.py.
+urlpatterns = []

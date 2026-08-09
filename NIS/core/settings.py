@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'administration.verification',
     'administration.moderation',
     'administration.reports',
+    'exports',
     'home',
     'django.contrib.contenttypes',
     'django.contrib.staticfiles',
