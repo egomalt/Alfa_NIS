@@ -1,0 +1,30 @@
+{% extends 'cabinet/base_user.html' %}
+
+{% block title %}Мои тесты — Alfa Career{% endblock %}
+
+{% block panel %}
+<div class="ud-tab-panel" id="panel-tests">
+  <div class="ud-page-header">
+    <div>
+      <div class="ud-page-title">Мои тесты</div>
+      <div class="ud-page-sub">Тесты, которые вы создали</div>
+    </div>
+    <a class="ud-btn-create" id="ud-create-test-btn" href="/constructor/">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Создать тест
+    </a>
+  </div>
+  <div class="ud-stats-row">
+    <div class="ud-stat-card"><div class="ud-stat-value" id="tstat-total">—</div><div class="ud-stat-label">Всего тестов</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="tstat-published">—</div><div class="ud-stat-label">Опубликовано</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="tstat-subs">—</div><div class="ud-stat-label">Прохождений</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="tstat-drafts">—</div><div class="ud-stat-label">Черновиков</div></div>
+  </div>
+  <div class="ud-filters">
+    <button class="ud-filter-btn active" data-tests-filter="all">Все</button>
+    <button class="ud-filter-btn" data-tests-filter="published">Опубликованные</button>
+    <button class="ud-filter-btn" data-tests-filter="draft">Черновики</button>
+  </div>
+  <div id="ud-tests-list"></div>
+</div>
+{% endblock %}

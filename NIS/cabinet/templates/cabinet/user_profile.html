@@ -1,0 +1,56 @@
+{% extends 'cabinet/base_user.html' %}
+
+{% block panel %}
+<div class="ud-tab-panel" id="panel-profile">
+  <div class="ud-page-header">
+    <div>
+      <div class="ud-page-title">Профиль</div>
+      <div class="ud-page-sub">Обзор вашей активности на платформе</div>
+    </div>
+    <a href="/cabinet/user/settings/" class="ud-btn-secondary" style="text-decoration:none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Редактировать
+    </a>
+  </div>
+
+  <div class="ud-profile-hero" id="ud-profile-hero">
+    <div class="ud-profile-av" id="ud-profile-av">?</div>
+    <div>
+      <div class="ud-profile-name" id="ud-profile-name">Загрузка…</div>
+      <div class="ud-profile-role" id="ud-profile-role">Кандидат</div>
+    </div>
+  </div>
+
+  <div class="ud-stats-row">
+    <div class="ud-stat-card"><div class="ud-stat-value" id="pstat-tests">—</div><div class="ud-stat-label">Тестов создано</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="pstat-articles">—</div><div class="ud-stat-label">Статей опубликовано</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="pstat-contests">—</div><div class="ud-stat-label">Конкурсов участий</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="pstat-wins">—</div><div class="ud-stat-label">Побед в конкурсах</div></div>
+  </div>
+
+  <div class="ud-section">
+    <div class="ud-section-title">О себе</div>
+    <div id="ud-profile-bio" style="font-size:14px;line-height:1.65;color:var(--text-2);"></div>
+  </div>
+
+  <div class="ud-section">
+    <div class="ud-section-title">Навыки</div>
+    <div id="ud-profile-skills" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+  </div>
+
+  <div class="ud-shortcuts" id="ud-shortcuts">
+    <a href="/cabinet/user/tests/" class="ud-shortcut" style="text-decoration:none;color:inherit;">
+      <div class="ud-shortcut-title">Мои тесты →</div>
+      <div class="ud-shortcut-sub" id="sc-tests-sub">Загрузка…</div>
+    </a>
+    <a href="/cabinet/user/articles/" class="ud-shortcut" style="text-decoration:none;color:inherit;">
+      <div class="ud-shortcut-title">Мои статьи →</div>
+      <div class="ud-shortcut-sub" id="sc-articles-sub">Загрузка…</div>
+    </a>
+    <a href="/cabinet/user/contests/" class="ud-shortcut" style="text-decoration:none;color:inherit;">
+      <div class="ud-shortcut-title">Конкурсы →</div>
+      <div class="ud-shortcut-sub" id="sc-contests-sub">Загрузка…</div>
+    </a>
+  </div>
+</div>
+{% endblock %}

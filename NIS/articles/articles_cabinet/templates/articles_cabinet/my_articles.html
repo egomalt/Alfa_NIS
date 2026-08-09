@@ -1,0 +1,25 @@
+{% extends 'cabinet/base_user.html' %}
+
+{% block title %}Мои статьи — Alfa Career{% endblock %}
+
+{% block panel %}
+<div class="ud-tab-panel" id="panel-articles">
+  <div class="ud-page-header">
+    <div>
+      <div class="ud-page-title">Мои статьи</div>
+      <div class="ud-page-sub">Делитесь опытом и знаниями с сообществом</div>
+    </div>
+    <a class="ud-btn-create" href="/articles/constructor/">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Написать статью
+    </a>
+  </div>
+  <div class="ud-stats-row">
+    <div class="ud-stat-card"><div class="ud-stat-value" id="astat-published">—</div><div class="ud-stat-label">Опубликовано</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="astat-drafts">—</div><div class="ud-stat-label">Черновики</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="astat-views">—</div><div class="ud-stat-label">Просмотров за всё время</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="astat-likes">—</div><div class="ud-stat-label">Лайков и комментариев</div></div>
+  </div>
+  <div id="ud-articles-list"></div>
+</div>
+{% endblock %}

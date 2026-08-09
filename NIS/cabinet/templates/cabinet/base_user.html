@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <script>(function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();</script>
+  <title>{% block title %}Личный кабинет — Alfa Career{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/career.css' %}">
+  <link rel="stylesheet" href="{% static 'cabinet/cabinet-user.css' %}?v=20260810-1">
+  <script>
+    window.ALFA_APP_BOOTSTRAP = {
+      username: "{{ username|escapejs }}",
+      page: "{{ page|default:'profile'|escapejs }}"
+    };
+  </script>
+  <script src="{% static 'main/theme.js' %}" defer></script>
+  <script src="{% static 'js/career.js' %}?v=20260613-1" defer></script>
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+
+{% include 'partials/navbar.html' with chip_id='cabinet-user-chip' logout_id='cd-logout-btn' %}
+
+<div class="ud-layout">
+  {% include 'cabinet/_user_sidebar.html' %}
+  <main class="ud-main">
+    {% block panel %}{% endblock %}
+  </main>
+</div>
+
+<script src="{% static 'cabinet/user.js' %}?v=20260810-1"></script>
+{% block page_script %}{% endblock %}
+</body>
+</html>

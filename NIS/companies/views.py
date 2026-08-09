@@ -1,9 +1,10 @@
-from django.http import Http404, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
-from authorization.models import Account, ROLE_USER
+from authorization.models import ROLE_COMPANY, ROLE_USER
+from authorization.views import get_current_account
 from core.utils import serialize_form_errors
 
 from .forms import CompanyProfileForm, CompanyVerificationForm
@@ -11,43 +12,21 @@ from .models import Company, CompanyRating
 
 
 @ensure_csrf_cookie
-def app_shell(request, username):
-    from authorization.views import get_current_account
-
-    try:
-        account = Account.objects.get(username=username)
-    except Account.DoesNotExist:
-        raise Http404
-
-    if account.role == ROLE_USER:
-        return render(request, 'users/dashboard.html', {
-            'app_path': request.path,
-            'username': username,
-            'page': 'dashboard',
-        })
-
+def company_tests_page(request):
+    """Раздел «Тесты» кабинета компании (страница в доменном приложении)."""
+    account = get_current_account(request)
+    if account is None or account.role != ROLE_COMPANY:
+        return redirect('/authorization/signup/')
     company, _ = Company.objects.get_or_create(
-        username=username,
+        username=account.username,
         defaults={'name': account.name, 'contact_email': account.email},
     )
-
-    current = get_current_account(request)
-    is_owner = current is not None and current.username == username
-
-    # Unverified companies are only visible to their owner
-    if not company.is_verified and not is_owner:
-        raise Http404
-
-    if request.path.endswith('/tests/') and not company.is_verified:
-        return redirect('company_profile_page', username=username)
-
-    template_name = 'companies/tests.html' if request.path.endswith('/tests/') else 'companies/profile.html'
-    page = 'tests' if request.path.endswith('/tests/') else 'profile'
-
-    return render(request, template_name, {
+    if not company.is_verified:
+        return redirect('/cabinet/company/')
+    return render(request, 'companies/tests.html', {
         'app_path': request.path,
-        'owner_username': username,
-        'page': page,
+        'owner_username': account.username,
+        'page': 'tests',
     })
 
 

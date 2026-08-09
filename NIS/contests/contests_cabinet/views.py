@@ -1,8 +1,18 @@
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 
-from authorization.models import ROLE_COMPANY
+from authorization.models import ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
+
+
+@ensure_csrf_cookie
+def my_contests_user(request):
+    """Раздел «Конкурсы» кабинета кандидата — история участия (единый сайдбарный вид)."""
+    account = get_current_account(request)
+    if account is None or account.role != ROLE_USER:
+        return redirect('/authorization/signup/')
+    return render(request, 'contests/contests_cabinet/my_contests_user.html',
+                  {'username': account.username, 'page': 'contests'})
 
 
 def _company_context(request):

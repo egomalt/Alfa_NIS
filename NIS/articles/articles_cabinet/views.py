@@ -10,13 +10,12 @@ from articles.constructor.models import Article
 
 
 @ensure_csrf_cookie
-def articles_cabinet(request):
+def my_articles(request):
+    """Раздел «Мои статьи» кабинета кандидата (единый сайдбарный вид)."""
     account = get_current_account(request)
-    if account is None:
+    if account is None or account.role != ROLE_USER:
         return redirect('/authorization/signup/')
-    if account.role != ROLE_USER:
-        return redirect('/cabinet/company/')
-    return render(request, 'articles_cabinet/articles_page.html', {'username': account.username})
+    return render(request, 'articles_cabinet/my_articles.html', {'username': account.username, 'page': 'articles'})
 
 
 def _serialize_article(a):

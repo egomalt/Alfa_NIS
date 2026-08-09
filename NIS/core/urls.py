@@ -17,6 +17,7 @@ urlpatterns = [
     path('', include('contests.contests_cabinet.urls')),
     path('', include('contests.contests_app.urls')),
     path('', include('company_catalog.urls')),
+    path('', include('companies.urls')),
     path('', include('cabinet.urls')),
     path('', include('administration.dashboard.urls')),
     path('', include('exports.urls')),
