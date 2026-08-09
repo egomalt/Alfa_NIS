@@ -167,5 +167,9 @@ textarea.cv-submit-input { min-height: 120px; line-height: 1.6; resize: vertical
   </div>
 </div>
 
+<script>
+  window.ALFA_MOD_TARGET = { type: 'contest', id: {{ contest_id }} };
+</script>
+<script src="{% static 'js/moderation-bar.js' %}?v=20260810-1"></script>
 </body>
 </html>

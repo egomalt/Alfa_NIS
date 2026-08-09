@@ -14,6 +14,7 @@ import contests.contests_cabinet.api_views as contest_views
 import administration.dashboard.api_views as admin_overview_views
 import administration.verification.api_views as admin_verification_views
 import administration.moderation.api_views as admin_moderation_views
+import administration.moderation.content_api as admin_content_views
 import administration.reports.api_views as admin_reports_views
 
 urlpatterns = [
@@ -88,4 +89,8 @@ urlpatterns = [
     path('admin/reports/',                               admin_reports_views.api_reports),
     path('admin/reports/<int:report_id>/resolve/',       admin_reports_views.api_report_resolve),
     path('admin/reports/<int:report_id>/dismiss/',       admin_reports_views.api_report_dismiss),
+    path('admin/content/article/<int:article_id>/delete/', admin_content_views.api_delete_article),
+    path('admin/content/contest/<int:contest_id>/delete/', admin_content_views.api_delete_contest),
+    path('admin/users/<slug:username>/content/',         admin_content_views.api_user_content),
+    path('admin/users/<slug:username>/purge/',           admin_content_views.api_user_purge),
 ]

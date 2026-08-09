@@ -74,5 +74,10 @@
 </main>
 
 <script src="{% static 'profiles/user.js' %}?v=20260722-1"></script>
+<meta name="csrf-token" content="{{ csrf_token }}">
+<script>
+  window.ALFA_MOD_TARGET = { type: 'user', username: "{{ username|escapejs }}" };
+</script>
+<script src="{% static 'js/moderation-bar.js' %}?v=20260810-1"></script>
 </body>
 </html>
