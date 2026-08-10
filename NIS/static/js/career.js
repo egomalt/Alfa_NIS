@@ -37,4 +37,32 @@
 
   // Auto-mount for all elements with data-user-chip attribute
   document.querySelectorAll('[data-user-chip]').forEach(el => mountUserChip(el.id));
+
+  /* ── Бургер верхнего навбара ─────────────────────────────────────── */
+  document.querySelectorAll('[data-nav-burger]').forEach(btn => {
+    const bar = btn.closest('.cr-navbar');
+    if (!bar) return;
+    btn.addEventListener('click', () => {
+      const open = bar.classList.toggle('nav-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    bar.querySelectorAll('.cr-nav a').forEach(a =>
+      a.addEventListener('click', () => bar.classList.remove('nav-open')));
+  });
+
+  /* ── Бургер сайдбара кабинета (off-canvas) ───────────────────────── */
+  document.querySelectorAll('[data-sidebar-burger]').forEach(btn => {
+    const layout = document.querySelector('.ud-layout, .cp-layout');
+    if (!layout) return;
+    const close = () => layout.classList.remove('sidebar-open');
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      layout.classList.toggle('sidebar-open');
+    });
+    // клик по затемнению или пункту меню закрывает панель
+    layout.addEventListener('click', e => {
+      if (e.target.classList.contains('cab-scrim')) close();
+      else if (e.target.closest('.ud-side-link, .cp-side-link')) close();
+    });
+  });
 })();

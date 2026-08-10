@@ -44,12 +44,9 @@ main { max-width: 1160px; margin: 0 auto; padding: 44px 32px 100px; }
 .read-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border: 1.5px solid var(--line-2); border-radius: 9px; background: transparent; color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; font-family: inherit; }
 .read-btn:hover { border-color: var(--brand); color: var(--brand-text); background: var(--brand-soft); }
 
-/* Category filters */
-.cats { display: flex; align-items: center; gap: 8px; margin-bottom: 36px; flex-wrap: wrap; }
-.cat-btn { height: 34px; padding: 0 16px; border: 1.5px solid var(--line-2); border-radius: 999px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .12s; white-space: nowrap; font-family: inherit; }
-.cat-btn:hover { border-color: var(--brand); color: var(--brand-text); }
-.cat-btn.active { background: var(--brand); border-color: var(--brand); color: #fff; }
-.cats-count { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--faint); margin-left: auto; }
+/* Фильтры категорий — единый компонент .cr-filters / .cr-chip в career.css.
+   .cr-filters переопределяем нижний отступ под этот каталог. */
+.cr-filters { margin-bottom: 36px; }
 
 /* Layout */
 .content-cols { display: grid; grid-template-columns: 1fr 280px; gap: 32px; align-items: start; }

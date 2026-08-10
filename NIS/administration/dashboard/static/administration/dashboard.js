@@ -182,12 +182,30 @@
     reloadOverview: function () { if (sections.overview && sections.overview.load) sections.overview.load(); },
   };
 
+  function setupSidebarBurger() {
+    var burger = el('ap-sidebar-burger');
+    var layout = document.querySelector('.ap-layout');
+    if (!burger || !layout) return;
+    var close = function () { layout.classList.remove('sidebar-open'); };
+    burger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      layout.classList.toggle('sidebar-open');
+    });
+    var scrim = el('ap-scrim');
+    if (scrim) scrim.addEventListener('click', close);
+    // выбор раздела в сайдбаре закрывает панель на мобиле
+    document.querySelectorAll('.ap-side-link').forEach(function (b) {
+      b.addEventListener('click', close);
+    });
+  }
+
   function init() {
     setupTabs();
     setupLogout();
     setupReasonModal();
     setupDocModal();
     setModName();
+    setupSidebarBurger();
 
     // Инициализируем все зарегистрированные разделы
     Object.keys(sections).forEach(function (name) {
