@@ -83,11 +83,11 @@
 
     const cats = document.getElementById('cats');
     const countEl = document.getElementById('cats-count');
-    cats.querySelectorAll('.cat-btn').forEach((b, i) => { if (i > 0) b.remove(); });
+    cats.querySelectorAll('.cr-chip').forEach((b, i) => { if (i > 0) b.remove(); });
 
     tags.forEach(tag => {
       const btn = document.createElement('button');
-      btn.className = 'cat-btn';
+      btn.className = 'cr-chip';
       btn.dataset.cat = tag;
       btn.textContent = tag;
       btn.addEventListener('click', () => filterCat(tag));
@@ -109,7 +109,7 @@
   function filterCat(cat) {
     activeCat = cat;
     shown = 6;
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+    document.querySelectorAll('.cr-chip').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
     document.querySelectorAll('.cloud-tag').forEach(b => b.classList.toggle('active', b.dataset.tag === cat));
     renderGrid();
   }

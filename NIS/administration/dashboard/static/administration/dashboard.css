@@ -38,7 +38,7 @@
 .ap-page-sub { font-size: 14px; color: var(--muted); }
 
 .ap-stats-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-bottom: 22px; }
-.ap-stat-card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 18px 20px; cursor: pointer; transition: border-color .12s; }
+.ap-stat-card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 18px 20px; cursor: pointer; transition: border-color .12s; min-width: 0; }
 .ap-stat-card:hover { border-color: var(--brand); }
 .ap-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
 .ap-stat-label { font-size: 12.5px; color: var(--muted); }
@@ -120,3 +120,28 @@
 .ap-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .ap-btn-primary { height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: var(--brand); color: var(--on-brand); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
 .ap-btn-secondary { height: 34px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+/* ── Адаптив админ-панели ─────────────────────────────────────────── */
+.ap-burger { display: none; align-items: center; gap: 8px; margin: 12px 16px 0; padding: 0 14px; height: 40px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); color: var(--text); font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit; }
+.ap-burger:hover { border-color: var(--brand); color: var(--brand-text); }
+.ap-scrim { display: none; }
+
+@media (max-width: 1100px) { .ap-stats-row { grid-template-columns: repeat(3,1fr); } }
+@media (max-width: 900px) {
+  .ap-navbar { padding: 0 16px; }
+  .ap-burger { display: inline-flex; }
+  .ap-layout { grid-template-columns: 1fr; }
+  .ap-sidebar { position: fixed; top: 64px; left: 0; bottom: 0; width: 240px; transform: translateX(-100%); transition: transform .22s ease; z-index: 80; }
+  .ap-layout.sidebar-open .ap-sidebar { transform: none; box-shadow: 0 10px 40px rgba(16,24,40,.25); }
+  .ap-layout.sidebar-open .ap-scrim { display: block; position: fixed; inset: 64px 0 0 0; background: rgba(0,0,0,.4); z-index: 70; }
+  .ap-stats-row { grid-template-columns: repeat(2,1fr); }
+  /* широкие таблицы — горизонтальный скролл */
+  .ap-table { overflow-x: auto; }
+  .ap-trow { min-width: 640px; }
+  .ap-main { padding: 22px 16px 60px; }
+  /* чип аккаунта → только аватар, размером как кнопки навбара */
+  .ap-user-chip { padding: 0; border: none; background: transparent; }
+  .ap-user-chip > div { display: none; }
+  .ap-avatar { width: 36px; height: 36px; border-radius: 9px; font-size: 14px; }
+}
+@media (max-width: 520px) { .ap-stats-row { grid-template-columns: 1fr; } }

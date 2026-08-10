@@ -30,11 +30,18 @@ input, button { font-family: inherit; }
 .cover-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 32px; }
 .cover-tags { display: flex; gap: 7px; margin-bottom: 14px; }
 .cover-tag { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 6px; background: rgba(255,255,255,.18); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.92); }
-.cover-title { font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1.2; color: #fff; max-width: 720px; }
+.cover-title { font-size: clamp(22px, 4.5vw, 36px); font-weight: 800; letter-spacing: -.03em; line-height: 1.2; color: #fff; max-width: 720px; overflow-wrap: break-word; }
 
 /* Layout */
 .layout { max-width: 1160px; margin: 0 auto; padding: 44px 32px 100px; display: grid; grid-template-columns: 1fr 300px; gap: 48px; align-items: start; }
 @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } .art-sidebar { display: none; } }
+@media (max-width: 600px) {
+  .cover { height: 300px; }
+  .cover-bottom { padding: 20px 18px; }
+  .breadcrumb { top: 18px; left: 18px; }
+  .cover-tags { flex-wrap: wrap; }
+  .layout { padding: 28px 18px 80px; }
+}
 
 .article { min-width: 0; }
 

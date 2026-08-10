@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <link rel="stylesheet" href="{% static 'administration/dashboard.css' %}?v=20260722-1">
+  <link rel="stylesheet" href="{% static 'administration/dashboard.css' %}?v=20260810-3">
   <script>window.ALFA_ADMIN_BOOTSTRAP = { username: "{{ username|escapejs }}" };</script>
   <script src="{% static 'main/theme.js' %}" defer></script>
 </head>
@@ -34,7 +34,13 @@
   </div>
 </nav>
 
+<button type="button" class="ap-burger" id="ap-sidebar-burger" aria-label="Разделы">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  Разделы
+</button>
+
 <div class="ap-layout">
+  <div class="ap-scrim" id="ap-scrim"></div>
   <aside class="ap-sidebar">
     <div class="ap-company-chip">
       <span class="ap-company-avatar">A</span>
@@ -167,7 +173,7 @@
   </div>
 </div>
 
-<script src="{% static 'administration/dashboard.js' %}?v=20260722-1"></script>
+<script src="{% static 'administration/dashboard.js' %}?v=20260810-1"></script>
 <script src="{% static 'administration/overview.js' %}?v=20260722-1"></script>
 <script src="{% static 'administration/verification.js' %}?v=20260722-1"></script>
 <script src="{% static 'administration/users.js' %}?v=20260722-1"></script>

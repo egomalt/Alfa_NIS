@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <link rel="stylesheet" href="{% static 'cabinet/cabinet-company.css' %}?v=20260810-1">
+  <link rel="stylesheet" href="{% static 'cabinet/cabinet-company.css' %}?v=20260810-3">
   <script>
     window.ALFA_APP_BOOTSTRAP = {
       username: "{{ username|escapejs }}",
@@ -25,8 +25,14 @@
 
 {% include 'partials/navbar.html' with chip_id='company-user-chip' logout_id='logout-btn' %}
 
+<button type="button" class="cab-burger" data-sidebar-burger aria-label="Разделы кабинета">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  Разделы
+</button>
+
 <div class="cp-layout">
   {% include 'cabinet/_company_sidebar.html' %}
+  <div class="cab-scrim"></div>
   <main class="cp-main">
     {% block panel %}{% endblock %}
   </main>
