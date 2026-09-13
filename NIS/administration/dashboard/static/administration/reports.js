@@ -65,9 +65,9 @@
       + '</div>';
   }
 
-  function render(list) {
+  function render(list, total) {
     var countEl = A.el('ap-r-count');
-    if (countEl) countEl.textContent = list.length;
+    if (countEl) countEl.textContent = (typeof total === 'number' ? total : list.length);
     var wrap = A.el('ap-reports-list');
     if (!list.length) {
       wrap.innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Пусто</div><div class="ap-empty-sub">Жалоб в этой категории нет</div></div>';
@@ -76,11 +76,14 @@
     wrap.innerHTML = list.map(cardHtml).join('');
   }
 
+  var page = 1;
+
   function load() {
-    A.apiGet('/api/v1/admin/reports/?status=' + filter)
+    A.apiGet('/api/v1/admin/reports/?status=' + filter + '&page=' + page)
       .then(function (d) {
         if (typeof d.threshold === 'number') threshold = d.threshold;
-        render(d.reports || []);
+        render(d.reports || [], d.total);
+        window.AlfaPager.render(A.el('ap-reports-pager'), d, function (next) { page = next; load(); });
       })
       .catch(function (e) {
         A.el('ap-reports-list').innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Ошибка</div><div class="ap-empty-sub">' + A.esc(e.message) + '</div></div>';
@@ -99,6 +102,7 @@
       if (!btn) return;
       filter = btn.dataset.rf;
       expandedId = null;
+      page = 1;
       this.querySelectorAll('[data-rf]').forEach(function (b) { b.classList.toggle('active', b.dataset.rf === filter); });
       load();
     });

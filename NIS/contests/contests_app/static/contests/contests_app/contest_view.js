@@ -52,9 +52,8 @@ function renderHero(c) {
           ${c.level ? `<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:7px;background:var(--surface-2);color:var(--text-2);">${c.level}</span>` : ''}
         </div>
       </div>
-      <button type="button" data-report-type="contest" data-report-id="${c.id}"
-              data-report-author="${c.company_username || ''}" data-report-title="${(c.title || '').replace(/"/g, '&quot;')}"
-              style="height:34px;padding:0 14px;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:none;align-items:center;gap:6px;">
+      <button type="button" class="cr-report-btn" data-report-type="contest" data-report-id="${c.id}"
+              data-report-author="${c.company_username || ''}" data-report-title="${(c.title || '').replace(/"/g, '&quot;')}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
         Пожаловаться
       </button>
