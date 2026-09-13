@@ -32,9 +32,9 @@
       + '</div>';
   }
 
-  function render(list) {
+  function render(list, total) {
     var countEl = A.el('ap-u-count');
-    if (countEl) countEl.textContent = list.length;
+    if (countEl) countEl.textContent = (typeof total === 'number' ? total : list.length);
     var wrap = A.el('ap-users-table');
     if (!list.length) {
       wrap.innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Никого не найдено</div><div class="ap-empty-sub">Измените фильтр или запрос</div></div>';
@@ -44,11 +44,16 @@
     wrap.innerHTML = head + list.map(rowHtml).join('');
   }
 
+  var page = 1;
+
   function load() {
-    var url = '/api/v1/admin/users/?filter=' + encodeURIComponent(filter);
+    var url = '/api/v1/admin/users/?filter=' + encodeURIComponent(filter) + '&page=' + page;
     if (query) url += '&q=' + encodeURIComponent(query);
     A.apiGet(url)
-      .then(function (d) { render(d.users || []); })
+      .then(function (d) {
+        render(d.users || [], d.total);
+        window.AlfaPager.render(A.el('ap-users-pager'), d, function (next) { page = next; load(); });
+      })
       .catch(function (e) {
         A.el('ap-users-table').innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Ошибка</div><div class="ap-empty-sub">' + A.esc(e.message) + '</div></div>';
       });
@@ -64,13 +69,14 @@
       var btn = e.target.closest('[data-uf]');
       if (!btn) return;
       filter = btn.dataset.uf;
+      page = 1;
       this.querySelectorAll('[data-uf]').forEach(function (b) { b.classList.toggle('active', b.dataset.uf === filter); });
       load();
     });
 
     var search = A.el('ap-user-search');
     if (search) {
-      search.addEventListener('input', function () { query = this.value; load(); });
+      search.addEventListener('input', function () { query = this.value; page = 1; load(); });
     }
 
     A.el('ap-users-table').addEventListener('click', function (e) {

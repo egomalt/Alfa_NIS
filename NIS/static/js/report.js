@@ -7,9 +7,6 @@
  * жаловаться нельзя, сервер такие запросы тоже отклоняет.
  */
 (() => {
-  const ESC = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
   function csrfToken() {
     const cookie = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('csrftoken='));
     if (cookie) return decodeURIComponent(cookie.slice('csrftoken='.length));
@@ -19,19 +16,18 @@
   function buildModal() {
     const wrap = document.createElement('div');
     wrap.id = 'report-modal';
-    wrap.style.cssText = 'position:fixed;inset:0;z-index:1000;display:none;align-items:center;' +
-      'justify-content:center;background:rgba(0,0,0,.45);padding:20px;';
+    wrap.className = 'cr-modal';
     wrap.innerHTML = `
-      <div style="width:100%;max-width:440px;background:var(--surface);border:1px solid var(--line-2);border-radius:14px;padding:22px;">
-        <div style="font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px;">Пожаловаться на материал</div>
-        <div id="report-target" style="font-size:13px;color:var(--muted);margin-bottom:16px;"></div>
-        <div style="font-size:12.5px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Причина</div>
-        <textarea id="report-reason" maxlength="2000" rows="4" placeholder="Что не так с этим материалом?"
-          style="width:100%;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;"></textarea>
-        <div id="report-error" style="font-size:12.5px;color:var(--red-text);min-height:18px;margin-top:6px;"></div>
-        <div style="display:flex;gap:10px;margin-top:10px;">
-          <button type="button" id="report-cancel" style="flex:1;height:42px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Отмена</button>
-          <button type="button" id="report-send" style="flex:1;height:42px;border:none;border-radius:10px;background:var(--brand);color:var(--on-brand);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Отправить</button>
+      <div class="cr-modal-card">
+        <div class="cr-modal-title">Пожаловаться на материал</div>
+        <div class="cr-modal-sub" id="report-target"></div>
+        <div class="cr-modal-label">Причина</div>
+        <textarea id="report-reason" class="cr-modal-textarea" maxlength="2000"
+                  placeholder="Что не так с этим материалом?"></textarea>
+        <div class="cr-modal-error" id="report-error"></div>
+        <div class="cr-modal-actions">
+          <button type="button" id="report-cancel" class="cr-modal-btn-cancel">Отмена</button>
+          <button type="button" id="report-send" class="cr-modal-btn-primary">Отправить</button>
         </div>
       </div>`;
     document.body.appendChild(wrap);
@@ -47,12 +43,12 @@
     modal.querySelector('#report-target').textContent = button.dataset.reportTitle || '';
     modal.querySelector('#report-reason').value = '';
     modal.querySelector('#report-error').textContent = '';
-    modal.style.display = 'flex';
+    modal.classList.add('open');
     modal.querySelector('#report-reason').focus();
   }
 
   function closeModal() {
-    if (modal) modal.style.display = 'none';
+    if (modal) modal.classList.remove('open');
     current = null;
   }
 
@@ -117,7 +113,7 @@
       if (!me) return;
       buttons.forEach(btn => {
         const own = btn.dataset.reportAuthor && btn.dataset.reportAuthor === me.username;
-        btn.style.display = own ? 'none' : 'inline-flex';
+        btn.style.display = own ? 'none' : 'inline-flex';  // класс скрывает по умолчанию
       });
     });
   }
