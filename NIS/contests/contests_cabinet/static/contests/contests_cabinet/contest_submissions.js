@@ -105,6 +105,9 @@ function renderList() {
   }).join('');
 }
 
+// Во всех трёх действиях состояние меняется ТОЛЬКО после успешного ответа сервера.
+// Раньше catch применял изменение так же, как успех: при 403 или 500 карточка
+// показывала «Решение принято», хотя на сервере ничего не менялось.
 async function toggleLike(id) {
   const s = submissions.find(x => x.id === id);
   if (!s) return;
@@ -112,7 +115,7 @@ async function toggleLike(id) {
     await api(`/api/v1/contests/${CONTEST_ID}/submissions/${id}/like/`, { method: 'POST' });
     s.liked = !s.liked;
     renderList();
-  } catch (_) { s.liked = !s.liked; renderList(); }
+  } catch (err) { alert(err.message || 'Не удалось сохранить изменение.'); }
 }
 
 async function toggleWinner(id) {
@@ -122,7 +125,7 @@ async function toggleWinner(id) {
     await api(`/api/v1/contests/${CONTEST_ID}/submissions/${id}/winner/`, { method: 'POST' });
     s.winner = !s.winner;
     renderList();
-  } catch (_) { s.winner = !s.winner; renderList(); }
+  } catch (err) { alert(err.message || 'Не удалось сохранить изменение.'); }
 }
 
 async function decide(id, status) {
@@ -131,9 +134,9 @@ async function decide(id, status) {
   try {
     await api(`/api/v1/contests/${CONTEST_ID}/submissions/${id}/`, { method: 'PATCH', body: JSON.stringify({ status }) });
     s.status = status;
-  } catch (_) { s.status = status; }
-  renderStats();
-  renderList();
+    renderStats();
+    renderList();
+  } catch (err) { alert(err.message || 'Не удалось сохранить решение.'); }
 }
 
 function initFilters() {

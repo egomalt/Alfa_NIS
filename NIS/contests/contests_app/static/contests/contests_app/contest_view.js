@@ -151,9 +151,9 @@ function renderSubmitArea() {
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
       <div>
         <div style="font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:3px;">Добавьте контактные данные</div>
-        <div style="font-size:12.5px;color:var(--text-2);line-height:1.5;">Для регистрации на конкурс в профиле должен быть email или телефон.</div>
+        <div style="font-size:12.5px;color:var(--text-2);line-height:1.5;">Для участия в конкурсе в профиле должен быть указан email.</div>
       </div>
-      <button onclick="openContactModal()" style="height:32px;padding:0 13px;border:none;border-radius:8px;background:var(--brand);color:var(--on-brand);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto;font-family:inherit;">Добавить</button>
+      <button data-open-contact style="height:32px;padding:0 13px;border:none;border-radius:8px;background:var(--brand);color:var(--on-brand);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto;font-family:inherit;">Добавить</button>
     </div>`;
 
   if (mySubmissions.length >= MAX_ATTEMPTS) {
@@ -200,13 +200,19 @@ function renderSubmitArea() {
         <div class="cv-file-chip">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           <span style="font-size:13.5px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${chosenFile.name}</span>
-          <button onclick="chosenFile=null;document.getElementById('cv-file-chip-wrap').innerHTML='';document.getElementById('cv-file-drop').style.display='';this.parentElement.remove()" style="width:24px;height:24px;border:none;background:transparent;color:var(--faint);cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+          <button data-clear-file style="width:24px;height:24px;border:none;background:transparent;color:var(--faint);cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
         </div>`;
       document.getElementById('cv-file-drop').style.display = 'none';
     });
   }
 
   document.getElementById('cv-btn-submit').addEventListener('click', submitSolution);
+
+  document.querySelector('[data-clear-file]')?.addEventListener('click', () => {
+    chosenFile = null;  // важно: именно переменная модуля, а не window
+    document.getElementById('cv-file-chip-wrap').innerHTML = '';
+    document.getElementById('cv-file-drop').style.display = '';
+  });
 }
 
 async function submitSolution() {
@@ -312,13 +318,20 @@ async function saveContact() {
   const emailInput = document.getElementById('cv-contact-email');
   const email = emailInput.value.trim();
   if (!email) { emailInput.style.borderColor = 'var(--brand)'; return; }
+  const errEl = document.getElementById('cv-contact-error');
+  if (errEl) errEl.textContent = '';
   try {
+    // Раньше здесь стоял POST на PATCH-эндпоинт, а ошибка гасилась пустым catch —
+    // пользователь видел «сохранено», но email не сохранялся.
     await apiFetch(`/api/v1/candidates/${me.username}/update/`, {
-      method: 'POST',
+      method: 'PATCH',
       body: JSON.stringify({ email }),
     });
-    me.email = email;
-  } catch (_) {}
+  } catch (err) {
+    if (errEl) errEl.textContent = err.message || 'Не удалось сохранить email.';
+    return;
+  }
+  me.email = email;
   hasContact = true;
   closeContactModal();
   renderSubmitArea();
@@ -347,6 +360,10 @@ async function init() {
   }
 }
 
+// Делегирование: баннер перерисовывается, поэтому слушатель висит на документе
+document.addEventListener('click', event => {
+  if (event.target.closest('[data-open-contact]')) openContactModal();
+});
 document.getElementById('cv-contact-cancel').addEventListener('click', closeContactModal);
 document.getElementById('cv-contact-save').addEventListener('click', saveContact);
 

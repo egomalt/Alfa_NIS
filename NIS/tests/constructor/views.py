@@ -36,11 +36,14 @@ def _safe_time_limit(raw_value):
 @page_login_required(*TEST_OWNER_ROLES)
 def constructor_shell(request, test_id=None):
     # Владельца берём из сессии, а не из ?owner= — иначе тест можно завести от чужого имени
+    account = request.account
+    back_url = '/cabinet/company/tests/' if account.role == ROLE_COMPANY else '/cabinet/user/tests/'
     return render(request, 'constructor/constructor.html', {
         'app_path': request.path,
         'test_id': test_id or '',
-        'owner_username': request.account.username,
+        'owner_username': account.username,
         'is_authenticated': True,
+        'back_url': back_url,
     })
 
 
