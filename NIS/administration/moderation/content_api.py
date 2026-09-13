@@ -5,9 +5,9 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 
-from administration.dashboard.views import moderator_required
+from core.auth import moderator_required
 from articles.constructor.models import Article
-from authorization.models import Account, ROLE_COMPANY, ROLE_USER
+from authorization.models import Account
 from contests.contests_cabinet.models import Contest
 from tests.constructor.models import Test
 

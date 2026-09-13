@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
-from administration.dashboard.views import moderator_required
+from core.auth import moderator_required
 from administration.reports.api_views import _new_counts_by_target, serialize_report
 from administration.reports.models import ESCALATION_THRESHOLD, Report
 from administration.verification.api_views import serialize_verification

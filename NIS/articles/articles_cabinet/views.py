@@ -1,21 +1,20 @@
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 
 from authorization.models import ROLE_USER
-from authorization.views import get_current_account
+from core.auth import api_login_required, page_login_required
 
 from articles.constructor.models import Article
 
 
 @ensure_csrf_cookie
+@page_login_required(ROLE_USER)
 def my_articles(request):
     """Раздел «Мои статьи» кабинета кандидата (единый сайдбарный вид)."""
-    account = get_current_account(request)
-    if account is None or account.role != ROLE_USER:
-        return redirect('/authorization/signup/')
-    return render(request, 'articles_cabinet/my_articles.html', {'username': account.username, 'page': 'articles'})
+    return render(request, 'articles_cabinet/my_articles.html',
+                  {'username': request.account.username, 'page': 'articles'})
 
 
 def _serialize_article(a):
@@ -36,9 +35,7 @@ def _serialize_article(a):
 
 
 @require_GET
+@api_login_required()
 def api_my_articles(request):
-    current = get_current_account(request)
-    if not current:
-        return JsonResponse({'ok': False, 'message': 'Нет доступа'}, status=401)
-    articles = Article.objects.filter(author_username=current.username)
+    articles = Article.objects.filter(author_username=request.account.username)
     return JsonResponse({'ok': True, 'articles': [_serialize_article(a) for a in articles]})

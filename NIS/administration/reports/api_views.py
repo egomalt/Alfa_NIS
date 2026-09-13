@@ -1,10 +1,9 @@
-import json
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 
-from administration.dashboard.views import moderator_required
+from core.auth import moderator_required
 from .models import ESCALATION_THRESHOLD, Report
 
 VALID_STATUSES = [Report.STATUS_NEW, Report.STATUS_RESOLVED, Report.STATUS_DISMISSED]

@@ -5,6 +5,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
+from core.auth import api_login_required, page_login_required
 from core.utils import serialize_form_errors
 
 from .forms import CompanyProfileForm, CompanyVerificationForm
@@ -12,11 +13,10 @@ from .models import Company, CompanyRating
 
 
 @ensure_csrf_cookie
+@page_login_required(ROLE_COMPANY)
 def company_tests_page(request):
     """Раздел «Тесты» кабинета компании (страница в доменном приложении)."""
-    account = get_current_account(request)
-    if account is None or account.role != ROLE_COMPANY:
-        return redirect('/authorization/signup/')
+    account = request.account
     company, _ = Company.objects.get_or_create(
         username=account.username,
         defaults={'name': account.name, 'contact_email': account.email},
@@ -118,7 +118,6 @@ def api_companies_list(request):
 
 @require_GET
 def api_company_detail(request, username):
-    from authorization.views import get_current_account
     company = get_object_or_404(Company, username=username)
     current = get_current_account(request)
     is_owner = current is not None and current.username == username
@@ -126,11 +125,10 @@ def api_company_detail(request, username):
 
 
 @require_http_methods(['POST'])
+@api_login_required(ROLE_COMPANY)
 def api_company_profile(request, username):
-    from authorization.views import get_current_account
     company = get_object_or_404(Company, username=username)
-    current = get_current_account(request)
-    if current is None or current.username != username:
+    if request.account.username != username:
         return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
     form = CompanyProfileForm(request.POST, request.FILES, instance=company)
     if not form.is_valid():
@@ -140,9 +138,12 @@ def api_company_profile(request, username):
 
 
 @require_http_methods(['POST'])
+@api_login_required(ROLE_COMPANY)
 def api_company_verification(request, username):
     from django.utils import timezone
     company = get_object_or_404(Company, username=username)
+    if request.account.username != username:
+        return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
     form = CompanyVerificationForm(request.POST, request.FILES, instance=company)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
@@ -159,7 +160,6 @@ def api_company_verification(request, username):
 @require_GET
 def api_company_tests(request, username):
     from tests.constructor.models import Test
-    from authorization.views import get_current_account
 
     company = get_object_or_404(Company, username=username)
     current = get_current_account(request)
@@ -209,14 +209,11 @@ def api_company_tests(request, username):
 
 
 @require_GET
+@api_login_required()
 def api_my_company_ratings(request):
-    from authorization.views import get_current_account
-    account = get_current_account(request)
-    if not account:
-        return JsonResponse({'ok': True, 'ratings': []})
     ratings = (
         CompanyRating.objects
-        .filter(user_username=account.username)
+        .filter(user_username=request.account.username)
         .select_related('company')
         .order_by('-id')
     )
@@ -228,15 +225,12 @@ def api_my_company_ratings(request):
 
 
 @require_http_methods(['POST'])
+@api_login_required(ROLE_USER)
 def api_company_rate(request, username):
     import json as _json
-    from authorization.models import ROLE_USER
-    from authorization.views import get_current_account
     from django.db.models import Avg
 
-    account = get_current_account(request)
-    if account is None or account.role != ROLE_USER:
-        return JsonResponse({'ok': False, 'message': 'Только пользователи могут оставлять оценку'}, status=403)
+    account = request.account
 
     try:
         data = _json.loads(request.body)

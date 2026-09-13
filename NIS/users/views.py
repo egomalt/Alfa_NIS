@@ -5,6 +5,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 
 from authorization.models import Account, ROLE_USER
 from authorization.views import get_current_account
+from core.auth import api_login_required
 from .models import UserProfile
 
 
@@ -25,10 +26,10 @@ def api_candidate_detail(request, username):
 
 
 @require_http_methods(['PATCH'])
+@api_login_required()
 def api_candidate_update(request, username):
-    current = get_current_account(request)
-    if not current or current.username != username:
-        return JsonResponse({'ok': False, 'message': 'Нет доступа'}, status=403)
+    if request.account.username != username:
+        return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
 
     account = Account.objects.filter(username=username, role=ROLE_USER).first()
     if not account:
@@ -64,10 +65,10 @@ def api_candidate_update(request, username):
 
 
 @require_POST
+@api_login_required()
 def api_candidate_avatar(request, username):
-    current = get_current_account(request)
-    if not current or current.username != username:
-        return JsonResponse({'ok': False, 'message': 'Нет доступа'}, status=403)
+    if request.account.username != username:
+        return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
 
     account = Account.objects.filter(username=username, role=ROLE_USER).first()
     if not account:

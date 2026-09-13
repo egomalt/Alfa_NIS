@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from administration.dashboard.views import moderator_required
+from core.auth import moderator_required
 from companies.models import Company
 
 VALID_STATUSES = [Company.VERIF_PENDING, Company.VERIF_APPROVED, Company.VERIF_REJECTED]

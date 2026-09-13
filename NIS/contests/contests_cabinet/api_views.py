@@ -3,16 +3,10 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
-from authorization.models import ROLE_COMPANY
+from authorization.models import ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
+from core.auth import api_login_required
 from .models import Contest, ContestSubmission
-
-
-def _get_company(request):
-    account = get_current_account(request)
-    if account is None or account.role != ROLE_COMPANY:
-        return None, JsonResponse({'ok': False, 'message': 'Требуется авторизация'}, status=401)
-    return account, None
 
 
 def _contest_to_dict(c, full=False):
@@ -79,10 +73,9 @@ def _sub_to_dict(s):
 
 
 @require_http_methods(['GET'])
+@api_login_required(ROLE_COMPANY)
 def api_company_contests(request):
-    account, err = _get_company(request)
-    if err:
-        return err
+    account = request.account
     qs = Contest.objects.filter(company_username=account.username)
     stats = {
         'total': qs.count(),
@@ -95,10 +88,9 @@ def api_company_contests(request):
 
 
 @require_http_methods(['POST'])
+@api_login_required(ROLE_COMPANY)
 def api_contest_create(request):
-    account, err = _get_company(request)
-    if err:
-        return err
+    account = request.account
     try:
         body = json.loads(request.body)
     except Exception:
@@ -132,9 +124,9 @@ def api_contest_detail(request, contest_id):
             data['company_name'] = c.company_username
         return JsonResponse({'ok': True, 'contest': data})
 
-    account, err = _get_company(request)
-    if err:
-        return err
+    account = get_current_account(request)
+    if account is None or account.role != ROLE_COMPANY:
+        return JsonResponse({'ok': False, 'message': 'Требуется вход.'}, status=401)
     if c.company_username != account.username:
         return JsonResponse({'ok': False, 'message': 'Нет доступа'}, status=403)
 
@@ -158,10 +150,9 @@ def api_contest_detail(request, contest_id):
 
 
 @require_http_methods(['POST'])
+@api_login_required(ROLE_COMPANY)
 def api_contest_publish(request, contest_id):
-    account, err = _get_company(request)
-    if err:
-        return err
+    account = request.account
     try:
         c = Contest.objects.get(id=contest_id, company_username=account.username)
     except Contest.DoesNotExist:
@@ -172,10 +163,9 @@ def api_contest_publish(request, contest_id):
 
 
 @require_http_methods(['GET'])
+@api_login_required(ROLE_COMPANY)
 def api_contest_submissions(request, contest_id):
-    account, err = _get_company(request)
-    if err:
-        return err
+    account = request.account
     try:
         c = Contest.objects.get(id=contest_id, company_username=account.username)
     except Contest.DoesNotExist:
@@ -184,10 +174,9 @@ def api_contest_submissions(request, contest_id):
 
 
 @require_http_methods(['PATCH'])
+@api_login_required(ROLE_COMPANY)
 def api_submission_update(request, contest_id, sub_id):
-    account, err = _get_company(request)
-    if err:
-        return err
+    account = request.account
     try:
         s = ContestSubmission.objects.get(
             id=sub_id, contest__id=contest_id, contest__company_username=account.username
@@ -205,10 +194,9 @@ def api_submission_update(request, contest_id, sub_id):
 
 
 @require_http_methods(['POST'])
+@api_login_required(ROLE_COMPANY)
 def api_submission_like(request, contest_id, sub_id):
-    account, err = _get_company(request)
-    if err:
-        return err
+    account = request.account
     try:
         s = ContestSubmission.objects.get(
             id=sub_id, contest__id=contest_id, contest__company_username=account.username
@@ -221,10 +209,9 @@ def api_submission_like(request, contest_id, sub_id):
 
 
 @require_http_methods(['POST'])
+@api_login_required(ROLE_COMPANY)
 def api_submission_winner(request, contest_id, sub_id):
-    account, err = _get_company(request)
-    if err:
-        return err
+    account = request.account
     try:
         s = ContestSubmission.objects.get(
             id=sub_id, contest__id=contest_id, contest__company_username=account.username
@@ -259,10 +246,9 @@ def api_contests_catalog(request):
 
 
 @require_http_methods(['POST'])
+@api_login_required(ROLE_USER)
 def api_contest_submit(request, contest_id):
-    account = get_current_account(request)
-    if account is None:
-        return JsonResponse({'ok': False, 'message': 'Требуется авторизация'}, status=401)
+    account = request.account
     try:
         c = Contest.objects.get(id=contest_id, status='active')
     except Contest.DoesNotExist:
@@ -298,10 +284,9 @@ def api_contest_submit(request, contest_id):
 
 
 @require_http_methods(['GET'])
+@api_login_required()
 def api_my_submissions(request, contest_id):
-    account = get_current_account(request)
-    if account is None:
-        return JsonResponse({'ok': True, 'submissions': []})
+    account = request.account
     subs = ContestSubmission.objects.filter(
         contest_id=contest_id, candidate_username=account.username
     )
@@ -309,10 +294,9 @@ def api_my_submissions(request, contest_id):
 
 
 @require_http_methods(['GET'])
+@api_login_required()
 def api_user_contest_history(request):
-    account = get_current_account(request)
-    if account is None:
-        return JsonResponse({'ok': True, 'submissions': []})
+    account = request.account
     subs = (
         ContestSubmission.objects
         .filter(candidate_username=account.username)

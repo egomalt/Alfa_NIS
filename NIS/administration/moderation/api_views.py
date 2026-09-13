@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from administration.dashboard.views import moderator_required
+from core.auth import moderator_required
 from authorization.models import (
     Account, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER,
     STATUS_ACTIVE, STATUS_BANNED, STATUS_WARNED,
