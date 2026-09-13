@@ -17,11 +17,12 @@ def api_candidate_detail(request, username):
 
     profile = UserProfile.objects.filter(username=account.username).first()
     current = get_current_account(request)
+    is_owner = current is not None and current.username == account.username
 
     return JsonResponse({
         'ok': True,
-        'candidate': _serialize_candidate(account, profile),
-        'is_owner': current is not None and current.username == account.username,
+        'candidate': _serialize_candidate(account, profile, include_private=is_owner),
+        'is_owner': is_owner,
     })
 
 
@@ -61,7 +62,7 @@ def api_candidate_update(request, username):
         profile.skills = [s.strip() for s in skills_raw if isinstance(s, str) and s.strip()][:20]
     profile.save(update_fields=['bio', 'skills'])
 
-    return JsonResponse({'ok': True, 'candidate': _serialize_candidate(account, profile)})
+    return JsonResponse({'ok': True, 'candidate': _serialize_candidate(account, profile, include_private=True)})
 
 
 @require_POST
@@ -82,16 +83,20 @@ def api_candidate_avatar(request, username):
     profile.avatar = avatar
     profile.save(update_fields=['avatar'])
 
-    return JsonResponse({'ok': True, 'candidate': _serialize_candidate(account, profile)})
+    return JsonResponse({'ok': True, 'candidate': _serialize_candidate(account, profile, include_private=True)})
 
 
-def _serialize_candidate(account, profile):
-    return {
+def _serialize_candidate(account, profile, include_private=False):
+    """Карточка кандидата. Email отдаём только владельцу: раньше его мог собрать
+    любой аноним, обойдя /api/v1/candidates/<username>/."""
+    data = {
         'username': account.username,
         'name': account.name,
-        'email': account.email,
         'bio': profile.bio if profile else '',
         'skills': profile.skills if profile else [],
         'avatar': profile.avatar.url if profile and profile.avatar else None,
         'created_at': account.created_at.isoformat(),
     }
+    if include_private:
+        data['email'] = account.email
+    return data
