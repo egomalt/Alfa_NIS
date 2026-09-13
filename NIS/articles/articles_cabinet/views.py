@@ -7,6 +7,11 @@ from authorization.models import ROLE_USER
 from core.auth import api_login_required, page_login_required
 
 from articles.constructor.models import Article
+from core.pagination import paginate
+
+# Каталоги фильтруются на стороне браузера, поэтому страница крупная:
+# ограничение защищает от выгрузки всей таблицы, но не режет текущий интерфейс.
+CATALOG_PER_PAGE = 100
 
 
 @ensure_csrf_cookie
@@ -37,5 +42,6 @@ def _serialize_article(a):
 @require_GET
 @api_login_required()
 def api_my_articles(request):
-    articles = Article.objects.filter(author_username=request.account.username)
-    return JsonResponse({'ok': True, 'articles': [_serialize_article(a) for a in articles]})
+    articles_qs = Article.objects.filter(author_username=request.account.username).order_by('-created_at')
+    articles, page_meta = paginate(request, articles_qs, CATALOG_PER_PAGE)
+    return JsonResponse({'ok': True, 'articles': [_serialize_article(a) for a in articles], **page_meta})

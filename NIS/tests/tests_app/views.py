@@ -1,10 +1,10 @@
-import json
-
 from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
+
+from core.utils import load_json_body
 
 from authorization.views import get_current_account
 from tests import code_results
@@ -88,10 +88,7 @@ def api_test_submit(request, test_id):
     if test is None:
         return JsonResponse({'ok': False, 'message': 'Тест не найден.'}, status=404)
 
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'message': 'Неверный JSON.'}, status=400)
+    body = load_json_body(request)
 
     # answers: {page_id: значение}. Для quiz — список id ответов, для input — строка.
     submitted = body.get('answers')

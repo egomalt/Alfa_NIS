@@ -1,11 +1,10 @@
 """Модераторские действия над контентом: удаление материалов и зачистка контента автора."""
-import json
-
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 
 from core.auth import moderator_required
+from core.utils import load_json_body
 from articles.constructor.models import Article
 from authorization.models import Account
 from contests.contests_cabinet.models import Contest
@@ -63,10 +62,7 @@ def api_user_content(request, username):
 @moderator_required
 def api_user_purge(request, username):
     """Удаляет выбранные категории контента автора: {"categories": ["articles","contests","tests"]}."""
-    try:
-        data = json.loads(request.body or '{}')
-    except (ValueError, TypeError):
-        data = {}
+    data = load_json_body(request)
     categories = data.get('categories') or []
     valid = {'articles', 'contests', 'tests'}
     categories = [c for c in categories if c in valid]

@@ -4,6 +4,11 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 
 from tests.constructor.models import Test
+from core.pagination import paginate
+
+# Каталоги фильтруются на стороне браузера, поэтому страница крупная:
+# ограничение защищает от выгрузки всей таблицы, но не режет текущий интерфейс.
+CATALOG_PER_PAGE = 100
 
 
 @ensure_csrf_cookie
@@ -15,7 +20,8 @@ def tests_catalog_shell(request):
 def api_tests_catalog(request):
     from authorization.models import Account
     owner_names = {a.username: a.name for a in Account.objects.all()}
-    tests = Test.objects.filter(status=Test.STATUS_PUBLISHED).prefetch_related('pages')
+    tests_qs = Test.objects.filter(status=Test.STATUS_PUBLISHED).prefetch_related('pages').order_by('-created_at')
+    tests, page_meta = paginate(request, tests_qs, CATALOG_PER_PAGE)
     result = []
     for test in tests:
         stats = test.stats or {}
@@ -30,4 +36,4 @@ def api_tests_catalog(request):
             'page_count': test.pages.count(),
             'url': f'/tests/{test.id}/',
         })
-    return JsonResponse({'ok': True, 'tests': result})
+    return JsonResponse({'ok': True, 'tests': result, **page_meta})

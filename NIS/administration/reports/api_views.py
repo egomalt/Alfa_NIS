@@ -1,11 +1,11 @@
-import json
-
 from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 
 from core.auth import api_login_required, moderator_required
+from core.pagination import paginate
+from core.utils import load_json_body
 from .models import ESCALATION_THRESHOLD, Report
 
 VALID_STATUSES = [Report.STATUS_NEW, Report.STATUS_RESOLVED, Report.STATUS_DISMISSED]
@@ -13,6 +13,7 @@ VALID_STATUSES = [Report.STATUS_NEW, Report.STATUS_RESOLVED, Report.STATUS_DISMI
 TARGET_LABELS = dict(Report.TARGET_CHOICES)
 
 MAX_REASON_LENGTH = 2000
+REPORTS_PER_PAGE = 100
 
 
 def _new_counts_by_target():
@@ -84,12 +85,7 @@ def _resolve_target(target_type, target_id):
 @api_login_required()
 def api_report_create(request):
     """Создание жалобы любым вошедшим пользователем."""
-    try:
-        body = json.loads(request.body or '{}')
-    except (ValueError, TypeError):
-        return JsonResponse({'ok': False, 'message': 'Неверный JSON.'}, status=400)
-    if not isinstance(body, dict):
-        body = {}
+    body = load_json_body(request)
 
     target_type = (body.get('target_type') or '').strip()
     target_id = str(body.get('target_id') or '').strip()
@@ -131,11 +127,11 @@ def api_reports(request):
     if status not in VALID_STATUSES:
         status = Report.STATUS_NEW
     new_counts = _new_counts_by_target()
-    reports = Report.objects.filter(status=status)
+    reports, page_meta = paginate(request, Report.objects.filter(status=status), REPORTS_PER_PAGE)
     data = [serialize_report(r, new_counts) for r in reports]
     # Эскалированные — выше
     data.sort(key=lambda r: (not r['escalated'],))
-    return JsonResponse({'ok': True, 'reports': data, 'threshold': ESCALATION_THRESHOLD})
+    return JsonResponse({'ok': True, 'reports': data, 'threshold': ESCALATION_THRESHOLD, **page_meta})
 
 
 @require_POST

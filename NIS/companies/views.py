@@ -6,10 +6,15 @@ from django.views.decorators.http import require_GET, require_http_methods
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
 from core.auth import api_login_required, page_login_required
-from core.utils import serialize_form_errors
+from core.utils import load_json_body, serialize_form_errors
 
 from .forms import CompanyProfileForm, CompanyVerificationForm
 from .models import Company, CompanyRating
+from core.pagination import paginate
+
+# Каталоги фильтруются на стороне браузера, поэтому страница крупная:
+# ограничение защищает от выгрузки всей таблицы, но не режет текущий интерфейс.
+CATALOG_PER_PAGE = 100
 
 
 @ensure_csrf_cookie
@@ -86,7 +91,8 @@ def api_companies_list(request):
     from django.db.models import Avg, Count
     from tests.constructor.models import Test
 
-    companies = Company.objects.filter(verification_status=Company.VERIF_APPROVED).order_by('-created_at')
+    companies_qs = Company.objects.filter(verification_status=Company.VERIF_APPROVED).order_by('-created_at')
+    companies, page_meta = paginate(request, companies_qs, CATALOG_PER_PAGE)
     counts = (
         Test.objects.filter(status=Test.STATUS_PUBLISHED)
         .values('owner_username')
@@ -118,7 +124,7 @@ def api_companies_list(request):
         for c in companies
     ]
 
-    return JsonResponse({'ok': True, 'companies': result})
+    return JsonResponse({'ok': True, 'companies': result, **page_meta})
 
 
 @require_GET
@@ -240,14 +246,12 @@ def api_my_company_ratings(request):
 @require_http_methods(['POST'])
 @api_login_required(ROLE_USER)
 def api_company_rate(request, username):
-    import json as _json
     from django.db.models import Avg
 
     account = request.account
 
     try:
-        data = _json.loads(request.body)
-        rating = int(data.get('rating', 0))
+        rating = int(load_json_body(request).get('rating', 0))
     except (ValueError, TypeError):
         return JsonResponse({'ok': False, 'message': 'Некорректные данные'}, status=400)
 
