@@ -48,6 +48,15 @@ SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 дней
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'core.password_validators.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8},
+    },
+    {'NAME': 'core.password_validators.CommonPasswordValidator'},
+    {'NAME': 'core.password_validators.NumericPasswordValidator'},
+]
+
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [

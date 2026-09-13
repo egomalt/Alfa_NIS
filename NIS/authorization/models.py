@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import check_password, make_password
 from django.core.validators import RegexValidator
 from django.db import models
 
@@ -36,6 +37,7 @@ class Account(models.Model):
     name = models.CharField(max_length=255)
     role = models.CharField(max_length=32, choices=ROLE_CHOICES, default=ROLE_COMPANY)
     email = models.EmailField(blank=True)
+    password_hash = models.CharField(max_length=128, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE, db_index=True)
     ban_until = models.DateTimeField(null=True, blank=True)
     ban_reason = models.TextField(blank=True)
@@ -49,6 +51,16 @@ class Account(models.Model):
 
     def __str__(self):
         return self.username
+
+    def set_password(self, raw_password):
+        """Сохраняет пароль в виде необратимого хеша — сам пароль нигде не хранится."""
+        self.password_hash = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        """Сверяет пароль с хешем. Аккаунт без заданного пароля войти не может."""
+        if not self.password_hash:
+            return False
+        return check_password(raw_password, self.password_hash)
 
     @property
     def is_banned(self):

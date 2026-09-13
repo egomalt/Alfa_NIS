@@ -68,6 +68,20 @@
             class="cr-auth-input" required>
           <ul class="errorlist" hidden></ul>
         </div>
+
+        <div data-field="password">
+          <div class="cr-auth-field-label">Пароль</div>
+          <input id="register-password" name="password" type="password" placeholder="Минимум 8 символов"
+            class="cr-auth-input" required autocomplete="new-password">
+          <ul class="errorlist" hidden></ul>
+        </div>
+
+        <div data-field="password_confirm">
+          <div class="cr-auth-field-label">Повторите пароль</div>
+          <input id="register-password-confirm" name="password_confirm" type="password" placeholder="••••••••"
+            class="cr-auth-input" required autocomplete="new-password">
+          <ul class="errorlist" hidden></ul>
+        </div>
       </div>
 
       <button type="submit" class="cr-auth-submit" id="signup-submit">Создать аккаунт кандидата</button>

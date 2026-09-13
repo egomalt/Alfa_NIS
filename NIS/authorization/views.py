@@ -55,6 +55,7 @@ def api_register(request):
         else:
             UserProfile.objects.create(username=account.username)
 
+    request.session.cycle_key()
     request.session[SESSION_KEY] = account.username
     cabinet_url = '/cabinet/company/' if is_company else '/cabinet/user/'
     return JsonResponse({'ok': True, 'next_url': cabinet_url}, status=201)
@@ -77,15 +78,17 @@ def api_login(request):
     username = form.cleaned_data['username'].strip().lower()
     account = Account.objects.filter(username__iexact=username).first()
 
-    if not account:
+    # Один и тот же ответ на «нет такого аккаунта» и «неверный пароль»,
+    # иначе по коду ответа можно перебором узнать, какие логины существуют.
+    if account is None or not account.check_password(form.cleaned_data['password']):
         return JsonResponse(
             {
                 'ok': False,
                 'errors': {
-                    'username': [{'message': 'Аккаунт с таким именем не найден.', 'code': 'not_found'}]
+                    'username': [{'message': 'Неверное имя пользователя или пароль.', 'code': 'invalid_credentials'}]
                 },
             },
-            status=404,
+            status=401,
         )
 
     # Истёкший бан снимаем автоматически, активный — блокирует вход
@@ -103,6 +106,8 @@ def api_login(request):
             status=403,
         )
 
+    # Новый идентификатор сессии при входе — защита от session fixation
+    request.session.cycle_key()
     request.session[SESSION_KEY] = account.username
     return JsonResponse({'ok': True, 'next_url': _cabinet_url(account)})
 
