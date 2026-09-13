@@ -1,3 +1,4 @@
+from django.contrib.auth import authenticate, login, logout
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -8,14 +9,17 @@ from core.utils import serialize_form_errors
 from .forms import AccountLoginForm, AccountRegistrationForm
 from .models import Account, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER
 
-SESSION_KEY = 'account_username'
-
 
 def get_current_account(request):
-    username = request.session.get(SESSION_KEY)
-    if not username:
+    """Текущий вошедший аккаунт или None.
+
+    Единая точка входа для всех проверок в проекте — 36 мест по коду зовут именно её.
+    Забаненных Django отсекает сам: `Account.is_active` завязан на состояние бана,
+    и стандартный бэкенд сверяется с ним при каждом запросе.
+    """
+    if not request.user.is_authenticated:
         return None
-    return Account.objects.filter(username=username).first()
+    return request.user
 
 
 @ensure_csrf_cookie
@@ -55,10 +59,19 @@ def api_register(request):
         else:
             UserProfile.objects.create(username=account.username)
 
-    request.session.cycle_key()
-    request.session[SESSION_KEY] = account.username
+    login(request, account, backend='django.contrib.auth.backends.ModelBackend')
     cabinet_url = '/cabinet/company/' if is_company else '/cabinet/user/'
     return JsonResponse({'ok': True, 'next_url': cabinet_url}, status=201)
+
+
+def _ban_message(account):
+    if account.ban_until is None:
+        message = 'Аккаунт заблокирован навсегда.'
+    else:
+        message = f'Аккаунт заблокирован до {account.ban_until.strftime("%d.%m.%Y")}.'
+    if account.ban_reason:
+        message += f' Причина: {account.ban_reason}'
+    return message
 
 
 def _cabinet_url(account):
@@ -76,11 +89,24 @@ def api_login(request):
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
 
     username = form.cleaned_data['username'].strip().lower()
-    account = Account.objects.filter(username__iexact=username).first()
+    password = form.cleaned_data['password']
 
-    # Один и тот же ответ на «нет такого аккаунта» и «неверный пароль»,
-    # иначе по коду ответа можно перебором узнать, какие логины существуют.
-    if account is None or not account.check_password(form.cleaned_data['password']):
+    account = Account.objects.filter(username__iexact=username).first()
+    if account is not None:
+        # Истёкший бан снимаем заранее, иначе Django сочтёт аккаунт неактивным и не пустит
+        account.refresh_ban_state()
+
+    # Забаненному authenticate откажет сам: Account.is_active завязан на состояние бана
+    user = authenticate(request, username=account.username if account else username, password=password)
+
+    if user is None:
+        if account is not None and account.is_banned and account.check_password(password):
+            return JsonResponse(
+                {'ok': False, 'errors': {'username': [{'message': _ban_message(account), 'code': 'banned'}]}},
+                status=403,
+            )
+        # Один и тот же ответ на «нет такого аккаунта» и «неверный пароль»,
+        # иначе по коду ответа можно перебором узнать, какие логины существуют.
         return JsonResponse(
             {
                 'ok': False,
@@ -91,30 +117,14 @@ def api_login(request):
             status=401,
         )
 
-    # Истёкший бан снимаем автоматически, активный — блокирует вход
-    account.refresh_ban_state()
-    if account.is_banned:
-        if account.ban_until is None:
-            msg = 'Аккаунт заблокирован навсегда.'
-        else:
-            until = account.ban_until.strftime('%d.%m.%Y')
-            msg = f'Аккаунт заблокирован до {until}.'
-        if account.ban_reason:
-            msg += f' Причина: {account.ban_reason}'
-        return JsonResponse(
-            {'ok': False, 'errors': {'username': [{'message': msg, 'code': 'banned'}]}},
-            status=403,
-        )
-
-    # Новый идентификатор сессии при входе — защита от session fixation
-    request.session.cycle_key()
-    request.session[SESSION_KEY] = account.username
-    return JsonResponse({'ok': True, 'next_url': _cabinet_url(account)})
+    # login() сам выдаёт новый идентификатор сессии — защита от session fixation
+    login(request, user)
+    return JsonResponse({'ok': True, 'next_url': _cabinet_url(user)})
 
 
 @require_POST
 def api_logout(request):
-    request.session.flush()
+    logout(request)
     return JsonResponse({'ok': True})
 
 

@@ -5,7 +5,7 @@ from authorization.models import ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER
 from authorization.views import get_current_account
 from companies.models import Company
 
-from .admin import admin_filename, build_admin_pdf
+from .moderation import admin_filename, build_admin_pdf
 from .company import build_company_pdf, company_filename
 from .pdf import pdf_response
 from .user import build_user_pdf, user_filename

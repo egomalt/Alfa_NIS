@@ -1,8 +1,11 @@
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
+    # Служебная админка Django (не путать с /administration/ — собственной панелью модератора)
+    path('django-admin/', admin.site.urls),
     path('api/v1/', include('api.v1.urls')),
     path('', include('home.urls')),
     path('', include('authorization.urls')),
