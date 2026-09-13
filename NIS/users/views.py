@@ -1,5 +1,3 @@
-import json
-
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import JsonResponse
@@ -8,6 +6,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from authorization.models import Account, ROLE_USER
 from authorization.views import get_current_account
 from core.auth import api_login_required
+from core.utils import load_json_body
 from core.uploads import UploadError, validate_image
 from .models import UserProfile
 
@@ -39,10 +38,7 @@ def api_candidate_update(request, username):
     if not account:
         return JsonResponse({'ok': False, 'message': 'Кандидат не найден'}, status=404)
 
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'message': 'Неверный JSON'}, status=400)
+    body = load_json_body(request)
 
     name = (body.get('name') or '').strip()
     email = (body.get('email') or '').strip()

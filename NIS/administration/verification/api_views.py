@@ -1,11 +1,10 @@
-import json
-
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from core.auth import moderator_required
+from core.utils import load_json_body
 from companies.models import Company
 
 VALID_STATUSES = [Company.VERIF_PENDING, Company.VERIF_APPROVED, Company.VERIF_REJECTED]
@@ -50,10 +49,7 @@ def api_verification_approve(request, username):
 @require_POST
 @moderator_required
 def api_verification_reject(request, username):
-    try:
-        data = json.loads(request.body or '{}')
-    except (ValueError, TypeError):
-        data = {}
+    data = load_json_body(request)
     reason = (data.get('reason') or '').strip()
     company = get_object_or_404(Company, username=username)
     company.verification_status = Company.VERIF_REJECTED

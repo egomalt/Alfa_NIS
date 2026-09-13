@@ -1,4 +1,5 @@
 import getpass
+import json
 import re
 
 from django import forms
@@ -29,6 +30,20 @@ def validate_username(raw_value):
 
 def serialize_form_errors(form):
     return {field: errors.get_json_data() for field, errors in form.errors.items()}
+
+
+def load_json_body(request):
+    """Разбирает JSON-тело запроса и всегда возвращает словарь.
+
+    Заменяет четыре разных варианта разбора, которые были раскиданы по проекту.
+    Важно, что не-объект (`json.loads("5")` или `[]`) тоже отдаётся пустым словарём:
+    раньше такой запрос проходил проверку, а падал уже на `body.get(...)` — с ошибкой 500.
+    """
+    try:
+        data = json.loads(request.body or '{}')
+    except (ValueError, TypeError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def check_password_strength(raw_password):

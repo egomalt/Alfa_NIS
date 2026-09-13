@@ -1,7 +1,5 @@
-import json
-
 from django.db import transaction
-from django.db.models import F, Sum
+from django.db.models import F, Q, Sum
 from django.http import Http404, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
@@ -9,6 +7,7 @@ from django.views.decorators.http import require_http_methods
 from articles.constructor.models import Article, ArticleVote
 from authorization.views import get_current_account
 from core.auth import api_login_required
+from core.utils import load_json_body
 from users.models import UserProfile
 
 COVERS = [
@@ -49,17 +48,26 @@ def article_read(request, article_id):
         user_vote = vote_obj.direction if vote_obj else None
 
     # Related: articles with overlapping tags, excluding current
+    # Раньше здесь перебиралась вся таблица опубликованных статей: на каждый
+    # просмотр в память поднимались все записи ради трёх похожих.
+    # Теперь пересечение тегов отбирается запросом, а в Python приходит максимум 60 строк.
     related = []
     if article.tags:
-        all_published = Article.objects.filter(
-            status=Article.STATUS_PUBLISHED
-        ).exclude(id=article_id).order_by('-views')
-        for a in all_published:
-            if set(a.tags or []) & set(article.tags):
-                cover_gradient = COVERS[a.cover_index % len(COVERS)]
-                related.append({'article': a, 'cover_gradient': cover_gradient})
-            if len(related) >= 3:
-                break
+        tag_filter = Q()
+        for tag in article.tags[:10]:
+            tag_filter |= Q(tags__icontains=tag)
+        candidates = (
+            Article.objects
+            .filter(tag_filter, status=Article.STATUS_PUBLISHED)
+            .exclude(id=article_id)
+            .order_by('-views')[:60]
+        )
+        wanted = set(article.tags)
+        for a in candidates:
+            if set(a.tags or []) & wanted:
+                related.append({'article': a, 'cover_gradient': COVERS[a.cover_index % len(COVERS)]})
+                if len(related) >= 3:
+                    break
 
     # Author stats
     author_articles = Article.objects.filter(
@@ -101,11 +109,10 @@ def api_article_vote(request, article_id):
         return JsonResponse({'ok': False, 'message': 'Статья не найдена'}, status=404)
 
     try:
-        body = json.loads(request.body)
-        direction = int(body.get('direction', 0))
-        if direction not in (1, -1):
-            raise ValueError
+        direction = int(load_json_body(request).get('direction', 0))
     except (ValueError, TypeError):
+        direction = 0
+    if direction not in (1, -1):
         return JsonResponse({'ok': False, 'message': 'Неверное направление'}, status=400)
 
     with transaction.atomic():

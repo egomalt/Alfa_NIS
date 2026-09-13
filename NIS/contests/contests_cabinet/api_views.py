@@ -1,15 +1,34 @@
-import json
-
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
+from django.db import transaction
 from django.http import JsonResponse
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_http_methods
 
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
 from core.auth import api_login_required
+from core.pagination import paginate
 from core.uploads import UploadError, human_size, validate_attachment
+from core.utils import load_json_body
 from .models import Contest, ContestAttachment, ContestSubmission
 
+
+def _parse_deadline(raw_value):
+    """Дата из запроса. parse_datetime кидает ValueError на «2024-13-45» — ловим."""
+    if not raw_value:
+        return None
+    try:
+        return parse_datetime(raw_value)
+    except ValueError:
+        return None
+
 MAX_ATTACHMENTS = 10
+CATALOG_PER_PAGE = 100
+MAX_SUBMISSION_ATTEMPTS = 1   # столько же показывает страница конкурса
+MAX_TEXT_LENGTH = 20000
+MAX_COMMENT_LENGTH = 2000
 
 
 def _attachment_to_dict(attachment):
@@ -45,23 +64,35 @@ def _contest_to_dict(c, full=False):
     return d
 
 
-def _sub_to_dict(s):
+def _candidate_cards(usernames):
+    """Карточки кандидатов одним запросом на модель.
+
+    Раньше _sub_to_dict ходил в базу дважды на каждую заявку: 50 работ — 101 запрос.
+    """
     from authorization.models import Account
     from users.models import UserProfile
-    email = ''
-    skills = []
-    bio = ''
-    try:
-        acc = Account.objects.get(username=s.candidate_username)
-        email = acc.email or ''
-    except Account.DoesNotExist:
-        pass
-    try:
-        profile = UserProfile.objects.get(username=s.candidate_username)
-        skills = profile.skills or []
-        bio = profile.bio or ''
-    except UserProfile.DoesNotExist:
-        pass
+
+    usernames = list({u for u in usernames if u})
+    emails = dict(Account.objects.filter(username__in=usernames).values_list('username', 'email'))
+    profiles = {
+        p.username: p for p in UserProfile.objects.filter(username__in=usernames)
+    }
+    cards = {}
+    for username in usernames:
+        profile = profiles.get(username)
+        cards[username] = {
+            'email': emails.get(username) or '',
+            'skills': (profile.skills if profile else None) or [],
+            'bio': (profile.bio if profile else None) or '',
+        }
+    return cards
+
+
+def _sub_to_dict(s, cards=None):
+    card = (cards or {}).get(s.candidate_username)
+    if card is None:
+        card = _candidate_cards([s.candidate_username])[s.candidate_username]
+    email, skills, bio = card['email'], card['skills'], card['bio']
     return {
         'id': s.id,
         'candidate_username': s.candidate_username,
@@ -101,18 +132,14 @@ def api_company_contests(request):
 @api_login_required(ROLE_COMPANY)
 def api_contest_create(request):
     account = request.account
-    try:
-        body = json.loads(request.body)
-    except Exception:
-        return JsonResponse({'ok': False, 'message': 'Неверный JSON'}, status=400)
+    body = load_json_body(request)
 
     c = Contest(company_username=account.username)
     for field in ('title', 'excerpt', 'case_text', 'rules', 'category', 'level', 'prize', 'submission_type', 'submission_hint'):
         if field in body:
             setattr(c, field, body[field])
     if body.get('deadline'):
-        from django.utils.dateparse import parse_datetime
-        c.deadline = parse_datetime(body['deadline'])
+        c.deadline = _parse_deadline(body['deadline'])
     c.save()
     return JsonResponse({'ok': True, 'contest': _contest_to_dict(c)}, status=201)
 
@@ -150,17 +177,13 @@ def api_contest_detail(request, contest_id):
         c.delete()
         return JsonResponse({'ok': True})
 
-    try:
-        body = json.loads(request.body)
-    except Exception:
-        return JsonResponse({'ok': False, 'message': 'Неверный JSON'}, status=400)
+    body = load_json_body(request)
 
     for field in ('title', 'excerpt', 'case_text', 'rules', 'category', 'level', 'prize', 'submission_type', 'submission_hint'):
         if field in body:
             setattr(c, field, body[field])
     if 'deadline' in body:
-        from django.utils.dateparse import parse_datetime
-        c.deadline = parse_datetime(body['deadline']) if body['deadline'] else None
+        c.deadline = _parse_deadline(body['deadline'])
     c.save()
     return JsonResponse({'ok': True, 'contest': _contest_to_dict(c)})
 
@@ -219,13 +242,31 @@ def api_contest_attachment_delete(request, contest_id, attachment_id):
 @require_http_methods(['POST'])
 @api_login_required(ROLE_COMPANY)
 def api_contest_publish(request, contest_id):
-    account = request.account
-    try:
-        c = Contest.objects.get(id=contest_id, company_username=account.username)
-    except Contest.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Не найден'}, status=404)
-    c.status = 'active'
-    c.save()
+    c = _own_contest_or_none(request, contest_id)
+    if c is None:
+        return JsonResponse({'ok': False, 'message': 'Конкурс не найден'}, status=404)
+
+    # Завершённый конкурс не воскрешаем: иначе он снова начнёт принимать работы
+    if c.status == Contest.STATUS_FINISHED:
+        return JsonResponse({'ok': False, 'message': 'Завершённый конкурс нельзя опубликовать заново.'}, status=400)
+
+    # Раньше публиковалось что угодно — хоть пустой конкурс без срока
+    missing = []
+    if not (c.title or '').strip():
+        missing.append('название')
+    if not (c.case_text or '').strip():
+        missing.append('описание кейса')
+    if not c.deadline:
+        missing.append('срок приёма работ')
+    if missing:
+        return JsonResponse(
+            {'ok': False, 'message': 'Заполните перед публикацией: ' + ', '.join(missing) + '.'}, status=400
+        )
+    if c.deadline <= timezone.now():
+        return JsonResponse({'ok': False, 'message': 'Срок приёма работ должен быть в будущем.'}, status=400)
+
+    c.status = Contest.STATUS_ACTIVE
+    c.save(update_fields=['status', 'updated_at'])
     return JsonResponse({'ok': True, 'contest': _contest_to_dict(c)})
 
 
@@ -237,7 +278,9 @@ def api_contest_submissions(request, contest_id):
         c = Contest.objects.get(id=contest_id, company_username=account.username)
     except Contest.DoesNotExist:
         return JsonResponse({'ok': False, 'message': 'Не найден'}, status=404)
-    return JsonResponse({'ok': True, 'submissions': [_sub_to_dict(s) for s in c.submissions.all()]})
+    subs = list(c.submissions.all())
+    cards = _candidate_cards(s.candidate_username for s in subs)
+    return JsonResponse({'ok': True, 'submissions': [_sub_to_dict(s, cards) for s in subs]})
 
 
 @require_http_methods(['PATCH'])
@@ -250,10 +293,7 @@ def api_submission_update(request, contest_id, sub_id):
         )
     except ContestSubmission.DoesNotExist:
         return JsonResponse({'ok': False, 'message': 'Не найдено'}, status=404)
-    try:
-        body = json.loads(request.body)
-    except Exception:
-        return JsonResponse({'ok': False, 'message': 'Неверный JSON'}, status=400)
+    body = load_json_body(request)
     if body.get('status') in ('pending', 'accepted', 'rejected'):
         s.status = body['status']
         s.save()
@@ -298,18 +338,21 @@ def api_contests_catalog(request):
     if request.GET.get('category'):
         qs = qs.filter(category__iexact=request.GET['category'])
 
+    qs = qs.order_by('-created_at')
+    contests, page_meta = paginate(request, qs, CATALOG_PER_PAGE)
+
     from companies.models import Company
     company_names = {
         co.username: co.name or co.username
-        for co in Company.objects.filter(username__in=qs.values_list('company_username', flat=True))
+        for co in Company.objects.filter(username__in=[c.company_username for c in contests])
     }
 
     result = []
-    for c in qs:
+    for c in contests:
         d = _contest_to_dict(c)
         d['company_name'] = company_names.get(c.company_username, c.company_username)
         result.append(d)
-    return JsonResponse({'ok': True, 'contests': result})
+    return JsonResponse({'ok': True, 'contests': result, **page_meta})
 
 
 @require_http_methods(['POST'])
@@ -317,36 +360,57 @@ def api_contests_catalog(request):
 def api_contest_submit(request, contest_id):
     account = request.account
     try:
-        c = Contest.objects.get(id=contest_id, status='active')
+        c = Contest.objects.get(id=contest_id, status=Contest.STATUS_ACTIVE)
     except Contest.DoesNotExist:
         return JsonResponse({'ok': False, 'message': 'Конкурс не найден или не активен'}, status=404)
 
-    attempt = ContestSubmission.objects.filter(contest=c, candidate_username=account.username).count() + 1
+    # Дедлайн раньше не проверялся нигде — работу можно было сдать хоть через год
+    if c.deadline and timezone.now() > c.deadline:
+        return JsonResponse({'ok': False, 'message': 'Приём работ завершён: срок вышел.'}, status=400)
+
+    comment = (request.POST.get('comment') or '')[:MAX_COMMENT_LENGTH]
     sub = ContestSubmission(
         contest=c,
         candidate_username=account.username,
         candidate_name=account.name or account.username,
-        attempt=attempt,
+        comment=comment,
     )
 
-    if c.submission_type == 'file':
-        f = request.FILES.get('file')
-        if not f:
-            return JsonResponse({'ok': False, 'message': 'Файл обязателен'}, status=400)
-        sub.file = f
-        sub.comment = request.POST.get('comment', '')
-    elif c.submission_type == 'link':
-        sub.link = request.POST.get('link', '')
-        sub.comment = request.POST.get('comment', '')
+    if c.submission_type == Contest.SUB_FILE:
+        try:
+            sub.file = validate_attachment(request.FILES.get('file'))
+        except UploadError as error:
+            return JsonResponse({'ok': False, 'message': str(error)}, status=400)
+    elif c.submission_type == Contest.SUB_LINK:
+        link = (request.POST.get('link') or '').strip()
+        try:
+            URLValidator()(link)
+        except ValidationError:
+            return JsonResponse({'ok': False, 'message': 'Укажите корректную ссылку.'}, status=400)
+        sub.link = link
     else:
-        sub.text = request.POST.get('text', '')
-        sub.comment = request.POST.get('comment', '')
+        text = (request.POST.get('text') or '').strip()
+        if not text:
+            return JsonResponse({'ok': False, 'message': 'Текст решения обязателен.'}, status=400)
+        sub.text = text[:MAX_TEXT_LENGTH]
 
-    sub.save()
-    c.participants_count = ContestSubmission.objects.filter(
-        contest=c
-    ).values('candidate_username').distinct().count()
-    c.save(update_fields=['participants_count'])
+    # Номер попытки и лимит считаем под блокировкой конкурса: иначе два
+    # одновременных запроса получат одинаковый номер и обойдут лимит
+    with transaction.atomic():
+        locked = Contest.objects.select_for_update().get(id=c.id)
+        used = ContestSubmission.objects.filter(contest=locked, candidate_username=account.username).count()
+        if used >= MAX_SUBMISSION_ATTEMPTS:
+            return JsonResponse(
+                {'ok': False, 'message': 'Вы уже отправили решение на этот конкурс.'}, status=409
+            )
+        sub.attempt = used + 1
+        sub.save()
+        locked.participants_count = (
+            ContestSubmission.objects.filter(contest=locked)
+            .values('candidate_username').distinct().count()
+        )
+        locked.save(update_fields=['participants_count'])
+
     return JsonResponse({'ok': True, 'submission': _sub_to_dict(sub)}, status=201)
 
 
@@ -354,10 +418,11 @@ def api_contest_submit(request, contest_id):
 @api_login_required()
 def api_my_submissions(request, contest_id):
     account = request.account
-    subs = ContestSubmission.objects.filter(
+    subs = list(ContestSubmission.objects.filter(
         contest_id=contest_id, candidate_username=account.username
-    )
-    return JsonResponse({'ok': True, 'submissions': [_sub_to_dict(s) for s in subs]})
+    ))
+    cards = _candidate_cards(s.candidate_username for s in subs)
+    return JsonResponse({'ok': True, 'submissions': [_sub_to_dict(s, cards) for s in subs]})
 
 
 @require_http_methods(['GET'])

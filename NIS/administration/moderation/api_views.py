@@ -1,4 +1,3 @@
-import json
 from datetime import timedelta
 
 from django.http import JsonResponse
@@ -7,10 +6,15 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from core.auth import moderator_required
+from core.pagination import paginate
+from core.utils import load_json_body
 from authorization.models import (
     Account, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER,
     STATUS_ACTIVE, STATUS_BANNED, STATUS_WARNED,
 )
+
+# Списки модерации могут вырасти, поэтому выдача постраничная.
+CATALOG_PER_PAGE = 100
 
 ROLE_LABELS = {ROLE_USER: 'Кандидат', ROLE_COMPANY: 'Компания', ROLE_MODERATOR: 'Модератор'}
 
@@ -45,14 +49,8 @@ def api_users(request):
         qs = qs.filter(name__icontains=q)
 
     qs = qs.order_by('-created_at')
-    return JsonResponse({'ok': True, 'users': [serialize_account(a) for a in qs]})
-
-
-def _load_body(request):
-    try:
-        return json.loads(request.body or '{}')
-    except (ValueError, TypeError):
-        return {}
+    users, page_meta = paginate(request, qs, CATALOG_PER_PAGE)
+    return JsonResponse({'ok': True, 'users': [serialize_account(a) for a in users], **page_meta})
 
 
 @require_POST
@@ -62,7 +60,7 @@ def api_user_ban(request, username):
     if account.role == ROLE_MODERATOR:
         return JsonResponse({'ok': False, 'message': 'Нельзя заблокировать модератора.'}, status=400)
 
-    data = _load_body(request)
+    data = load_json_body(request)
     reason = (data.get('reason') or '').strip()
     duration = data.get('duration')  # 'perm' или число дней (int/строка)
 
@@ -89,7 +87,7 @@ def api_user_warn(request, username):
     if account.role == ROLE_MODERATOR:
         return JsonResponse({'ok': False, 'message': 'Нельзя предупредить модератора.'}, status=400)
 
-    data = _load_body(request)
+    data = load_json_body(request)
     reason = (data.get('reason') or '').strip()
     account.status = STATUS_WARNED
     account.warning_reason = reason

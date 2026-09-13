@@ -1,5 +1,3 @@
-import json
-
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -8,6 +6,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from core.auth import api_login_required, page_login_required
+from core.utils import load_json_body
 from tests import code_results
 
 from .models import Test, TestAnswer, TestPage
@@ -138,10 +137,7 @@ def _save_pages(test, pages_data):
 @require_http_methods(['POST'])
 @api_login_required(*TEST_OWNER_ROLES)
 def api_tests_create(request):
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'message': 'Неверный JSON.'}, status=400)
+    body = load_json_body(request)
 
     # owner_username из тела запроса игнорируем: владелец — тот, кто вошёл
     owner_username = request.account.username
@@ -181,10 +177,7 @@ def api_test_detail(request, test_id):
         return JsonResponse({'ok': True})
 
     # PUT — full replace
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'message': 'Неверный JSON.'}, status=400)
+    body = load_json_body(request)
 
     title = (body.get('title') or '').strip()
     if not title:
@@ -228,10 +221,7 @@ def api_code_run(request, page_id):
     except TestPage.DoesNotExist:
         return JsonResponse({'ok': False, 'message': 'Страница не найдена.'}, status=404)
 
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'message': 'Неверный JSON.'}, status=400)
+    body = load_json_body(request)
 
     code = (body.get('code') or '').strip()
     language = (body.get('language') or '').strip()

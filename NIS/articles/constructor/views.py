@@ -8,8 +8,13 @@ from django.views.decorators.http import require_http_methods
 
 from authorization.models import ROLE_USER
 from core.auth import api_login_required, page_login_required
+from core.utils import load_json_body
 
 from .models import Article
+
+MAX_TITLE_LENGTH = 255
+MAX_EXCERPT_LENGTH = 2000
+MAX_TAGS = 10
 
 
 @ensure_csrf_cookie
@@ -53,16 +58,34 @@ def api_article_update(request, article_id):
     if not article:
         return JsonResponse({'ok': False, 'message': 'Статья не найдена'}, status=404)
 
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'message': 'Неверный JSON'}, status=400)
+    body = load_json_body(request)
 
+    # Раньше значения клали в модель как есть: cover_index: "abc" валил сохранение
+    # с ошибкой 500, а длина title и размер content ничем не ограничивались.
     fields = []
-    for field in ('title', 'excerpt', 'content', 'tags', 'cover_index', 'read_time'):
+    for field, limit in (('title', MAX_TITLE_LENGTH), ('excerpt', MAX_EXCERPT_LENGTH)):
         if field in body:
-            setattr(article, field, body[field])
+            setattr(article, field, str(body[field] or '')[:limit])
             fields.append(field)
+
+    for field in ('content', 'tags'):
+        if field in body:
+            value = body[field]
+            if not isinstance(value, list):
+                return JsonResponse({'ok': False, 'message': f'Поле {field} должно быть списком.'}, status=400)
+            if field == 'tags':
+                value = [str(t)[:50] for t in value[:MAX_TAGS]]
+            setattr(article, field, value)
+            fields.append(field)
+
+    for field, maximum in (('cover_index', 999), ('read_time', 1000)):
+        if field in body:
+            try:
+                setattr(article, field, max(0, min(int(body[field]), maximum)))
+            except (TypeError, ValueError):
+                return JsonResponse({'ok': False, 'message': f'Поле {field} должно быть числом.'}, status=400)
+            fields.append(field)
+
     if fields:
         article.save(update_fields=fields)
 
