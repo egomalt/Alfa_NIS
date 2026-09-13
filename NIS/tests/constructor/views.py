@@ -6,19 +6,41 @@ from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
+from authorization.models import ROLE_COMPANY, ROLE_USER
+from core.auth import api_login_required, page_login_required
+from tests import code_results
+
 from .models import Test, TestAnswer, TestPage
+
+# Тесты заводят и кандидаты, и компании — у каждой роли свой раздел «Мои тесты».
+TEST_OWNER_ROLES = (ROLE_USER, ROLE_COMPANY)
+
+# Потолки для запуска пользовательского кода: значения приходят из page_meta,
+# которую заполняет автор теста, поэтому доверять им без ограничений нельзя.
+MAX_CODE_LENGTH = 100_000
+MAX_TEST_CASES = 50
+MAX_TIME_LIMIT = 10
+DEFAULT_TIME_LIMIT = 5
+
+
+def _safe_time_limit(raw_value):
+    """Лимит времени из page_meta: не даём раздуть таймаут и не падаем на мусоре."""
+    try:
+        seconds = int(raw_value)
+    except (TypeError, ValueError):
+        return DEFAULT_TIME_LIMIT
+    return max(1, min(seconds, MAX_TIME_LIMIT))
 
 
 @ensure_csrf_cookie
+@page_login_required(*TEST_OWNER_ROLES)
 def constructor_shell(request, test_id=None):
-    from authorization.views import get_current_account
-    owner_username = request.GET.get('owner', '')
-    account = get_current_account(request)
+    # Владельца берём из сессии, а не из ?owner= — иначе тест можно завести от чужого имени
     return render(request, 'constructor/constructor.html', {
         'app_path': request.path,
         'test_id': test_id or '',
-        'owner_username': owner_username,
-        'is_authenticated': account is not None,
+        'owner_username': request.account.username,
+        'is_authenticated': True,
     })
 
 
@@ -69,12 +91,25 @@ def _serialize_test(test, include_pages=False):
 
 
 @require_GET
+@api_login_required()
 def api_tests_list(request):
-    owner_username = request.GET.get('owner', '')
-    if not owner_username:
-        return JsonResponse({'ok': False, 'message': 'owner param required'}, status=400)
-    tests = Test.objects.filter(owner_username=owner_username)
+    """Список СВОИХ тестов, включая черновики.
+
+    Параметр ?owner= намеренно игнорируется: раньше по нему можно было вытащить
+    чужие черновики. Публичные тесты компании отдаёт /api/v1/companies/<username>/tests/.
+    """
+    tests = Test.objects.filter(owner_username=request.account.username).prefetch_related('pages')
     return JsonResponse({'ok': True, 'tests': [_serialize_test(t) for t in tests]})
+
+
+def _owned_test_or_error(request, test_id):
+    """Тест текущего пользователя либо готовый JSON-ответ с отказом."""
+    test = Test.objects.filter(id=test_id).first()
+    if test is None:
+        return None, JsonResponse({'ok': False, 'message': 'Тест не найден.'}, status=404)
+    if test.owner_username != request.account.username:
+        return None, JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
+    return test, None
 
 
 def _save_pages(test, pages_data):
@@ -98,18 +133,18 @@ def _save_pages(test, pages_data):
 
 
 @require_http_methods(['POST'])
+@api_login_required(*TEST_OWNER_ROLES)
 def api_tests_create(request):
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'message': 'Invalid JSON'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Неверный JSON.'}, status=400)
 
-    owner_username = (body.get('owner_username') or '').strip()
+    # owner_username из тела запроса игнорируем: владелец — тот, кто вошёл
+    owner_username = request.account.username
     title = (body.get('title') or '').strip()
-    if not owner_username:
-        return JsonResponse({'ok': False, 'message': 'owner_username required'}, status=400)
     if not title:
-        return JsonResponse({'ok': False, 'message': 'title required'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Укажите название теста.'}, status=400)
 
     level = (body.get('level') or '').strip()
     category = (body.get('category') or '').strip()
@@ -127,11 +162,13 @@ def api_tests_create(request):
 
 
 @require_http_methods(['GET', 'PUT', 'DELETE'])
+@api_login_required()
 def api_test_detail(request, test_id):
-    try:
-        test = Test.objects.get(id=test_id)
-    except Test.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Not found'}, status=404)
+    # Эндпоинт редактора: отдаёт страницы вместе с признаком правильного ответа,
+    # поэтому доступен только владельцу. Прохождение теста идёт через /tests/<id>/view/.
+    test, error = _owned_test_or_error(request, test_id)
+    if error:
+        return error
 
     if request.method == 'GET':
         return JsonResponse({'ok': True, 'test': _serialize_test(test, include_pages=True)})
@@ -144,11 +181,11 @@ def api_test_detail(request, test_id):
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'message': 'Invalid JSON'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Неверный JSON.'}, status=400)
 
     title = (body.get('title') or '').strip()
     if not title:
-        return JsonResponse({'ok': False, 'message': 'title required'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Укажите название теста.'}, status=400)
 
     stats = dict(test.stats or {})
     stats['level'] = (body.get('level') or '').strip()
@@ -166,11 +203,11 @@ def api_test_detail(request, test_id):
 
 
 @require_http_methods(['POST'])
+@api_login_required()
 def api_test_publish(request, test_id):
-    try:
-        test = Test.objects.get(id=test_id)
-    except Test.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Not found'}, status=404)
+    test, error = _owned_test_or_error(request, test_id)
+    if error:
+        return error
 
     if test.pages.count() == 0:
         return JsonResponse({'ok': False, 'message': 'Нельзя опубликовать тест без страниц.'}, status=400)
@@ -181,23 +218,26 @@ def api_test_publish(request, test_id):
 
 
 @require_http_methods(['POST'])
+@api_login_required()
 def api_code_run(request, page_id):
     try:
         page = TestPage.objects.get(id=page_id, type=TestPage.TYPE_CODE)
     except TestPage.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Not found'}, status=404)
+        return JsonResponse({'ok': False, 'message': 'Страница не найдена.'}, status=404)
 
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'message': 'Invalid JSON'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Неверный JSON.'}, status=400)
 
     code = (body.get('code') or '').strip()
     language = (body.get('language') or '').strip()
     sample_only = body.get('sample_only', True)
 
     if not code:
-        return JsonResponse({'ok': False, 'message': 'Код не может быть пустым'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Код не может быть пустым.'}, status=400)
+    if len(code) > MAX_CODE_LENGTH:
+        return JsonResponse({'ok': False, 'message': 'Код слишком длинный.'}, status=400)
 
     from .executor import LANGUAGES, run_in_docker
 
@@ -205,8 +245,8 @@ def api_code_run(request, page_id):
         return JsonResponse({'ok': False, 'message': f'Неподдерживаемый язык: {language}'}, status=400)
 
     meta = page.page_meta or {}
-    test_cases = meta.get('test_cases', [])
-    time_limit = int(meta.get('time_limit', 5))
+    test_cases = (meta.get('test_cases') or [])[:MAX_TEST_CASES]
+    time_limit = _safe_time_limit(meta.get('time_limit'))
 
     if sample_only:
         test_cases = [tc for tc in test_cases if tc.get('is_sample')]
@@ -240,5 +280,10 @@ def api_code_run(request, page_id):
             tc_result['stderr'] = run_result['stderr']
 
         results.append(tc_result)
+
+    # Полный прогон — это и есть отправка решения: запоминаем вердикт на сервере,
+    # чтобы при подведении итогов не верить числам от клиента.
+    if not sample_only:
+        code_results.remember(request, page.id, passed, len(test_cases))
 
     return JsonResponse({'ok': True, 'passed': passed, 'total': len(test_cases), 'results': results})

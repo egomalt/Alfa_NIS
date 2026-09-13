@@ -1,7 +1,7 @@
 """Сбор статистики компании и сборка PDF-отчёта."""
 from django.db.models import Avg, Count
 
-from companies.models import Company, CompanyRating
+from companies.models import CompanyRating
 from contests.contests_cabinet.models import Contest
 from tests.constructor.models import Test
 

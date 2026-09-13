@@ -42,8 +42,6 @@ def company_contests_view(request, username):
 
 @ensure_csrf_cookie
 def user_articles_view(request, username):
-    try:
-        account = Account.objects.get(username=username, role=ROLE_USER)
-    except Account.DoesNotExist:
+    if not Account.objects.filter(username=username, role=ROLE_USER).exists():
         raise Http404
     return render(request, 'profiles/user_articles.html', {'username': username})

@@ -116,6 +116,12 @@ def api_contest_detail(request, contest_id):
 
     if request.method == 'GET':
         from companies.models import Company
+        # Черновик виден только владельцу: иначе перебором id читаются условия
+        # ещё не стартовавших конкурсов
+        if c.status == 'draft':
+            account = get_current_account(request)
+            if account is None or account.username != c.company_username:
+                return JsonResponse({'ok': False, 'message': 'Конкурс не найден'}, status=404)
         data = _contest_to_dict(c, full=True)
         try:
             co = Company.objects.get(username=c.company_username)

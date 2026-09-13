@@ -42,9 +42,11 @@ def _company_rating(company):
     return round(avg, 1) if avg is not None else None, total, dist
 
 
-def _serialize_company(company):
+def _serialize_company(company, include_private=False):
+    """Карточка компании. Приватные поля (регистрационный документ) — только владельцу
+    и модератору: раньше ссылка на юрдокумент уходила в публичный ответ."""
     avg_rating, rating_count, rating_dist = _company_rating(company)
-    return {
+    data = {
         'id': company.id,
         'username': company.username,
         'name': company.name,
@@ -57,7 +59,6 @@ def _serialize_company(company):
         'company_size': company.company_size,
         'industry': company.industry,
         'avatar_url': company.avatar.url if company.avatar else '',
-        'registration_document_url': company.registration_document.url if company.registration_document else '',
         'direction_1': company.direction_1,
         'direction_2': company.direction_2,
         'direction_3': company.direction_3,
@@ -73,6 +74,10 @@ def _serialize_company(company):
         'rating_count': rating_count,
         'rating_dist': rating_dist,
     }
+    if include_private:
+        doc = company.registration_document
+        data['registration_document_url'] = doc.url if doc else ''
+    return data
 
 
 
@@ -121,7 +126,11 @@ def api_company_detail(request, username):
     company = get_object_or_404(Company, username=username)
     current = get_current_account(request)
     is_owner = current is not None and current.username == username
-    return JsonResponse({'ok': True, 'company': _serialize_company(company), 'is_owner': is_owner})
+    return JsonResponse({
+        'ok': True,
+        'company': _serialize_company(company, include_private=is_owner),
+        'is_owner': is_owner,
+    })
 
 
 @require_http_methods(['POST'])
@@ -134,7 +143,7 @@ def api_company_profile(request, username):
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
     company = form.save()
-    return JsonResponse({'ok': True, 'company': _serialize_company(company)})
+    return JsonResponse({'ok': True, 'company': _serialize_company(company, include_private=True)})
 
 
 @require_http_methods(['POST'])
@@ -154,7 +163,11 @@ def api_company_verification(request, username):
     company.submitted_at = timezone.now()
     company.verified_at = None
     company.save()
-    return JsonResponse({'ok': True, 'company': _serialize_company(company), 'next_url': '/cabinet/company/'})
+    return JsonResponse({
+        'ok': True,
+        'company': _serialize_company(company, include_private=True),
+        'next_url': '/cabinet/company/',
+    })
 
 
 @require_GET
@@ -196,7 +209,7 @@ def api_company_tests(request, username):
 
     return JsonResponse({
         'ok': True,
-        'company': _serialize_company(company),
+        'company': _serialize_company(company, include_private=is_owner),
         'is_owner': is_owner,
         'tests': serialized,
         'stats': {
