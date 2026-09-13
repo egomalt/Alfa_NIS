@@ -40,6 +40,14 @@ class Report(models.Model):
     class Meta:
         db_table = 'reports'
         ordering = ['-created_at']
+        # Один человек — одна жалоба на объект. Иначе порог эскалации
+        # (ESCALATION_THRESHOLD) накручивается в одиночку.
+        constraints = [
+            models.UniqueConstraint(
+                fields=['reporter_username', 'target_type', 'target_id'],
+                name='unique_report_per_reporter',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.get_target_type_display()}: {self.target_title}'

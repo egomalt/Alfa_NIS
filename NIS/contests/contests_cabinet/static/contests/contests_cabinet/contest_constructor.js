@@ -88,7 +88,7 @@ function renderAttachments() {
       </button>
     </div>`).join('');
   document.querySelectorAll('[data-ai]').forEach(btn => {
-    btn.addEventListener('click', () => { attachments.splice(parseInt(btn.dataset.ai), 1); renderAttachments(); });
+    btn.addEventListener('click', () => removeAttachment(parseInt(btn.dataset.ai)));
   });
 }
 
@@ -131,9 +131,7 @@ function fillForm(contest) {
   document.getElementById('ccon-sub-hint').value = contest.submission_hint || '';
   if (contest.rules?.length) rules = [...contest.rules];
   if (contest.submission_type) activeSubType = contest.submission_type;
-  if (contest.attachments?.length) {
-    attachments = contest.attachments.map(a => ({ name: a.name, size: a.size_display || '' }));
-  }
+  attachments = (contest.attachments || []).map(a => ({ id: a.id, name: a.name, size: a.size_display || '' }));
   currentStatus = contest.status || 'draft';
   updateBadge();
   renderRules();
@@ -157,6 +155,7 @@ async function doSave() {
         history.replaceState({}, '', `/cabinet/company/contests/${contestId}/edit/`);
       }
     }
+    await uploadPendingAttachments();
     btn.textContent = '✓ Сохранено';
     btn.classList.add('saved');
     setTimeout(() => { btn.textContent = 'Сохранить'; btn.classList.remove('saved'); btn.disabled = false; }, 1800);
@@ -200,6 +199,44 @@ document.getElementById('ccon-attach-input').addEventListener('change', e => {
   e.target.value = '';
   renderAttachments();
 });
+
+// Файл, уже сохранённый на сервере, удаляем и на сервере; новый — просто из списка
+async function removeAttachment(index) {
+  const item = attachments[index];
+  if (!item) return;
+  if (item.id && contestId) {
+    try {
+      await api(`/api/v1/contests/${contestId}/attachments/${item.id}/`, { method: 'DELETE' });
+    } catch (err) {
+      alert(err.message);
+      return;
+    }
+  }
+  attachments.splice(index, 1);
+  renderAttachments();
+}
+
+// Файлы уходят отдельными multipart-запросами: конкурс сохраняется JSON-ом,
+// вложить в него файл нельзя
+async function uploadPendingAttachments() {
+  const pending = attachments.filter(a => a.file && !a.id);
+  for (const item of pending) {
+    const form = new FormData();
+    form.append('file', item.file);
+    const resp = await fetch(`/api/v1/contests/${contestId}/attachments/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf() },
+      credentials: 'same-origin',
+      body: form,
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.message || `Не удалось загрузить «${item.name}».`);
+    item.id = data.attachment.id;
+    item.size = data.attachment.size_display;
+    delete item.file;
+  }
+  if (pending.length) renderAttachments();
+}
 document.getElementById('ccon-preview-btn').addEventListener('click', () => {
   if (contestId) location.href = `/contests/${contestId}/`;
   else alert('Сохраните конкурс для предпросмотра');
