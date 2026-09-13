@@ -27,14 +27,27 @@
   }
 
   let allTests = [];
-  let activeLevel = 'all';
-  let activeCat = 'all';
+  // Начальные фильтры берём из адреса: с главной сюда ведут поиск и чипы (/tests/?q=…&cat=…)
+  const params = new URLSearchParams(location.search);
+  let activeLevel = params.get('level') || 'all';
+  let activeCat = params.get('cat') || 'all';
+  let query = (params.get('q') || '').trim().toLowerCase();
 
   function filtered() {
-    return allTests.filter(t =>
-      (activeLevel === 'all' || t.level === activeLevel) &&
-      (activeCat === 'all' || t.category === activeCat)
-    );
+    return allTests.filter(t => {
+      if (activeLevel !== 'all' && t.level !== activeLevel) return false;
+      if (activeCat !== 'all' && t.category !== activeCat) return false;
+      if (!query) return true;
+      const haystack = `${t.title} ${t.description} ${t.owner_name} ${t.owner_username}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+
+  function syncChips() {
+    document.querySelectorAll('[data-level]').forEach(b => b.classList.toggle('active', b.dataset.level === activeLevel));
+    document.querySelectorAll('[data-cat]').forEach(b => b.classList.toggle('active', b.dataset.cat === activeCat));
+    const input = document.getElementById('catalog-search');
+    if (input) input.value = params.get('q') || '';
   }
 
   function render() {
@@ -43,7 +56,8 @@
     const grid = document.getElementById('grid');
 
     if (!list.length) {
-      grid.innerHTML = `<div class="empty"><div class="empty-title">Тестов не найдено</div><div class="empty-sub">Попробуйте изменить фильтры</div></div>`;
+      const sub = query ? `По запросу «${esc(query)}» ничего нет — попробуйте другой запрос` : 'Попробуйте изменить фильтры';
+      grid.innerHTML = `<div class="empty"><div class="empty-title">Тестов не найдено</div><div class="empty-sub">${sub}</div></div>`;
       return;
     }
 
@@ -88,6 +102,11 @@
     });
   });
 
+  document.getElementById('catalog-search')?.addEventListener('input', e => {
+    query = e.target.value.trim().toLowerCase();
+    render();
+  });
+
   // Show "Создать тест" for company accounts
   fetch('/api/v1/auth/me/')
     .then(r => r.json())
@@ -104,6 +123,7 @@
     .then(data => {
       if (!data.ok) throw new Error();
       allTests = data.tests || [];
+      syncChips();
       render();
     })
     .catch(() => {

@@ -271,14 +271,40 @@
         a.views ? `${fmtNum(a.views)} просмотров` : null,
         a.likes ? `${a.likes} лайков` : null,
       ].filter(Boolean).join(' · ');
-      return `<a class="ud-list-row" href="/articles/${a.id}/">
+      // Черновик ещё не опубликован — публичная страница отдаёт на нём 404,
+      // поэтому ведём в редактор
+      const href = a.status === 'published' ? `/articles/${a.id}/` : `/cabinet/user/articles/${a.id}/edit/`;
+      return `<a class="ud-list-row" href="${href}">
         <div class="ud-list-main">
           <div class="ud-list-title">${esc(a.title || 'Без названия')}</div>
           <div class="ud-list-meta">${esc(metaParts)}</div>
         </div>
         <span class="ud-status-pill" style="background:${STATUS_BG[a.status]||'var(--surface-2)'};color:${STATUS_CO[a.status]||'var(--muted)'};">${STATUS_LB[a.status] || a.status}</span>
+        <div class="ud-row-actions" onclick="event.stopPropagation()">
+          <a class="ud-icon-btn" href="/cabinet/user/articles/${a.id}/edit/" title="Редактировать">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+          </a>
+          <button class="ud-icon-btn" data-delete-article="${a.id}" title="Удалить">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>
       </a>`;
     }).join('');
+
+    listEl.querySelectorAll('[data-delete-article]').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!confirm('Удалить статью? Это действие нельзя отменить.')) return;
+        try {
+          await apiFetch(`/api/v1/articles/${btn.dataset.deleteArticle}/delete/`, { method: 'DELETE' });
+          state.articles = state.articles.filter(a => String(a.id) !== btn.dataset.deleteArticle);
+          renderArticlesTab();
+          renderProfileTab();
+          renderStatsTab();
+        } catch (e) { alert(e.message); }
+      });
+    });
   }
 
   /* ---------- render contests tab ---------- */
@@ -370,17 +396,7 @@
     set('ss-a-views', fmtNum(totalViews));
     set('ss-a-likes', totalLikes);
 
-    // Heatmap
-    const heatEl = document.getElementById('ud-heat-grid');
-    if (heatEl) {
-      let cells = '';
-      for (let i = 0; i < 26 * 7; i++) {
-        const r = Math.random();
-        const bg = r > 0.85 ? 'var(--brand)' : r > 0.6 ? 'var(--brand-soft)' : 'var(--surface-2)';
-        cells += `<div class="ud-heat-cell" style="background:${bg};"></div>`;
-      }
-      heatEl.innerHTML = cells;
-    }
+    renderActivityHeatmap();
 
     // Contest bars
     const contestBarsEl = document.getElementById('ud-contest-bars');
@@ -452,6 +468,60 @@
 
   /* ---------- render settings tab ---------- */
 
+  /* ---------- activity heatmap ---------- */
+
+  const HEAT_WEEKS = 26;
+
+  // Даты приходят в двух форматах: ISO от статей и тестов, «ДД.ММ.ГГГГ ЧЧ:ММ» от работ на конкурс
+  function parseActivityDate(value) {
+    if (!value) return null;
+    const ru = /^(\d{2})\.(\d{2})\.(\d{4})/.exec(value);
+    const date = ru ? new Date(`${ru[3]}-${ru[2]}-${ru[1]}`) : new Date(value);
+    return isNaN(date) ? null : date;
+  }
+
+  function dayKey(date) {
+    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  }
+
+  function renderActivityHeatmap() {
+    const heatEl = document.getElementById('ud-heat-grid');
+    if (!heatEl) return;
+
+    // Считаем реальные события: созданные статьи, тесты и отправленные работы
+    const counts = new Map();
+    const sources = [
+      ...state.articles.map(a => a.created_at),
+      ...state.tests.map(t => t.created_at),
+      ...state.contestHistory.map(s => s.submitted_at),
+    ];
+    for (const raw of sources) {
+      const date = parseActivityDate(raw);
+      if (!date) continue;
+      const key = dayKey(date);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let cells = '';
+    for (let back = HEAT_WEEKS * 7 - 1; back >= 0; back--) {
+      const day = new Date(today);
+      day.setDate(today.getDate() - back);
+      const n = counts.get(dayKey(day)) || 0;
+      const bg = n >= 3 ? 'var(--brand)' : n > 0 ? 'var(--brand-soft)' : 'var(--surface-2)';
+      const label = `${day.toLocaleDateString('ru-RU')} — ${n ? pluralEvents(n) : 'нет активности'}`;
+      cells += `<div class="ud-heat-cell" style="background:${bg};" title="${esc(label)}"></div>`;
+    }
+    heatEl.innerHTML = cells;
+  }
+
+  function pluralEvents(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return n + ' событие';
+    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return n + ' события';
+    return n + ' событий';
+  }
+
   function renderSettingsTab() {
     if (!document.getElementById('ud-s-name')) return;
     const c = state.candidate;
@@ -472,6 +542,7 @@
     const btn = document.getElementById('ud-save-settings-btn');
     const flashEl = document.getElementById('ud-settings-flash');
     const name = document.getElementById('ud-s-name')?.value.trim();
+    const email = document.getElementById('ud-s-email')?.value.trim();
     const bio = document.getElementById('ud-s-bio')?.value.trim();
     const skillsStr = document.getElementById('ud-s-skills')?.value || '';
     const skills = skillsStr.split(',').map(s => s.trim()).filter(Boolean);
@@ -486,7 +557,7 @@
     try {
       const data = await apiFetch(`/api/v1/candidates/${username}/update/`, {
         method: 'PATCH',
-        body: JSON.stringify({ name, bio: bio || '', skills }),
+        body: JSON.stringify({ name, email: email || '', bio: bio || '', skills }),
       });
       state.candidate = data.candidate;
       if (btn) { btn.disabled = false; btn.textContent = '✓ Сохранено'; }

@@ -73,7 +73,7 @@
         if (!page) return;
 
         const isLast = state.currentIndex === state.pages.length - 1;
-        const hasQuizPages = state.pages.some(p => p.type === 'quiz' || p.type === 'input');
+        const hasAnswerPages = hasAnyAnswerPage();
 
         let html = '';
 
@@ -116,17 +116,11 @@
 
         // Nav buttons
         const prevDisabled = state.currentIndex === 0 ? 'disabled' : '';
-        const lastActionBtn = isLast && hasQuizPages
-            ? `<button type="button" id="tv-submit-btn" class="tv-btn tv-btn-primary">Завершить тест</button>`
-            : isLast
-            ? ''
-            : `<button type="button" id="tv-next-btn" class="tv-btn tv-btn-primary">Далее →</button>`;
-
         html += `
             <div class="tv-nav-btns">
                 <button type="button" id="tv-prev-btn" class="tv-btn" ${prevDisabled}>← Назад</button>
                 ${!isLast ? `<button type="button" id="tv-next-btn" class="tv-btn tv-btn-primary">Далее →</button>` : ''}
-                ${isLast && hasQuizPages ? `<button type="button" id="tv-submit-btn" class="tv-btn tv-btn-primary">Завершить тест</button>` : ''}
+                ${isLast && hasAnswerPages ? `<button type="button" id="tv-submit-btn" class="tv-btn tv-btn-primary">Завершить тест</button>` : ''}
             </div>
         `;
 
@@ -172,6 +166,12 @@
     const LANG_LABELS = { python: 'Python 3', javascript: 'JavaScript (Node)', cpp: 'C++17' };
     const LANG_EXTENSIONS = { python: '.py', javascript: '.js', cpp: '.cpp' };
 
+    // Страницы, за которые начисляются баллы. Раньше здесь не учитывался тип 'code',
+    // из-за чего тест, заканчивающийся текстовой страницей, нельзя было завершить.
+    function hasAnyAnswerPage() {
+        return state.pages.some(p => p.type === 'quiz' || p.type === 'input' || p.type === 'code');
+    }
+
     function renderCodePage(container, page) {
         const meta = page.page_meta || {};
         const language = meta.language || 'python';
@@ -183,7 +183,7 @@
 
         const isFirst = state.currentIndex === 0;
         const isLast = state.currentIndex === state.pages.length - 1;
-        const hasAnswerPages = state.pages.some(p => p.type === 'quiz' || p.type === 'input' || p.type === 'code');
+        const hasAnswerPages = hasAnyAnswerPage();
 
         container.innerHTML = `
             ${page.title ? `<h2 style="margin-bottom:16px">${escHtml(page.title)}</h2>` : ''}
@@ -205,7 +205,7 @@
             <div class="tv-nav-btns" style="margin-top:8px">
                 <button type="button" id="tv-prev-btn" class="tv-btn" ${isFirst ? 'disabled' : ''}>← Назад</button>
                 ${!isLast ? `<button type="button" id="tv-next-btn" class="tv-btn tv-btn-primary">Далее →</button>` : ''}
-                ${isLast && hasAnswerPages ? `<button type="button" id="tv-finish-btn" class="tv-btn tv-btn-primary">Завершить тест</button>` : ''}
+                ${isLast && hasAnswerPages ? `<button type="button" id="tv-submit-btn" class="tv-btn tv-btn-primary">Завершить тест</button>` : ''}
             </div>
         `;
 
@@ -245,7 +245,7 @@
         container.querySelector('#tv-next-btn')?.addEventListener('click', () => {
             if (state.currentIndex < state.pages.length - 1) { state.currentIndex++; renderPage(); renderSidebar(); }
         });
-        container.querySelector('#tv-finish-btn')?.addEventListener('click', submitTest);
+        container.querySelector('#tv-submit-btn')?.addEventListener('click', submitTest);
     }
 
     async function runCode(pageId, code, language, sampleOnly, container) {

@@ -87,13 +87,22 @@ function renderTable() {
           <button class="cc-icon-btn" title="Редактировать" onclick="location.href='/cabinet/company/contests/${c.id}/edit/'">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
           </button>
-          <button class="cc-icon-btn danger" title="Удалить" onclick="deleteContest(${c.id}, event)">
+          <button class="cc-icon-btn danger" title="Удалить" data-delete-contest="${c.id}">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
           </button>
         </div>
       </div>`;
     }).join('')}
   </div>`;
+}
+
+// Обработчик вешается на контейнер один раз: содержимое таблицы перерисовывается,
+// и слушатели на самих кнопках терялись бы после каждой перерисовки.
+function initTableActions() {
+  document.getElementById('cc-table-wrap').addEventListener('click', event => {
+    const btn = event.target.closest('[data-delete-contest]');
+    if (btn) deleteContest(Number(btn.dataset.deleteContest), event);
+  });
 }
 
 async function deleteContest(id, e) {
@@ -144,5 +153,6 @@ async function load() {
 }
 
 initFilters();
+initTableActions();
 loadSidebarCompany();
 load();

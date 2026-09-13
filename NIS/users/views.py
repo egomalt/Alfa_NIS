@@ -1,5 +1,7 @@
 import json
 
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
@@ -48,9 +50,13 @@ def api_candidate_update(request, username):
 
     changed_fields = []
     if name:
-        account.name = name
+        account.name = name[:255]
         changed_fields.append('name')
     if email:
+        try:
+            validate_email(email)
+        except ValidationError:
+            return JsonResponse({'ok': False, 'message': 'Некорректный email.'}, status=400)
         account.email = email
         changed_fields.append('email')
     if changed_fields:
