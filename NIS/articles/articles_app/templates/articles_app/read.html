@@ -108,6 +108,14 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
         </button>
       </div>
+      <button type="button" id="btn-report"
+              data-report-type="article" data-report-id="{{ article.id }}"
+              data-report-author="{{ article.author_username }}"
+              data-report-title="{{ article.title }}"
+              style="margin-left:auto;height:34px;padding:0 14px;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:none;align-items:center;gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        Пожаловаться
+      </button>
     </div>
 
     <div class="author-card">
@@ -173,6 +181,7 @@ let userVote = {{ user_vote|default:"null" }};
 <script>
   window.ALFA_MOD_TARGET = { type: 'article', id: {{ article.id }}, author: "{{ article.author_username|escapejs }}", title: "{{ article.title|escapejs }}" };
 </script>
+<script src="{% static 'js/report.js' %}?v=20260913-1"></script>
 <script src="{% static 'js/moderation-bar.js' %}?v=20260810-1"></script>
 </body>
 </html>

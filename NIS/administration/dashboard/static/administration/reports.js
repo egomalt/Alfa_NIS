@@ -114,7 +114,11 @@
         var id = actEl.dataset.id;
         if (act === 'open-target') { window.open(actEl.dataset.url, '_blank'); return; }
         if (act === 'open-author') { window.open('/' + actEl.dataset.user + '/', '_blank'); return; }
-        if (act === 'takedown') { A.apiPost('/api/v1/admin/reports/' + id + '/resolve/', {}).then(afterAction).catch(function (err) { alert(err.message); }); return; }
+        if (act === 'takedown') {
+          if (!confirm('Удалить материал? Это действие нельзя отменить.')) return;
+          A.apiPost('/api/v1/admin/reports/' + id + '/takedown/', {}).then(afterAction).catch(function (err) { alert(err.message); });
+          return;
+        }
         if (act === 'keep' || act === 'dismiss') { A.apiPost('/api/v1/admin/reports/' + id + '/dismiss/', {}).then(afterAction).catch(function (err) { alert(err.message); }); return; }
         if (act === 'warn-author') {
           var wu = actEl.dataset.user;

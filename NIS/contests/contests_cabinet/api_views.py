@@ -6,7 +6,20 @@ from django.views.decorators.http import require_http_methods
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
 from core.auth import api_login_required
-from .models import Contest, ContestSubmission
+from core.uploads import UploadError, human_size, validate_attachment
+from .models import Contest, ContestAttachment, ContestSubmission
+
+MAX_ATTACHMENTS = 10
+
+
+def _attachment_to_dict(attachment):
+    return {
+        'id': attachment.id,
+        'name': attachment.name,
+        'size': attachment.size,
+        'size_display': human_size(attachment.size),
+        'url': attachment.file.url if attachment.file else '',
+    }
 
 
 def _contest_to_dict(c, full=False):
@@ -28,10 +41,7 @@ def _contest_to_dict(c, full=False):
         d['case_text'] = c.case_text
         d['rules'] = c.rules
         d['submission_hint'] = c.submission_hint
-        d['attachments'] = [
-            {'id': a.id, 'name': a.name, 'size': a.size, 'url': a.file.url}
-            for a in c.attachments.all()
-        ]
+        d['attachments'] = [_attachment_to_dict(a) for a in c.attachments.all()]
     return d
 
 
@@ -153,6 +163,57 @@ def api_contest_detail(request, contest_id):
         c.deadline = parse_datetime(body['deadline']) if body['deadline'] else None
     c.save()
     return JsonResponse({'ok': True, 'contest': _contest_to_dict(c)})
+
+
+def _own_contest_or_none(request, contest_id):
+    return Contest.objects.filter(id=contest_id, company_username=request.account.username).first()
+
+
+@require_http_methods(['POST'])
+@api_login_required(ROLE_COMPANY)
+def api_contest_attachment_upload(request, contest_id):
+    """Загрузка стартового файла конкурса.
+
+    Раньше интерфейс собирал файлы в список на странице, но отправлял конкурс
+    JSON-ом, поэтому файлы не доходили до сервера вообще.
+    """
+    contest = _own_contest_or_none(request, contest_id)
+    if contest is None:
+        return JsonResponse({'ok': False, 'message': 'Конкурс не найден'}, status=404)
+
+    if contest.attachments.count() >= MAX_ATTACHMENTS:
+        return JsonResponse(
+            {'ok': False, 'message': f'Можно приложить не больше {MAX_ATTACHMENTS} файлов.'}, status=400
+        )
+
+    try:
+        uploaded = validate_attachment(request.FILES.get('file'))
+    except UploadError as error:
+        return JsonResponse({'ok': False, 'message': str(error)}, status=400)
+
+    attachment = ContestAttachment.objects.create(
+        contest=contest,
+        file=uploaded,
+        name=uploaded.name[:255],
+        size=uploaded.size,
+    )
+    return JsonResponse({'ok': True, 'attachment': _attachment_to_dict(attachment)}, status=201)
+
+
+@require_http_methods(['DELETE'])
+@api_login_required(ROLE_COMPANY)
+def api_contest_attachment_delete(request, contest_id, attachment_id):
+    contest = _own_contest_or_none(request, contest_id)
+    if contest is None:
+        return JsonResponse({'ok': False, 'message': 'Конкурс не найден'}, status=404)
+
+    attachment = contest.attachments.filter(id=attachment_id).first()
+    if attachment is None:
+        return JsonResponse({'ok': False, 'message': 'Файл не найден'}, status=404)
+
+    attachment.file.delete(save=False)
+    attachment.delete()
+    return JsonResponse({'ok': True})
 
 
 @require_http_methods(['POST'])

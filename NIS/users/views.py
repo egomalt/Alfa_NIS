@@ -8,6 +8,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from authorization.models import Account, ROLE_USER
 from authorization.views import get_current_account
 from core.auth import api_login_required
+from core.uploads import UploadError, validate_image
 from .models import UserProfile
 
 
@@ -81,9 +82,12 @@ def api_candidate_avatar(request, username):
     if not account:
         return JsonResponse({'ok': False, 'message': 'Кандидат не найден'}, status=404)
 
-    avatar = request.FILES.get('avatar')
-    if not avatar:
-        return JsonResponse({'ok': False, 'message': 'Файл не передан'}, status=400)
+    # Файл кладётся в поле напрямую, минуя форму, поэтому валидаторы ImageField
+    # не срабатывают — проверяем сами
+    try:
+        avatar = validate_image(request.FILES.get('avatar'))
+    except UploadError as error:
+        return JsonResponse({'ok': False, 'message': str(error)}, status=400)
 
     profile, _ = UserProfile.objects.get_or_create(username=username)
     profile.avatar = avatar

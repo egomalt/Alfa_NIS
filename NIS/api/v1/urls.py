@@ -40,6 +40,9 @@ urlpatterns = [
     path('articles/<int:article_id>/publish/', article_constructor_views.api_article_publish),
     path('articles/<int:article_id>/delete/', article_constructor_views.api_article_delete),
 
+    # Жалобы (создаёт любой вошедший; очередь модерации — в /admin/reports/)
+    path('reports/', admin_reports_views.api_report_create, name='v1_api_report_create'),
+
     # Companies
     path('companies/',                              company_views.api_companies_list),
     path('companies/my-ratings/',                   company_views.api_my_company_ratings),
@@ -69,6 +72,8 @@ urlpatterns = [
     path('contests/user-history/',                                    contest_views.api_user_contest_history),
     path('contests/<int:contest_id>/',                                contest_views.api_contest_detail),
     path('contests/<int:contest_id>/publish/',                        contest_views.api_contest_publish),
+    path('contests/<int:contest_id>/attachments/',                    contest_views.api_contest_attachment_upload),
+    path('contests/<int:contest_id>/attachments/<int:attachment_id>/', contest_views.api_contest_attachment_delete),
     path('contests/<int:contest_id>/submissions/',                    contest_views.api_contest_submissions),
     path('contests/<int:contest_id>/submissions/<int:sub_id>/',       contest_views.api_submission_update),
     path('contests/<int:contest_id>/submissions/<int:sub_id>/like/',  contest_views.api_submission_like),
@@ -87,6 +92,7 @@ urlpatterns = [
     path('admin/users/<slug:username>/warn/',            admin_moderation_views.api_user_warn),
     path('admin/users/<slug:username>/unban/',           admin_moderation_views.api_user_unban),
     path('admin/reports/',                               admin_reports_views.api_reports),
+    path('admin/reports/<int:report_id>/takedown/',      admin_reports_views.api_report_takedown),
     path('admin/reports/<int:report_id>/resolve/',       admin_reports_views.api_report_resolve),
     path('admin/reports/<int:report_id>/dismiss/',       admin_reports_views.api_report_dismiss),
     path('admin/content/article/<int:article_id>/delete/', admin_content_views.api_delete_article),
