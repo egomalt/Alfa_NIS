@@ -2,16 +2,14 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from authorization.models import ROLE_COMPANY, ROLE_USER
-from authorization.views import get_current_account
+from core.auth import page_login_required
 
 
+@page_login_required()
 def cabinet_root(request):
-    account = get_current_account(request)
-    if account is None:
-        return redirect('/authorization/signup/')
-    if account.role == ROLE_COMPANY:
+    if request.account.role == ROLE_COMPANY:
         return redirect('/cabinet/company/')
-    if account.role == ROLE_USER:
+    if request.account.role == ROLE_USER:
         return redirect('/cabinet/user/')
     return redirect('/')
 
@@ -24,10 +22,8 @@ _COMPANY_TEMPLATES = {
 
 
 def _company_cabinet_page(request, page):
-    account = get_current_account(request)
-    if account is None or account.role != ROLE_COMPANY:
-        return redirect('/authorization/signup/')
     from companies.models import Company
+    account = request.account
     Company.objects.get_or_create(
         username=account.username,
         defaults={'name': account.name, 'contact_email': account.email},
@@ -36,16 +32,19 @@ def _company_cabinet_page(request, page):
 
 
 @ensure_csrf_cookie
+@page_login_required(ROLE_COMPANY)
 def company_cabinet(request):
     return _company_cabinet_page(request, 'profile')
 
 
 @ensure_csrf_cookie
+@page_login_required(ROLE_COMPANY)
 def company_statistics(request):
     return _company_cabinet_page(request, 'stats')
 
 
 @ensure_csrf_cookie
+@page_login_required(ROLE_COMPANY)
 def company_settings(request):
     return _company_cabinet_page(request, 'settings')
 
@@ -58,9 +57,7 @@ _USER_TEMPLATES = {
 
 
 @ensure_csrf_cookie
+@page_login_required(ROLE_USER)
 def user_cabinet(request, page='profile'):
-    account = get_current_account(request)
-    if account is None or account.role != ROLE_USER:
-        return redirect('/authorization/signup/')
     template = _USER_TEMPLATES.get(page, _USER_TEMPLATES['profile'])
-    return render(request, template, {'username': account.username, 'page': page})
+    return render(request, template, {'username': request.account.username, 'page': page})

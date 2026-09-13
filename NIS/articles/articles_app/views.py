@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 
 from articles.constructor.models import Article, ArticleVote
 from authorization.views import get_current_account
+from core.auth import api_login_required
 from users.models import UserProfile
 
 COVERS = [
@@ -91,10 +92,9 @@ def article_read(request, article_id):
 
 
 @require_http_methods(['POST'])
+@api_login_required()
 def api_article_vote(request, article_id):
-    account = get_current_account(request)
-    if not account:
-        return JsonResponse({'ok': False, 'message': 'Нет доступа'}, status=401)
+    account = request.account
 
     article = Article.objects.filter(id=article_id, status=Article.STATUS_PUBLISHED).first()
     if not article:
