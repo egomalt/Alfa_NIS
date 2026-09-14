@@ -23,11 +23,30 @@ def cover_gradient(cover_index):
     return COVERS[cover_index % len(COVERS)]
 
 
-def serialize_article(article, with_author=True, with_status=False):
+def author_names_for(articles):
+    """Отображаемые имена авторов: {username: имя}.
+
+    Статьи связаны с аккаунтом строкой-логином, а не внешним ключом, поэтому
+    имена достаём отдельным запросом на всю страницу сразу — иначе получился бы
+    запрос на каждую карточку.
+    """
+    from authorization.models import Account
+
+    usernames = {a.author_username for a in articles if a.author_username}
+    if not usernames:
+        return {}
+    return {
+        username: name or username
+        for username, name in Account.objects.filter(username__in=usernames).values_list('username', 'name')
+    }
+
+
+def serialize_article(article, with_author=True, with_status=False, author_names=None):
     """Карточка статьи.
 
     with_author — добавляет автора (публичные каталоги);
-    with_status — добавляет статус и даты правки (кабинет автора).
+    with_status — добавляет статус и даты правки (кабинет автора);
+    author_names — карта из author_names_for(), чтобы показать имя вместо логина.
     """
     data = {
         'id': article.id,
@@ -42,6 +61,7 @@ def serialize_article(article, with_author=True, with_status=False):
     }
     if with_author:
         data['author_username'] = article.author_username
+        data['author_name'] = (author_names or {}).get(article.author_username) or article.author_username
     if with_status:
         data['status'] = article.status
         data['created_at'] = article.created_at.isoformat()

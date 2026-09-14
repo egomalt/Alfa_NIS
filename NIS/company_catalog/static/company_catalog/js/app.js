@@ -85,7 +85,7 @@
           <div class="card-excerpt">${esc(description)}</div>
           <div class="card-footer">
             <span class="co-stat">${ICON_TESTS}${esc(testsLabel(company.tests_count))}</span>
-            <div class="card-footer-right">${ratingHtml(company)}</div>
+            <div class="card-meta">${ratingHtml(company)}</div>
           </div>
         </div>
       </a>`;
@@ -144,7 +144,7 @@
     }
 
     list.innerHTML = top.map((c, i) => `
-      <a class="trending-item" href="${esc(c.profile_url)}" style="text-decoration:none;color:inherit;">
+      <a class="trending-item" href="${esc(c.profile_url)}">
         <span class="trending-num">${i + 1}</span>
         <span style="min-width:0;">
           <div class="trending-title">${esc(c.name)}</div>
