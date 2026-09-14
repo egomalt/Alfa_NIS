@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <link rel="stylesheet" href="{% static 'articles_app/css/app.css' %}?v=20260914-1">
-  <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-  <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
+  <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
+  <link rel="stylesheet" href="{% static 'articles_app/css/app.css' %}?v={{ ASSET_V }}">
+  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
+  <script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
 </head>
 <body>
 
@@ -186,12 +186,12 @@ const ARTICLE_ID = {{ article.id }};
 const IS_LOGGED_IN = {{ is_logged_in|yesno:"true,false" }};
 let userVote = {{ user_vote|default:"null" }};
 </script>
-<script src="{% static 'articles_app/js/app.js' %}"></script>
+<script src="{% static 'articles_app/js/app.js' %}?v={{ ASSET_V }}"></script>
 <meta name="csrf-token" content="{{ csrf_token }}">
 <script>
   window.ALFA_MOD_TARGET = { type: 'article', id: {{ article.id }}, author: "{{ article.author_username|escapejs }}", title: "{{ article.title|escapejs }}" };
 </script>
-<script src="{% static 'js/report.js' %}?v=20260913-1"></script>
-<script src="{% static 'js/moderation-bar.js' %}?v=20260810-1"></script>
+<script src="{% static 'js/report.js' %}?v={{ ASSET_V }}"></script>
+<script src="{% static 'js/moderation-bar.js' %}?v={{ ASSET_V }}"></script>
 </body>
 </html>

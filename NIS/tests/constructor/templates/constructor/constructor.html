@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'constructor/css/app.css' %}?v=20260914-1">
+  <link rel="stylesheet" href="{% static 'constructor/css/app.css' %}?v={{ ASSET_V }}">
   <script>
     window.ALFA_APP_BOOTSTRAP = {
       path: "{{ app_path|escapejs }}",
@@ -23,8 +23,8 @@
       page: "constructor"
     };
   </script>
-  <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-  <script type="module" src="{% static 'constructor/app.js' %}?v=20260914-1"></script>
+  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
+  <script type="module" src="{% static 'constructor/app.js' %}?v={{ ASSET_V }}"></script>
 </head>
 <body>
 <div class="app">

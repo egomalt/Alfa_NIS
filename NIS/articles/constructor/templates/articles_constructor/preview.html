@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'articles_constructor/css/preview.css' %}">
+  <link rel="stylesheet" href="{% static 'articles_constructor/css/preview.css' %}?v={{ ASSET_V }}">
 </head>
 <body>
 
@@ -62,6 +62,6 @@
 
 </article>
 
-<script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
+<script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
 </body>
 </html>

@@ -10,7 +10,7 @@
 {% block title %}Решения — Alfa Career{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="{% static 'contests/contests_cabinet/contests_cabinet.css' %}?v=20260914-1">
+<link rel="stylesheet" href="{% static 'contests/contests_cabinet/contests_cabinet.css' %}?v={{ ASSET_V }}">
 {# База отдаёт username и page; странице нужен ещё id конкурса #}
 <script>Object.assign(window.ALFA_APP_BOOTSTRAP, { contestId: {{ contest_id }} });</script>
 {% endblock %}
@@ -60,5 +60,5 @@
 {% endblock %}
 
 {% block page_script %}
-<script type="module" src="{% static 'contests/contests_cabinet/contest_submissions.js' %}?v=20260914-1"></script>
+<script type="module" src="{% static 'contests/contests_cabinet/contest_submissions.js' %}?v={{ ASSET_V }}"></script>
 {% endblock %}

@@ -77,10 +77,15 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.asset_version',
             ],
         },
     },
 ]
+
+# Версия статики: подставляется ко всем ссылкам на CSS/JS как ?v=.
+# Поменял статику — подними значение (или задай ASSET_VERSION в окружении).
+ASSET_VERSION = os.getenv('ASSET_VERSION', '20260914')
 
 WSGI_APPLICATION = 'core.wsgi.application'
 

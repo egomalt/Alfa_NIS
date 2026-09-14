@@ -9,8 +9,8 @@
   <title>{% block title %}Личный кабинет — Alfa Career{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <link rel="stylesheet" href="{% static 'cabinet/cabinet-user.css' %}?v=20260914-1">
+  <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
+  <link rel="stylesheet" href="{% static 'cabinet/cabinet-user.css' %}?v={{ ASSET_V }}">
   <script>
     window.ALFA_APP_BOOTSTRAP = {
       username: "{{ username|escapejs }}",
@@ -18,8 +18,8 @@
       panel: "{{ panel|default:page|default:'profile'|escapejs }}"
     };
   </script>
-  <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-  <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
+  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
+  <script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -39,7 +39,7 @@
   </main>
 </div>
 
-<script src="{% static 'cabinet/user.js' %}?v=20260914-1"></script>
+<script src="{% static 'cabinet/user.js' %}?v={{ ASSET_V }}"></script>
 {% block page_script %}{% endblock %}
 </body>
 </html>
