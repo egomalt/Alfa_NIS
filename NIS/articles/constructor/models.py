@@ -8,7 +8,10 @@ class Article(models.Model):
     author_username = models.SlugField(max_length=50, db_index=True)
     title = models.CharField(max_length=255, blank=True)
     excerpt = models.TextField(blank=True)
-    content = models.JSONField(default=list)
+    # Тело статьи — HTML-строка из редактора. Раньше поле было объявлено как
+    # JSONField(default=list), хотя списка там никогда не было: из-за этого
+    # значения хранились JSON-закодированными, а проверки принимали поле за список.
+    content = models.TextField(blank=True)
     tags = models.JSONField(default=list)
     status = models.CharField(max_length=20, default=STATUS_DRAFT)
     cover_index = models.IntegerField(default=0)
