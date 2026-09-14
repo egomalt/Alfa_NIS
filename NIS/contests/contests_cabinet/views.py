@@ -3,6 +3,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from core.auth import page_login_required
+from core.uploads import MAX_DOCUMENT_SIZE
 
 
 @ensure_csrf_cookie
@@ -27,6 +28,9 @@ def contest_constructor(request, contest_id=None):
     return render(request, 'contests/contests_cabinet/contest_constructor.html', {
         'username': request.account.username,
         'contest_id': contest_id,
+        # Лимит берём из того же места, где его проверяет сервер, — иначе
+        # подсказка в интерфейсе снова разойдётся с реальным ограничением
+        'max_attachment_mb': MAX_DOCUMENT_SIZE // (1024 * 1024),
     })
 
 

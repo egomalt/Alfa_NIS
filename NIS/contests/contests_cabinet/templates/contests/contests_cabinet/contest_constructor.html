@@ -73,17 +73,62 @@ html, body { height: 100%; }
 .ccon-attach-row svg { flex-shrink: 0; color: var(--muted); }
 .ccon-btn-rm-attach { width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--faint); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color .15s, color .15s; flex-shrink: 0; }
 .ccon-btn-rm-attach:hover { border-color: var(--red-text); color: var(--red-text); }
+.ccon-attach-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ccon-attach-size { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--faint); flex-shrink: 0; }
+.ccon-type-title { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
+.ccon-type-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.ccon-status { font-size: 12.5px; font-weight: 600; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ccon-status.error { color: var(--red-text); }
+.ccon-status.ok { color: var(--green-text); }
+
+/* ── Адаптив ────────────────────────────────────────────────────────────────
+   Было: шапка одной нерезиновой строкой и тело grid 260px + редактор
+   с фиксированной высотой экрана. Ниже 1000px разделы переезжают наверх
+   горизонтальной лентой, ниже 760px шапка разбивается на две строки. */
+
+@media (max-width: 1000px) {
+  .ccon-app { height: auto; min-height: 100vh; overflow: visible; }
+  .ccon-body { display: flex; flex-direction: column; overflow: visible; }
+
+  .ccon-sidebar { border-right: none; border-bottom: 1px solid var(--line); overflow: visible; padding: 12px 16px; }
+  #ccon-sec-list { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+  #ccon-sec-list::-webkit-scrollbar { display: none; }
+  .ccon-sec-item { flex: 0 0 auto; white-space: nowrap; }
+  /* Подсказка про смысл конкурса на узком экране только оттесняет форму */
+  .ccon-hint-box { display: none; }
+
+  .ccon-editor { overflow: visible; }
+  .ccon-editor-content { padding: 22px 18px 60px; max-width: none; }
+}
+
+@media (max-width: 760px) {
+  .ccon-topbar { height: auto; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+  .ccon-topbar > div:nth-of-type(2) { order: 3; flex-basis: 100%; }
+  .ccon-divider { display: none; }
+  .ccon-editor-content { padding: 18px 14px 52px; }
+  /* Категория/уровень и дедлайн/приз по две колонки не помещаются */
+  .ccon-row2 { grid-template-columns: 1fr; }
+  .ccon-type-cards { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 460px) {
+  .ccon-topbar > div:last-of-type { flex-wrap: wrap; width: 100%; }
+  .ccon-topbar > div:last-of-type .ccon-btn,
+  .ccon-topbar > div:last-of-type .ccon-btn-save,
+  .ccon-topbar > div:last-of-type .ccon-btn-publish { flex: 1 1 auto; justify-content: center; }
+}
 </style>
 <script>
   window.ALFA_APP_BOOTSTRAP = {
     username: "{{ username|escapejs }}",
     contestId: {% if contest_id %}{{ contest_id }}{% else %}null{% endif %},
+    maxAttachmentMb: {{ max_attachment_mb }},
     page: "constructor"
   };
 </script>
 <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
 <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
-<script type="module" src="{% static 'contests/contests_cabinet/contest_constructor.js' %}?v=20260718-1"></script>
+<script type="module" src="{% static 'contests/contests_cabinet/contest_constructor.js' %}?v=20260914-1"></script>
 </head>
 <body>
 
@@ -102,6 +147,8 @@ html, body { height: 100%; }
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"/></svg>
       <span id="ccon-name-display" style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Новый конкурс</span>
       <span id="ccon-badge" class="ccon-badge-draft">Черновик</span>
+      {# Сообщения о сохранении и ошибках. Раньше они шли через alert() #}
+      <span id="ccon-status" class="ccon-status"></span>
     </div>
     <div style="display:flex;gap:8px;flex-shrink:0;margin-left:auto;">
       <button class="ccon-btn" id="ccon-preview-btn">
@@ -184,7 +231,11 @@ html, body { height: 100%; }
             <div class="ccon-file-drop" id="ccon-file-drop" onclick="document.getElementById('ccon-attach-input').click()">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6M9 15l3 3 3-3"/></svg>
               <div style="font-size:13.5px;font-weight:600;margin-bottom:3px;">Нажмите или перетащите файлы</div>
-              <div style="font-size:12px;color:var(--muted);">Датасеты, шаблон проекта, ТЗ — до 100 МБ на файл</div>
+              {% comment %}
+                Значение приходит из core.uploads.MAX_DOCUMENT_SIZE: раньше здесь
+                было написано «до 100 МБ», а сервер отклонял всё крупнее 25 МБ.
+              {% endcomment %}
+              <div style="font-size:12px;color:var(--muted);">Датасеты, шаблон проекта, ТЗ — до {{ max_attachment_mb }} МБ на файл</div>
             </div>
             <input type="file" id="ccon-attach-input" multiple style="display:none;">
             <div id="ccon-attach-list"></div>

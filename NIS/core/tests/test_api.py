@@ -131,6 +131,36 @@ class ArticleAuthorLinkTests(BaseCase):
         self.assertNotIn('href="/udalyonnyy/"', self._page('udalyonnyy'))
 
 
+class ConstructorTests(BaseCase):
+    """Конструкторы не должны обещать больше, чем умеет сервер."""
+
+    def test_code_languages_match_executor(self):
+        """В селекте были python, js, ts, java, cpp, go, rust — исполнитель знает три."""
+        from tests.constructor.executor import LANGUAGES
+
+        body = self.login('firma').get('/constructor/').content.decode()
+        offered = set(re.findall(r'<option value="([a-z+]+)">', body))
+        self.assertEqual(offered, set(LANGUAGES))
+
+    def test_attachment_limit_shown_matches_server(self):
+        """Подсказка обещала «до 100 МБ», сервер отклонял всё крупнее 25 МБ."""
+        from core.uploads import MAX_DOCUMENT_SIZE
+
+        body = self.login('firma').get('/cabinet/company/contests/new/').content.decode()
+        self.assertIn(f'до {MAX_DOCUMENT_SIZE // (1024 * 1024)} МБ на файл', body)
+
+    def test_status_targets_exist(self):
+        """setStatus() писал в элементы, которых не было в разметке."""
+        tests_page = self.login('firma').get('/constructor/').content.decode()
+        self.assertIn('id="cst-save-status"', tests_page)
+
+        contest_page = self.login('firma').get('/cabinet/company/contests/new/').content.decode()
+        self.assertIn('id="ccon-status"', contest_page)
+
+        article_page = self.login('kandidat').get('/cabinet/user/articles/new/').content.decode()
+        self.assertIn('id="status-msg"', article_page)
+
+
 class TemplateCommentTests(SimpleTestCase):
     """Комментарии в шаблонах не должны попадать на страницу.
 

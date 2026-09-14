@@ -2,8 +2,30 @@ const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
 const USERNAME = BOOTSTRAP.username || '';
 let contestId = BOOTSTRAP.contestId || null;
 
+// Приходит из шаблона, значение задаёт core.uploads.MAX_DOCUMENT_SIZE
+const MAX_ATTACHMENT_MB = BOOTSTRAP.maxAttachmentMb || 25;
+const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
+
 function csrf() {
   return document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+let isDirty = false;
+let loadFailed = false;
+
+function markDirty() { isDirty = true; }
+
+/* Сообщения вместо alert(): ошибку сохранения раньше показывали модальным
+   окном браузера, а результат успешной загрузки — никак. */
+function setStatus(message, kind = '') {
+  const el = document.getElementById('ccon-status');
+  if (!el) return;
+  el.textContent = message || '';
+  el.className = 'ccon-status' + (kind ? ' ' + kind : '');
 }
 
 async function api(url, opts = {}) {
@@ -53,27 +75,31 @@ function renderRules() {
   document.getElementById('ccon-rules-list').innerHTML = rules.map((r, i) => `
     <div class="ccon-rule-row">
       <span class="ccon-rule-num">${i + 1}</span>
-      <input class="ccon-rule-inp" value="${r.replace(/"/g, '&quot;')}" data-rule="${i}">
-      <button class="ccon-btn-rm-rule" data-rm="${i}">
+      <input class="ccon-rule-inp" value="${esc(r)}" data-rule="${i}">
+      <button type="button" class="ccon-btn-rm-rule" data-rm="${i}" aria-label="Убрать правило">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>`).join('');
   document.querySelectorAll('[data-rule]').forEach(inp => {
-    inp.addEventListener('input', () => { rules[parseInt(inp.dataset.rule)] = inp.value; });
+    inp.addEventListener('input', () => { rules[parseInt(inp.dataset.rule, 10)] = inp.value; markDirty(); });
   });
   document.querySelectorAll('[data-rm]').forEach(btn => {
-    btn.addEventListener('click', () => { rules.splice(parseInt(btn.dataset.rm), 1); renderRules(); });
+    btn.addEventListener('click', () => {
+      rules.splice(parseInt(btn.dataset.rm, 10), 1);
+      renderRules();
+      markDirty();
+    });
   });
 }
 
 function renderTypeCards() {
   document.getElementById('ccon-type-cards').innerHTML = SUB_TYPES.map(t => `
     <div class="ccon-type-card ${t.key === activeSubType ? 'active' : ''}" data-type="${t.key}">
-      <div style="font-size:13.5px;font-weight:700;margin-bottom:3px;">${t.title}</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.4;">${t.desc}</div>
+      <div class="ccon-type-title">${t.title}</div>
+      <div class="ccon-type-desc">${t.desc}</div>
     </div>`).join('');
   document.querySelectorAll('.ccon-type-card').forEach(card => {
-    card.addEventListener('click', () => { activeSubType = card.dataset.type; renderTypeCards(); });
+    card.addEventListener('click', () => { activeSubType = card.dataset.type; renderTypeCards(); markDirty(); });
   });
 }
 
@@ -81,9 +107,9 @@ function renderAttachments() {
   document.getElementById('ccon-attach-list').innerHTML = attachments.map((a, i) => `
     <div class="ccon-attach-row">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span style="flex:1;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.name}</span>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--faint);">${a.size}</span>
-      <button class="ccon-btn-rm-attach" data-ai="${i}">
+      <span class="ccon-attach-name">${esc(a.name)}</span>
+      <span class="ccon-attach-size">${esc(a.size)}</span>
+      <button type="button" class="ccon-btn-rm-attach" data-ai="${i}" aria-label="Убрать файл">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>`).join('');
@@ -139,12 +165,21 @@ function fillForm(contest) {
   renderAttachments();
 }
 
+/* Возвращает true, только если конкурс сохранён вместе с файлами. */
 async function doSave() {
+  // Если конкурс не удалось загрузить, форма пустая — сохранение затёрло бы
+  // название, кейс и правила пустыми строками
+  if (loadFailed) {
+    setStatus('Конкурс не загрузился — обновите страницу, иначе сохранение сотрёт данные', 'error');
+    return false;
+  }
+
   const btn = document.getElementById('ccon-save-btn');
   const body = getFormData();
   try {
     btn.textContent = 'Сохранение…';
     btn.disabled = true;
+    setStatus('');
     let res;
     if (contestId) {
       res = await api(`/api/v1/contests/${contestId}/`, { method: 'PUT', body: JSON.stringify(body) });
@@ -156,25 +191,34 @@ async function doSave() {
       }
     }
     await uploadPendingAttachments();
+    isDirty = false;
     btn.textContent = '✓ Сохранено';
     btn.classList.add('saved');
     setTimeout(() => { btn.textContent = 'Сохранить'; btn.classList.remove('saved'); btn.disabled = false; }, 1800);
+    return true;
   } catch (err) {
     btn.textContent = 'Сохранить';
     btn.disabled = false;
-    alert(err.message);
+    setStatus(err.message || 'Не удалось сохранить', 'error');
+    return false;
   }
 }
 
 async function doPublish() {
-  await doSave();
-  if (!contestId) { alert('Сначала сохраните конкурс'); return; }
+  // Публикация шла даже после неудачного сохранения — в бой уходила прошлая версия
+  if (!await doSave()) return;
+
+  const btn = document.getElementById('ccon-publish-btn');
+  btn.disabled = true;
   try {
     await api(`/api/v1/contests/${contestId}/publish/`, { method: 'POST' });
     currentStatus = 'active';
     updateBadge();
+    setStatus('Конкурс опубликован', 'ok');
   } catch (err) {
-    alert(err.message);
+    setStatus(err.message || 'Не удалось опубликовать', 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -183,7 +227,12 @@ async function load() {
   try {
     const data = await api(`/api/v1/contests/${contestId}/`);
     fillForm(data.contest || data);
-  } catch (_) {}
+    isDirty = false;
+  } catch (err) {
+    // Молчаливый catch показывал пустую форму как будто это новый конкурс
+    loadFailed = true;
+    setStatus('Не удалось загрузить конкурс. Обновите страницу — не сохраняйте.', 'error');
+  }
 }
 
 document.getElementById('ccon-title').addEventListener('input', e => {
@@ -191,13 +240,36 @@ document.getElementById('ccon-title').addEventListener('input', e => {
 });
 document.getElementById('ccon-save-btn').addEventListener('click', doSave);
 document.getElementById('ccon-publish-btn').addEventListener('click', doPublish);
-document.getElementById('ccon-add-rule-btn').addEventListener('click', () => { rules.push(''); renderRules(); });
+document.getElementById('ccon-add-rule-btn').addEventListener('click', () => { rules.push(''); renderRules(); markDirty(); });
+
+// Любое поле формы помечает конкурс изменённым
+['ccon-title', 'ccon-cat', 'ccon-level', 'ccon-deadline', 'ccon-prize',
+ 'ccon-excerpt', 'ccon-case', 'ccon-sub-hint'].forEach(id => {
+  const el = document.getElementById(id);
+  el?.addEventListener('input', markDirty);
+  el?.addEventListener('change', markDirty);
+});
+
+window.addEventListener('beforeunload', event => {
+  if (!isDirty) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+
 document.getElementById('ccon-attach-input').addEventListener('change', e => {
+  const rejected = [];
   Array.from(e.target.files).forEach(f => {
+    // Сервер режет вложения на MAX_DOCUMENT_SIZE. Раньше подсказка обещала
+    // 100 МБ, файл спокойно добавлялся в список и отваливался уже при сохранении
+    if (f.size > MAX_ATTACHMENT_BYTES) { rejected.push(f.name); return; }
     attachments.push({ name: f.name, size: (f.size / 1024 / 1024).toFixed(1) + ' МБ', file: f });
   });
   e.target.value = '';
   renderAttachments();
+  markDirty();
+  setStatus(rejected.length
+    ? `Не добавлены (больше ${MAX_ATTACHMENT_MB} МБ): ${rejected.join(', ')}`
+    : '', rejected.length ? 'error' : '');
 });
 
 // Файл, уже сохранённый на сервере, удаляем и на сервере; новый — просто из списка
@@ -208,7 +280,7 @@ async function removeAttachment(index) {
     try {
       await api(`/api/v1/contests/${contestId}/attachments/${item.id}/`, { method: 'DELETE' });
     } catch (err) {
-      alert(err.message);
+      setStatus(err.message || 'Не удалось удалить файл', 'error');
       return;
     }
   }
@@ -237,9 +309,13 @@ async function uploadPendingAttachments() {
   }
   if (pending.length) renderAttachments();
 }
-document.getElementById('ccon-preview-btn').addEventListener('click', () => {
+document.getElementById('ccon-preview-btn').addEventListener('click', async () => {
+  // Несохранённые правки в предпросмотр не попадают — сохраняем и не уходим,
+  // если сохранение не прошло
+  if (isDirty || !contestId) {
+    if (!await doSave()) return;
+  }
   if (contestId) location.href = `/contests/${contestId}/`;
-  else alert('Сохраните конкурс для предпросмотра');
 });
 
 renderSections();

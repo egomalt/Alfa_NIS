@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'constructor/css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'constructor/css/app.css' %}?v=20260914-1">
   <script>
     window.ALFA_APP_BOOTSTRAP = {
       path: "{{ app_path|escapejs }}",
@@ -24,7 +24,7 @@
     };
   </script>
   <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-  <script type="module" src="{% static 'constructor/app.js' %}?v=20260613-1"></script>
+  <script type="module" src="{% static 'constructor/app.js' %}?v=20260914-1"></script>
 </head>
 <body>
 <div class="app">
@@ -57,6 +57,11 @@
         <path d="M5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/>
       </svg>
       <input id="cst-title" class="test-name" type="text" placeholder="Название теста" maxlength="255" autocomplete="off">
+      {% comment %}
+        Сюда пишет setStatus(): сохранение, загрузка, публикация и их ошибки.
+        Элемента раньше не было, и все 12 сообщений уходили в никуда.
+      {% endcomment %}
+      <span id="cst-save-status" class="save-status"></span>
     </div>
 
     <div class="actions">
@@ -68,7 +73,7 @@
       </button>
       <button class="btn-save" id="cst-save-btn" disabled>Сохранить</button>
       <button class="btn-publish" id="cst-publish-btn" disabled>Опубликовать</button>
-      <button class="btn-theme" id="cst-theme-btn">
+      <button class="btn-theme" id="cst-theme-btn" data-theme-toggle>
         <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M20 14.5A8 8 0 1 1 9.5 4a6.3 6.3 0 0 0 10.5 10.5Z"/>
         </svg>
@@ -201,19 +206,15 @@
           <div style="display:flex;gap:16px;flex-wrap:wrap;">
             <div class="field" style="flex:0 0 auto;">
               <div class="field-label">Язык</div>
-              <select class="inp" id="ed-language" style="height:44px;width:auto;min-width:150px;">
-                <option value="python">python</option>
-                <option value="javascript">javascript</option>
-                <option value="typescript">typescript</option>
-                <option value="java">java</option>
-                <option value="cpp">cpp</option>
-                <option value="go">go</option>
-                <option value="rust">rust</option>
+              {# Варианты приходят из исполнителя — лишних языков тут быть не может #}
+              <select class="inp" id="ed-language" style="height:44px;width:auto;min-width:170px;">
+                {% for lang in languages %}<option value="{{ lang.key }}">{{ lang.label }}</option>{% endfor %}
               </select>
             </div>
             <div class="field" style="flex:0 0 auto;">
               <div class="field-label">Лимит (сек)</div>
-              <input class="inp-sm" id="ed-time-limit" type="number" min="1" max="120" value="5" style="width:80px;">
+              <input class="inp-sm" id="ed-time-limit" type="number" min="1" max="{{ max_time_limit }}" value="5" style="width:80px;">
+              <div class="field-hint">не больше {{ max_time_limit }}</div>
             </div>
           </div>
           <div class="section">
