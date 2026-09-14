@@ -6,12 +6,28 @@ from .models import Account
 
 
 class AccountRegistrationForm(forms.ModelForm):
-    password = forms.CharField(label='Пароль', strip=False, widget=forms.PasswordInput)
-    password_confirm = forms.CharField(label='Повторите пароль', strip=False, widget=forms.PasswordInput)
+    password = forms.CharField(
+        label='Пароль', strip=False, widget=forms.PasswordInput,
+        error_messages={'required': 'Придумайте пароль.'},
+    )
+    password_confirm = forms.CharField(
+        label='Повторите пароль', strip=False, widget=forms.PasswordInput,
+        error_messages={'required': 'Повторите пароль.'},
+    )
 
     class Meta:
         model = Account
         fields = ['name', 'username', 'email']
+        # Без этого Django собирает сообщение из английских имён модели и поля:
+        # «Account с таким Username уже существует».
+        error_messages = {
+            'name': {'required': 'Укажите отображаемое имя.'},
+            'username': {
+                'required': 'Придумайте имя пользователя.',
+                'unique': 'Это имя пользователя уже занято.',
+            },
+            'email': {'required': 'Укажите email.', 'invalid': 'Некорректный email.'},
+        }
 
     def clean_username(self):
         return validate_username(self.cleaned_data.get('username'))
@@ -40,5 +56,11 @@ class AccountRegistrationForm(forms.ModelForm):
 
 
 class AccountLoginForm(forms.Form):
-    username = forms.CharField(label='Имя пользователя')
-    password = forms.CharField(label='Пароль', strip=False, widget=forms.PasswordInput)
+    username = forms.CharField(
+        label='Имя пользователя',
+        error_messages={'required': 'Введите имя пользователя.'},
+    )
+    password = forms.CharField(
+        label='Пароль', strip=False, widget=forms.PasswordInput,
+        error_messages={'required': 'Введите пароль.'},
+    )

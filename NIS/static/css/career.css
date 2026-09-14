@@ -2187,6 +2187,32 @@ h1, h2, h3, h4,
 .cr-modal-btn-primary:hover { background: var(--brand-strong); }
 .cr-modal-btn-primary:disabled { background: var(--surface-2); color: var(--faint); cursor: not-allowed; }
 
+/* ── Ошибки и уведомления в формах ────────────────────────────────── */
+
+/* Поле с ошибкой: рамка и лёгкая заливка, чтобы проблему было видно
+   сразу, а не только по тексту под полем. */
+.cr-auth-input.is-invalid,
+.ud-form-input.is-invalid,
+.cr-input.is-invalid {
+  border-color: var(--red-text);
+  background: var(--red-soft);
+}
+.cr-auth-input.is-invalid:focus,
+.ud-form-input.is-invalid:focus,
+.cr-input.is-invalid:focus {
+  border-color: var(--red-text);
+}
+
+/* Успешное действие — тот же баннер, но зелёный */
+.app-alert-success {
+  color: var(--green-text);
+  background: var(--green-soft);
+  border-color: var(--green-text);
+}
+
+/* Несколько ошибок у одного поля — читаемым списком */
+.errorlist li + li { margin-top: 3px; }
+
 /* ── Кнопка «Выйти» в навбаре ─────────────────────────────────────── */
 .cr-logout-btn {
   height: 34px;
