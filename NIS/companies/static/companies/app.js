@@ -109,15 +109,23 @@
         row.appendChild(titleCell);
 
         const statusCell = document.createElement('td');
+        statusCell.dataset.label = 'Статус';
         const pill = document.createElement('span');
         pill.className = `status-pill ${String(test.status || '').toLowerCase()}`;
         pill.textContent = STATUS_LABELS[test.status] || test.status || '—';
         statusCell.appendChild(pill);
         row.appendChild(statusCell);
 
-        for (const value of [String(test.page_count ?? 0), String(test.submissions ?? 0),
-                             formatDate(test.created_at)]) {
+        // data-label подхватывает CSS на телефоне: там шапка таблицы скрыта,
+        // и без подписи непонятно, что за число в карточке
+        const cells = [
+            ['Страниц', String(test.page_count ?? 0)],
+            ['Прохождений', String(test.submissions ?? 0)],
+            ['Создан', formatDate(test.created_at)],
+        ];
+        for (const [label, value] of cells) {
             const cell = document.createElement('td');
+            cell.dataset.label = label;
             cell.textContent = value;
             row.appendChild(cell);
         }
