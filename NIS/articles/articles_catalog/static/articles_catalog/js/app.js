@@ -94,23 +94,12 @@
       cats.insertBefore(btn, countEl);
     });
     cats.querySelector('[data-cat="all"]').addEventListener('click', () => filterCat('all'));
-
-    if (tags.length) {
-      document.getElementById('tags-card').style.display = '';
-      document.getElementById('tag-cloud').innerHTML = tags.slice(0, 12).map(t =>
-        `<button class="cloud-tag" data-tag="${esc(t)}">${esc(t)}</button>`
-      ).join('');
-      document.getElementById('tag-cloud').querySelectorAll('.cloud-tag').forEach(btn => {
-        btn.addEventListener('click', () => filterCat(btn.dataset.tag));
-      });
-    }
   }
 
   function filterCat(cat) {
     activeCat = cat;
     shown = 6;
     document.querySelectorAll('.cr-chip').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
-    document.querySelectorAll('.cloud-tag').forEach(b => b.classList.toggle('active', b.dataset.tag === cat));
     renderGrid();
   }
 

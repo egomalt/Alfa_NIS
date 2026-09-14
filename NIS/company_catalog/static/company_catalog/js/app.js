@@ -131,17 +131,6 @@
     makeChip('all', 'Все');
     names.forEach(name => makeChip(name, name));
 
-    const cloud = el('industry-cloud');
-    if (names.length) {
-      el('industries-card').style.display = '';
-      cloud.innerHTML = names.map(name =>
-        `<button class="cloud-tag${industry === name ? ' active' : ''}" data-industry="${esc(name)}">${esc(name)}</button>`
-      ).join('');
-      cloud.querySelectorAll('[data-industry]').forEach(button => {
-        button.addEventListener('click', () => selectIndustry(
-          industry === button.dataset.industry ? 'all' : button.dataset.industry));
-      });
-    }
   }
 
   function renderTrending() {
