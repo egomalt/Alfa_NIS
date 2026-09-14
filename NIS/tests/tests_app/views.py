@@ -9,6 +9,7 @@ from core.utils import load_json_body
 from authorization.views import get_current_account
 from tests import code_results
 from tests.constructor.models import Test, TestPage
+from tests.constructor.views import public_code_meta
 
 
 def _get_visible_test(request, test_id):
@@ -67,6 +68,10 @@ def api_test_view(request, test_id):
             page_data['answers'] = [{'id': a.id, 'text': a.text, 'order': a.order} for a in answers]
         elif page.type == TestPage.TYPE_INPUT:
             page_data['answers'] = []
+        elif page.type == TestPage.TYPE_CODE:
+            # Только безопасная часть: язык, лимит и примеры. Скрытые тест-кейсы
+            # остаются на сервере — иначе решение подбирается под ответы.
+            page_data['page_meta'] = public_code_meta(page)
         pages.append(page_data)
 
     return JsonResponse({

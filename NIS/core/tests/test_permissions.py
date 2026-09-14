@@ -5,7 +5,7 @@ from django.test import Client
 
 from articles.constructor.models import Article
 from companies.models import Company
-from tests.constructor.models import Test
+from tests.constructor.models import Test, TestPage
 
 from .base import BaseCase
 
@@ -121,6 +121,27 @@ class LeakTests(BaseCase):
         self.assertEqual(Client().get(f'/api/v1/tests/{draft.id}/view/?preview=1').status_code, 404)
         self.assertEqual(self.login('konkurent').get(f'/api/v1/tests/{draft.id}/view/?preview=1').status_code, 404)
         self.assertEqual(self.login('firma').get(f'/api/v1/tests/{draft.id}/view/?preview=1').status_code, 200)
+
+    def test_hidden_code_test_cases_stay_on_server(self):
+        """Страница прохождения получает язык и примеры, но не скрытые тесты."""
+        test = self.make_test(owner='firma', with_quiz=False)
+        TestPage.objects.create(
+            test=test, order=0, type=TestPage.TYPE_CODE, title='Сумма',
+            page_meta={
+                'language': 'cpp',
+                'time_limit': 3,
+                'test_cases': [
+                    {'input': '1 2', 'expected': '3', 'is_sample': True},
+                    {'input': 'SEKRETNIY-VVOD', 'expected': 'SEKRETNIY-OTVET', 'is_sample': False},
+                ],
+            },
+        )
+        page = self.login('kandidat').get(f'/api/v1/tests/{test.id}/view/').json()['pages'][0]
+
+        self.assertEqual(page['page_meta']['language'], 'cpp')
+        self.assertEqual(page['page_meta']['samples'], [{'input': '1 2', 'expected': '3'}])
+        self.assertNotIn('SEKRETNIY-VVOD', json.dumps(page))
+        self.assertNotIn('SEKRETNIY-OTVET', json.dumps(page))
 
     def test_company_document_is_private(self):
         Company.objects.filter(username='firma').update(registration_document='company_documents/doc.pdf')

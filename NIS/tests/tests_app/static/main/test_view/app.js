@@ -1,14 +1,25 @@
+/* Прохождение теста.
+ *
+ * Ответы живут только в памяти вкладки — на сервер они уходят одним запросом
+ * при завершении. Поэтому здесь же висит предупреждение при уходе со страницы:
+ * в шапке общая навигация сайта, и клик по «Статьи» посреди теста иначе
+ * молча стирал бы всё, что человек успел ответить.
+ */
 (() => {
     const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
     const CSRF = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
     const testId = BOOTSTRAP.testId;
     const isPreview = !!BOOTSTRAP.isPreview;
 
+    // Страницы, за которые начисляются баллы. Тип 'code' раньше здесь не учитывался,
+    // из-за чего тест, заканчивающийся текстовой страницей, нельзя было завершить.
+    const SCORED_TYPES = ['quiz', 'input', 'code'];
+
     const state = {
         test: null,
         pages: [],
         currentIndex: 0,
-        answers: {},       // {pageId: value}  value = [] for quiz, string for input
+        answers: {},       // {pageId: value}  value = [] для quiz, строка для input, {code,…} для code
         submitted: false,
         results: null,
         score: 0,
@@ -25,133 +36,157 @@
         return data;
     }
 
-    // ── Escape ────────────────────────────────────────────────────────────────
+    const el = id => document.getElementById(id);
 
     function escHtml(s) {
         return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // ── Sidebar ───────────────────────────────────────────────────────────────
-
-    function renderSidebar() {
-        const sidebar = document.getElementById('tv-sidebar');
-        if (!sidebar) return;
-        sidebar.innerHTML = '';
-
-        if (state.submitted) {
-            const item = document.createElement('div');
-            item.className = 'tv-nav-item active';
-            item.innerHTML = `<span class="tv-nav-num">★</span><span class="tv-nav-label">Результаты</span>`;
-            sidebar.appendChild(item);
-            return;
-        }
-
-        state.pages.forEach((page, i) => {
-            const item = document.createElement('div');
-            const isActive = i === state.currentIndex;
-            const isAnswered = state.answers[page.id] !== undefined;
-            item.className = `tv-nav-item${isActive ? ' active' : ''}${isAnswered && !isActive ? ' answered' : ''}`;
-            const label = page.title || (page.type === 'text' ? 'Текст' : `Вопрос ${i + 1}`);
-            item.innerHTML = `<span class="tv-nav-num">${i + 1}</span><span class="tv-nav-label">${escHtml(label)}</span>`;
-            item.addEventListener('click', () => { state.currentIndex = i; renderPage(); renderSidebar(); });
-            sidebar.appendChild(item);
-        });
+    function md(text) {
+        return window.marked ? window.marked.parse(text || '') : escHtml(text);
     }
 
-    // ── Page rendering ────────────────────────────────────────────────────────
+    const ICON_PREV = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M11 5l-6 7 6 7"/></svg>';
+    const ICON_NEXT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 5l6 7-6 7"/></svg>';
+    const ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>';
+    const ICON_RUN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+    const ICON_UPLOAD = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 17V5M7 10l5-5 5 5M4 19h16"/></svg>';
+    const ICON_RESET = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>';
 
-    function renderPage() {
-        const container = document.getElementById('tv-main-inner');
-        if (!container) return;
+    // ── Состояние ответов ─────────────────────────────────────────────────────
+
+    function isScored(page) {
+        return SCORED_TYPES.includes(page.type);
+    }
+
+    /* «Отвечено» — это именно данный ответ, а не просто тронутое поле.
+       Для задачи на код засчитывается только проверенное решение: набранный,
+       но не отправленный код баллов не даёт. */
+    function isAnswered(page) {
+        const value = state.answers[page.id];
+        if (value === undefined) return false;
+        if (page.type === 'quiz') return Array.isArray(value) && value.length > 0;
+        if (page.type === 'input') return typeof value === 'string' && value.trim() !== '';
+        if (page.type === 'code') return value.type === 'code';
+        return false;
+    }
+
+    function scoredPages() {
+        return state.pages.filter(isScored);
+    }
+
+    // Номер вопроса среди оцениваемых страниц. Раньше брался индекс страницы,
+    // и если тест начинался с текста, первый вопрос назывался «Вопрос 2».
+    function questionNumber(page) {
+        return scoredPages().findIndex(p => p.id === page.id) + 1;
+    }
+
+    function answeredCount() {
+        return scoredPages().filter(isAnswered).length;
+    }
+
+    function hasAnyAnswerPage() {
+        return scoredPages().length > 0;
+    }
+
+    // ── Прогресс ──────────────────────────────────────────────────────────────
+
+    function renderProgress() {
+        const fill = el('tv-progress-fill');
+        const label = el('tv-progress-label');
+        if (!fill || !label) return;
 
         if (state.submitted) {
-            renderResults(container);
+            fill.style.width = '100%';
+            label.textContent = 'Тест завершён';
             return;
         }
 
-        const page = state.pages[state.currentIndex];
-        if (!page) return;
+        const total = scoredPages().length;
+        const done = answeredCount();
+        fill.style.width = total ? `${Math.round(done / total * 100)}%` : '0%';
+        label.textContent = total ? `Отвечено ${done} из ${total}` : 'Без вопросов';
+    }
 
-        const isLast = state.currentIndex === state.pages.length - 1;
-        const hasAnswerPages = hasAnyAnswerPage();
+    // ── Содержание ────────────────────────────────────────────────────────────
 
-        let html = '';
+    function renderSidebar() {
+        const list = el('tv-toc-items');
+        const sum = el('tv-toc-sum');
+        if (!list) return;
+        list.innerHTML = '';
 
-        if (page.type === 'code') {
-            renderCodePage(container, page);
+        if (state.submitted) {
+            if (sum) sum.textContent = 'Тест завершён';
+            const item = document.createElement('div');
+            item.className = 'tv-nav-item active';
+            item.innerHTML = `<span class="tv-nav-num">${ICON_CHECK}</span><span class="tv-nav-label">Результаты</span>`;
+            list.appendChild(item);
+            renderProgress();
             return;
         }
 
-        if (page.type === 'text') {
-            const renderedMd = window.marked ? window.marked.parse(page.content || '') : escHtml(page.content);
-            html = `
-                ${page.title ? `<h2>${escHtml(page.title)}</h2>` : ''}
-                <div class="tv-page-content">${renderedMd}</div>
-            `;
-        } else if (page.type === 'quiz') {
-            const inputType = page.multi_correct ? 'checkbox' : 'radio';
-            const selected = state.answers[page.id] || [];
-            const answers = (page.answers || []).map(a => {
-                const isSelected = selected.includes(a.id);
-                return `
-                    <label class="tv-answer-label${isSelected ? ' selected' : ''}">
-                        <input type="${inputType}" name="quiz-${page.id}" value="${a.id}" ${isSelected ? 'checked' : ''} style="flex-shrink:0">
-                        ${escHtml(a.text)}
-                    </label>
-                `;
-            }).join('');
-            html = `
-                <p class="tv-question">${escHtml(page.title)}</p>
-                ${page.content ? `<div class="tv-page-content">${window.marked ? window.marked.parse(page.content) : escHtml(page.content)}</div>` : ''}
-                <div class="tv-answers" id="tv-answers-${page.id}">${answers}</div>
-            `;
-        } else if (page.type === 'input') {
-            const val = state.answers[page.id] || '';
-            html = `
-                <p class="tv-question">${escHtml(page.title)}</p>
-                ${page.content ? `<div class="tv-page-content">${window.marked ? window.marked.parse(page.content) : escHtml(page.content)}</div>` : ''}
-                <input id="tv-input-${page.id}" class="tv-input-field" type="text" placeholder="Введите ответ…" value="${escHtml(val)}" autocomplete="off">
-            `;
-        }
+        const total = scoredPages().length;
+        if (sum) sum.innerHTML = total ? `Отвечено <b>${answeredCount()}</b> из <b>${total}</b>` : 'Вопросов нет';
 
-        // Nav buttons
-        const prevDisabled = state.currentIndex === 0 ? 'disabled' : '';
-        html += `
-            <div class="tv-nav-btns">
-                <button type="button" id="tv-prev-btn" class="tv-btn" ${prevDisabled}>← Назад</button>
-                ${!isLast ? `<button type="button" id="tv-next-btn" class="tv-btn tv-btn-primary">Далее →</button>` : ''}
-                ${isLast && hasAnswerPages ? `<button type="button" id="tv-submit-btn" class="tv-btn tv-btn-primary">Завершить тест</button>` : ''}
-            </div>
-        `;
+        state.pages.forEach((page, i) => {
+            const scored = isScored(page);
+            const answered = scored && isAnswered(page);
+            const item = document.createElement('div');
+            item.className = 'tv-nav-item'
+                + (i === state.currentIndex ? ' active' : '')
+                + (answered ? ' answered' : '')
+                + (scored ? '' : ' is-text');
 
-        container.innerHTML = html;
-
-        // Bind answer inputs
-        if (page.type === 'quiz') {
-            container.querySelectorAll(`[name="quiz-${page.id}"]`).forEach(input => {
-                input.addEventListener('change', () => {
-                    const all = container.querySelectorAll(`[name="quiz-${page.id}"]`);
-                    state.answers[page.id] = Array.from(all)
-                        .filter(i => i.checked)
-                        .map(i => parseInt(i.value, 10));
-                    // Update selected styling
-                    container.querySelectorAll(`#tv-answers-${page.id} .tv-answer-label`).forEach(label => {
-                        const inp = label.querySelector('input');
-                        label.classList.toggle('selected', inp && inp.checked);
-                    });
-                    renderSidebar();
-                });
+            const num = answered ? ICON_CHECK : (scored ? questionNumber(page) : '§');
+            const label = page.title || (scored ? `Вопрос ${questionNumber(page)}` : 'Материал');
+            item.innerHTML = `<span class="tv-nav-num">${num}</span><span class="tv-nav-label">${escHtml(label)}</span>`;
+            item.addEventListener('click', () => {
+                state.currentIndex = i;
+                closeToc();
+                renderPage();
+                renderSidebar();
             });
-        } else if (page.type === 'input') {
-            const inputEl = container.querySelector(`#tv-input-${page.id}`);
-            if (inputEl) {
-                inputEl.addEventListener('input', e => {
-                    state.answers[page.id] = e.target.value;
-                    renderSidebar();
-                });
-            }
-        }
+            list.appendChild(item);
+        });
 
+        renderProgress();
+    }
+
+    function openToc() {
+        el('tv-toc')?.classList.add('open');
+        el('tv-toc-backdrop')?.classList.add('open');
+    }
+    function closeToc() {
+        el('tv-toc')?.classList.remove('open');
+        el('tv-toc-backdrop')?.classList.remove('open');
+    }
+
+    // ── Шапка карточки задания ────────────────────────────────────────────────
+
+    function metaHtml(page, badges = []) {
+        const label = isScored(page)
+            ? `Вопрос ${questionNumber(page)} из ${scoredPages().length}`
+            : 'Материал';
+        const chips = badges.filter(Boolean)
+            .map(b => `<span class="tv-q-badge${b.accent ? ' accent' : ''}">${escHtml(b.text)}</span>`)
+            .join('');
+        return `<div class="tv-q-meta"><span class="tv-q-num">${label}</span>${chips}</div>`;
+    }
+
+    function navButtonsHtml() {
+        const isFirst = state.currentIndex === 0;
+        const isLast = state.currentIndex === state.pages.length - 1;
+        return `
+            <div class="tv-nav-btns">
+                <button type="button" id="tv-prev-btn" class="tv-btn" ${isFirst ? 'disabled' : ''}>${ICON_PREV}Назад</button>
+                <span class="tv-spacer"></span>
+                ${!isLast ? `<button type="button" id="tv-next-btn" class="tv-btn tv-btn-primary">Далее${ICON_NEXT}</button>` : ''}
+                ${isLast && hasAnyAnswerPage() ? `<button type="button" id="tv-submit-btn" class="tv-btn tv-btn-primary">${ICON_CHECK}Завершить тест</button>` : ''}
+            </div>`;
+    }
+
+    function bindNavButtons(container) {
         container.querySelector('#tv-prev-btn')?.addEventListener('click', () => {
             if (state.currentIndex > 0) { state.currentIndex--; renderPage(); renderSidebar(); }
         });
@@ -161,55 +196,142 @@
         container.querySelector('#tv-submit-btn')?.addEventListener('click', submitTest);
     }
 
-    // ── Code page ─────────────────────────────────────────────────────────────
+    // ── Страница ──────────────────────────────────────────────────────────────
+
+    function renderPage() {
+        const container = el('tv-main-inner');
+        if (!container) return;
+
+        if (state.submitted) { renderResults(container); return; }
+
+        const page = state.pages[state.currentIndex];
+        if (!page) return;
+
+        if (page.type === 'code') { renderCodePage(container, page); return; }
+
+        let card = '';
+
+        if (page.type === 'text') {
+            card = `
+                ${metaHtml(page)}
+                ${page.title ? `<h2 class="tv-question">${escHtml(page.title)}</h2>` : ''}
+                <div class="tv-page-content">${md(page.content)}</div>`;
+        } else if (page.type === 'quiz') {
+            const inputType = page.multi_correct ? 'checkbox' : 'radio';
+            const selected = state.answers[page.id] || [];
+            const answers = (page.answers || []).map(a => `
+                <label class="tv-answer-label${selected.includes(a.id) ? ' selected' : ''}">
+                    <input type="${inputType}" name="quiz-${page.id}" value="${a.id}" ${selected.includes(a.id) ? 'checked' : ''}>
+                    ${escHtml(a.text)}
+                </label>`).join('');
+            card = `
+                ${metaHtml(page, [page.multi_correct
+                    ? { text: 'Несколько вариантов', accent: true }
+                    : { text: 'Один вариант' }])}
+                <h2 class="tv-question">${escHtml(page.title)}</h2>
+                ${page.content ? `<div class="tv-page-content">${md(page.content)}</div>` : ''}
+                <div class="tv-answers" id="tv-answers-${page.id}">${answers}</div>`;
+        } else if (page.type === 'input') {
+            card = `
+                ${metaHtml(page, [{ text: 'Ответ текстом' }])}
+                <h2 class="tv-question">${escHtml(page.title)}</h2>
+                ${page.content ? `<div class="tv-page-content">${md(page.content)}</div>` : ''}
+                <input id="tv-input-${page.id}" class="tv-input-field" type="text"
+                       placeholder="Введите ответ…" value="${escHtml(state.answers[page.id] || '')}" autocomplete="off">`;
+        }
+
+        container.innerHTML = `<div class="tv-card">${card}</div>${navButtonsHtml()}`;
+
+        if (page.type === 'quiz') {
+            container.querySelectorAll(`[name="quiz-${page.id}"]`).forEach(input => {
+                input.addEventListener('change', () => {
+                    state.answers[page.id] = Array.from(container.querySelectorAll(`[name="quiz-${page.id}"]`))
+                        .filter(i => i.checked)
+                        .map(i => parseInt(i.value, 10));
+                    container.querySelectorAll(`#tv-answers-${page.id} .tv-answer-label`).forEach(label => {
+                        label.classList.toggle('selected', label.querySelector('input')?.checked);
+                    });
+                    renderSidebar();
+                });
+            });
+        } else if (page.type === 'input') {
+            container.querySelector(`#tv-input-${page.id}`)?.addEventListener('input', e => {
+                state.answers[page.id] = e.target.value;
+                renderSidebar();
+            });
+        }
+
+        bindNavButtons(container);
+    }
+
+    // ── Задача на код ─────────────────────────────────────────────────────────
 
     const LANG_LABELS = { python: 'Python 3', javascript: 'JavaScript (Node)', cpp: 'C++17' };
     const LANG_EXTENSIONS = { python: '.py', javascript: '.js', cpp: '.cpp' };
 
-    // Страницы, за которые начисляются баллы. Раньше здесь не учитывался тип 'code',
-    // из-за чего тест, заканчивающийся текстовой страницей, нельзя было завершить.
-    function hasAnyAnswerPage() {
-        return state.pages.some(p => p.type === 'quiz' || p.type === 'input' || p.type === 'code');
+    function samplesHtml(samples) {
+        if (!samples || !samples.length) return '';
+        const rows = samples.map(s => `
+            <div class="tv-sample">
+                <div class="tv-sample-cell">
+                    <div class="tv-sample-label">Ввод</div>
+                    <pre>${escHtml(s.input) || '—'}</pre>
+                </div>
+                <div class="tv-sample-cell">
+                    <div class="tv-sample-label">Ожидаемый вывод</div>
+                    <pre>${escHtml(s.expected) || '—'}</pre>
+                </div>
+            </div>`).join('');
+        return `<div class="tv-samples"><div class="tv-samples-head">Примеры</div>${rows}</div>`;
     }
 
     function renderCodePage(container, page) {
+        // Язык приходит с сервера в page_meta. Пока его не отдавали, здесь всегда
+        // подставлялся python и решение на другом языке гарантированно падало.
         const meta = page.page_meta || {};
         const language = meta.language || 'python';
         const langLabel = LANG_LABELS[language] || language;
         const ext = LANG_EXTENSIONS[language] || '.txt';
-        const problemHtml = window.marked ? window.marked.parse(page.content || '') : escHtml(page.content);
-
-        const currentCode = (state.answers[page.id] && state.answers[page.id].code) || '';
-
-        const isFirst = state.currentIndex === 0;
-        const isLast = state.currentIndex === state.pages.length - 1;
-        const hasAnswerPages = hasAnyAnswerPage();
+        const currentCode = state.answers[page.id]?.code || '';
 
         container.innerHTML = `
-            ${page.title ? `<h2 style="margin-bottom:16px">${escHtml(page.title)}</h2>` : ''}
-            ${page.content ? `<div class="tv-page-content" style="margin-bottom:20px">${problemHtml}</div>` : ''}
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                <span class="tv-code-lang-badge">${escHtml(langLabel)}</span>
-                <label class="tv-upload-label">
-                    📁 Загрузить файл
-                    <input type="file" id="tv-code-file" accept="${ext}" hidden>
-                </label>
-                <button type="button" id="tv-code-reset" class="tv-upload-label" style="cursor:pointer;border:none;background:none;padding:5px 10px">↺ Сбросить</button>
+            <div class="tv-card">
+                ${metaHtml(page, [{ text: 'Задача на код', accent: true }])}
+                ${page.title ? `<h2 class="tv-question">${escHtml(page.title)}</h2>` : ''}
+                ${page.content ? `<div class="tv-page-content">${md(page.content)}</div>` : ''}
+                ${samplesHtml(meta.samples)}
             </div>
-            <textarea id="tv-code-editor" class="tv-code-textarea" spellcheck="false" autocorrect="off" autocapitalize="off">${escHtml(currentCode)}</textarea>
-            <div id="tv-code-results" style="margin-top:14px"></div>
-            <div class="tv-nav-btns" style="margin-top:14px">
-                <button type="button" id="tv-code-run-btn" class="tv-btn">▶ Запустить (примеры)</button>
-                <button type="button" id="tv-code-submit-btn" class="tv-btn tv-btn-primary">Отправить решение</button>
+
+            <div class="tv-editor">
+                <div class="tv-editor-bar">
+                    <span class="tv-code-lang-badge">${escHtml(langLabel)}</span>
+                    ${meta.time_limit ? `<span class="tv-editor-hint">${meta.time_limit} с на тест</span>` : ''}
+                    <div class="tv-editor-acts">
+                        <label class="tv-editor-act">
+                            ${ICON_UPLOAD} Загрузить файл
+                            <input type="file" id="tv-code-file" accept="${ext}" hidden>
+                        </label>
+                        <button type="button" id="tv-code-reset" class="tv-editor-act">${ICON_RESET} Сбросить</button>
+                    </div>
+                </div>
+                <textarea id="tv-code-editor" class="tv-code-textarea" spellcheck="false"
+                          autocorrect="off" autocapitalize="off">${escHtml(currentCode)}</textarea>
             </div>
-            <div class="tv-nav-btns" style="margin-top:8px">
-                <button type="button" id="tv-prev-btn" class="tv-btn" ${isFirst ? 'disabled' : ''}>← Назад</button>
-                ${!isLast ? `<button type="button" id="tv-next-btn" class="tv-btn tv-btn-primary">Далее →</button>` : ''}
-                ${isLast && hasAnswerPages ? `<button type="button" id="tv-submit-btn" class="tv-btn tv-btn-primary">Завершить тест</button>` : ''}
+
+            <div id="tv-code-results"></div>
+
+            <div class="tv-code-actions">
+                <button type="button" id="tv-code-run-btn" class="tv-btn">${ICON_RUN} Запустить на примерах</button>
+                <button type="button" id="tv-code-submit-btn" class="tv-btn tv-btn-primary">${ICON_CHECK} Проверить решение</button>
             </div>
-        `;
+
+            ${navButtonsHtml()}`;
 
         const textarea = container.querySelector('#tv-code-editor');
+
+        function saveCode() {
+            state.answers[page.id] = { ...(state.answers[page.id] || {}), code: textarea.value };
+        }
 
         container.querySelector('#tv-code-file').addEventListener('change', e => {
             const file = e.target.files[0];
@@ -226,60 +348,47 @@
 
         textarea.addEventListener('input', saveCode);
 
-        function saveCode() {
-            const existing = state.answers[page.id] || {};
-            state.answers[page.id] = { ...existing, code: textarea.value };
-        }
+        container.querySelector('#tv-code-run-btn').addEventListener('click',
+            () => runCode(page.id, textarea.value, true, container));
+        container.querySelector('#tv-code-submit-btn').addEventListener('click',
+            () => runCode(page.id, textarea.value, false, container));
 
-        container.querySelector('#tv-code-run-btn').addEventListener('click', async () => {
-            await runCode(page.id, textarea.value, language, true, container);
-        });
-
-        container.querySelector('#tv-code-submit-btn').addEventListener('click', async () => {
-            await runCode(page.id, textarea.value, language, false, container);
-        });
-
-        container.querySelector('#tv-prev-btn')?.addEventListener('click', () => {
-            if (state.currentIndex > 0) { state.currentIndex--; renderPage(); renderSidebar(); }
-        });
-        container.querySelector('#tv-next-btn')?.addEventListener('click', () => {
-            if (state.currentIndex < state.pages.length - 1) { state.currentIndex++; renderPage(); renderSidebar(); }
-        });
-        container.querySelector('#tv-submit-btn')?.addEventListener('click', submitTest);
+        bindNavButtons(container);
     }
 
-    async function runCode(pageId, code, language, sampleOnly, container) {
+    async function runCode(pageId, code, sampleOnly, container) {
         const runBtn = container.querySelector('#tv-code-run-btn');
         const submitBtn = container.querySelector('#tv-code-submit-btn');
         const resultsEl = container.querySelector('#tv-code-results');
 
+        const runLabel = runBtn?.innerHTML;
         if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Выполняется…'; }
-        if (submitBtn) { submitBtn.disabled = true; }
-        if (resultsEl) { resultsEl.innerHTML = '<div style="color:var(--muted);font-size:0.85rem">Выполнение…</div>'; }
+        if (submitBtn) submitBtn.disabled = true;
+        if (resultsEl) resultsEl.innerHTML = '<div class="tv-editor-hint" style="padding:10px 0">Выполнение…</div>';
 
         try {
-            const previewParam = isPreview ? '?preview=1' : '';
-            const data = await apiFetch(`/api/v1/tests/pages/${pageId}/run/${previewParam}`, {
+            const data = await apiFetch(`/api/v1/tests/pages/${pageId}/run/${isPreview ? '?preview=1' : ''}`, {
                 method: 'POST',
-                body: JSON.stringify({ code, language, sample_only: sampleOnly }),
+                body: JSON.stringify({ code, sample_only: sampleOnly }),
             });
 
             if (!sampleOnly) {
-                const existing = state.answers[pageId] || {};
-                state.answers[pageId] = { ...existing, type: 'code', passed: data.passed, total: data.total };
+                state.answers[pageId] = {
+                    ...(state.answers[pageId] || {}),
+                    type: 'code', passed: data.passed, total: data.total,
+                };
                 renderSidebar();
             }
-
             if (resultsEl) renderCodeResults(resultsEl, data, sampleOnly);
         } catch (e) {
-            if (resultsEl) resultsEl.innerHTML = `<div style="color:#e53e3e;font-size:0.85rem;padding:10px 0">${escHtml(e.message)}</div>`;
+            if (resultsEl) resultsEl.innerHTML = `<div class="tv-code-error">${escHtml(e.message)}</div>`;
         } finally {
-            if (runBtn) { runBtn.disabled = false; runBtn.textContent = '▶ Запустить (примеры)'; }
-            if (submitBtn) { submitBtn.disabled = false; }
+            if (runBtn) { runBtn.disabled = false; runBtn.innerHTML = runLabel; }
+            if (submitBtn) submitBtn.disabled = false;
         }
     }
 
-    function renderCodeResults(el, data, sampleOnly) {
+    function renderCodeResults(el_, data, sampleOnly) {
         const items = data.results.map(r => {
             const icon = r.passed ? '✅' : (r.timed_out ? '⏱' : '❌');
             let detail = '';
@@ -289,32 +398,29 @@
                         ${r.input ? `<div><span class="tv-code-detail-label">Ввод:</span><pre>${escHtml(r.input)}</pre></div>` : ''}
                         <div><span class="tv-code-detail-label">Ожидалось:</span><pre>${escHtml(r.expected)}</pre></div>
                         <div><span class="tv-code-detail-label">Получено:</span><pre>${escHtml(r.actual)}</pre></div>
-                        ${r.stderr ? `<div><span class="tv-code-detail-label" style="color:#e53e3e">Ошибка:</span><pre style="color:#e53e3e">${escHtml(r.stderr)}</pre></div>` : ''}
-                    </div>
-                `;
+                        ${r.stderr ? `<div><span class="tv-code-detail-label">Ошибка:</span><pre>${escHtml(r.stderr)}</pre></div>` : ''}
+                    </div>`;
             }
             return `<div class="tv-code-result-item ${r.passed ? 'pass' : 'fail'}">${icon} Тест ${r.index}${detail}</div>`;
         }).join('');
 
-        el.innerHTML = `
+        el_.innerHTML = `
             <div class="tv-code-results-wrap">
                 <div class="tv-code-results-header">
-                    <strong>${data.passed} / ${data.total}</strong> тестов пройдено
-                    ${!sampleOnly ? `<span class="tv-code-verdict ${data.passed === data.total ? 'pass' : 'fail'}">${data.passed === data.total ? 'Принято ✓' : 'Ошибка ✗'}</span>` : ''}
+                    <span><strong>${data.passed} / ${data.total}</strong> тестов пройдено</span>
+                    ${!sampleOnly ? `<span class="tv-code-verdict ${data.passed === data.total ? 'pass' : 'fail'}">${data.passed === data.total ? 'Принято' : 'Есть ошибки'}</span>` : ''}
                 </div>
                 <div class="tv-code-result-list">${items}</div>
-            </div>
-        `;
+            </div>`;
     }
 
-    // ── Submit ────────────────────────────────────────────────────────────────
+    // ── Завершение ────────────────────────────────────────────────────────────
 
     async function submitTest() {
-        const btn = document.getElementById('tv-submit-btn');
+        const btn = el('tv-submit-btn');
         if (btn) { btn.disabled = true; btn.textContent = 'Отправка…'; }
         try {
-            const previewParam = isPreview ? '?preview=1' : '';
-            const data = await apiFetch(`/api/v1/tests/${testId}/submit/${previewParam}`, {
+            const data = await apiFetch(`/api/v1/tests/${testId}/submit/${isPreview ? '?preview=1' : ''}`, {
                 method: 'POST',
                 body: JSON.stringify({ answers: state.answers }),
             });
@@ -323,21 +429,20 @@
             state.total = data.total;
             state.results = data.results;
             renderSidebar();
-            renderResults(document.getElementById('tv-main-inner'));
+            renderResults(el('tv-main-inner'));
         } catch (e) {
-            if (btn) { btn.disabled = false; btn.textContent = 'Завершить тест'; }
-            const container = document.getElementById('tv-main-inner');
+            if (btn) { btn.disabled = false; btn.innerHTML = `${ICON_CHECK}Завершить тест`; }
+            const container = el('tv-main-inner');
             if (container) {
                 const err = document.createElement('p');
-                err.style.color = '#e53e3e';
-                err.style.marginTop = '12px';
+                err.className = 'tv-error-note';
                 err.textContent = e.message || 'Ошибка отправки.';
                 container.appendChild(err);
             }
         }
     }
 
-    // ── Results ───────────────────────────────────────────────────────────────
+    // ── Результаты ────────────────────────────────────────────────────────────
 
     function renderResults(container) {
         const pct = state.total > 0 ? Math.round(state.score / state.total * 100) : 0;
@@ -345,26 +450,23 @@
 
         const resultItems = (state.results || []).map(r => {
             const page = state.pages.find(p => p.id === r.page_id);
-            const title = page?.title || `Вопрос`;
-            const cls = r.correct ? 'correct' : 'incorrect';
+            const title = page?.title || 'Вопрос';
             let hint = '';
             if (!r.correct) {
                 if (r.type === 'input') {
                     hint = `Правильный ответ: ${escHtml(r.correct_text)}`;
                 } else if (r.type === 'quiz') {
-                    const correctAnswers = (page?.answers || [])
+                    const correct = (page?.answers || [])
                         .filter(a => r.correct_answer_ids.includes(a.id))
-                        .map(a => escHtml(a.text))
-                        .join(', ');
-                    hint = `Правильно: ${correctAnswers}`;
+                        .map(a => escHtml(a.text)).join(', ');
+                    hint = `Правильно: ${correct}`;
                 }
             }
             return `
-                <div class="tv-result-item ${cls}">
+                <div class="tv-result-item ${r.correct ? 'correct' : 'incorrect'}">
                     <div class="tv-result-item-title">${r.correct ? '✓' : '✗'} ${escHtml(title)}</div>
                     ${hint ? `<div class="tv-result-item-hint">${hint}</div>` : ''}
-                </div>
-            `;
+                </div>`;
         }).join('');
 
         container.innerHTML = `
@@ -373,21 +475,36 @@
                 <div class="tv-result-title">${pass ? 'Тест пройден!' : 'Тест не пройден'}</div>
                 <div class="tv-result-sub">${state.score} из ${state.total} правильных ответов</div>
                 ${resultItems ? `<div class="tv-result-items">${resultItems}</div>` : ''}
-                <a href="${isPreview ? `/constructor/${testId}/` : '/tests/'}" class="tv-btn">${isPreview ? '← Вернуться в конструктор' : 'Все тесты'}</a>
-            </div>
-        `;
+                <a href="${isPreview ? `/constructor/${testId}/` : '/tests/'}" class="tv-btn">${isPreview ? 'Вернуться в конструктор' : 'Все тесты'}</a>
+            </div>`;
+        renderProgress();
     }
 
-    // ── Init ──────────────────────────────────────────────────────────────────
+    // ── Защита от потери ответов ──────────────────────────────────────────────
+
+    function hasUnsavedAnswers() {
+        return !state.submitted && scoredPages().some(isAnswered);
+    }
+
+    window.addEventListener('beforeunload', event => {
+        if (!hasUnsavedAnswers()) return;
+        event.preventDefault();
+        event.returnValue = '';   // требуется старыми браузерами
+    });
+
+    // ── Запуск ────────────────────────────────────────────────────────────────
 
     async function init() {
         if (!testId) return;
 
-        const previewParam = isPreview ? '?preview=1' : '';
+        document.querySelectorAll('[data-toc-open]').forEach(b => b.addEventListener('click', openToc));
+        document.querySelectorAll('[data-toc-close]').forEach(b => b.addEventListener('click', closeToc));
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeToc(); });
+
         if (isPreview) {
-            const badge = document.getElementById('tv-preview-badge');
+            const badge = el('tv-preview-badge');
             if (badge) badge.hidden = false;
-            const backBtn = document.getElementById('tv-back-to-editor');
+            const backBtn = el('tv-back-to-editor');
             if (backBtn) {
                 backBtn.href = `/constructor/${testId}/`;
                 backBtn.hidden = false;
@@ -395,17 +512,17 @@
         }
 
         try {
-            const data = await apiFetch(`/api/v1/tests/${testId}/view/${previewParam}`);
+            const data = await apiFetch(`/api/v1/tests/${testId}/view/${isPreview ? '?preview=1' : ''}`);
             state.test = data.test;
             state.pages = data.pages;
 
-            const titleEl = document.getElementById('tv-test-title');
+            const titleEl = el('tv-test-title');
             if (titleEl) titleEl.textContent = data.test.title;
 
             renderSidebar();
             renderPage();
         } catch (e) {
-            const container = document.getElementById('tv-main-inner');
+            const container = el('tv-main-inner');
             if (container) container.innerHTML = `<div class="tv-loading">${escHtml(e.message || 'Не удалось загрузить тест.')}</div>`;
         }
     }

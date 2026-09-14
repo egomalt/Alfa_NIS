@@ -1,0 +1,344 @@
+/* Страница прохождения теста.
+ *
+ * Стили жили в career.css, который грузят все 16 страниц сайта, хотя нужны
+ * ровно здесь. Вынесены сюда целиком.
+ *
+ * Конструкция: общая шапка сайта → строка с названием теста и прогрессом →
+ * содержание слева и задание справа. Ниже 900px содержание превращается
+ * в выезжающую панель, чтобы не отжимать текст задания в узкую полосу.
+ */
+
+/* ── Строка названия и прогресса ────────────────────────────────────── */
+
+.tv-head { background: var(--surface); border-bottom: 1px solid var(--line); }
+.tv-head-inner { max-width: 1160px; margin: 0 auto; padding: 20px 32px 16px; }
+.tv-head-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.tv-title { font-size: 19px; font-weight: 800; letter-spacing: -.015em; margin: 0; min-width: 0; overflow-wrap: break-word; }
+.tv-preview-badge {
+  flex-shrink: 0;
+  font-size: 11.5px; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px;
+  background: var(--amber-soft); color: var(--amber-text);
+}
+.tv-back-btn {
+  flex-shrink: 0;
+  height: 32px; padding: 0 12px;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line-2); border-radius: 8px;
+  background: var(--surface); color: var(--text-2);
+  font-family: var(--font); font-size: 13px; font-weight: 500;
+  text-decoration: none; cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.tv-back-btn:hover { color: var(--text); border-color: var(--brand); }
+.tv-head-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+.tv-progress-row { display: flex; align-items: center; gap: 14px; }
+.tv-progress-bar { flex: 1; min-width: 0; height: 5px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.tv-progress-fill { height: 100%; width: 0; border-radius: 999px; background: var(--brand); transition: width .3s ease; }
+.tv-progress-label { flex-shrink: 0; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+
+/* Открывает содержание на узких экранах; на широких панель видна всегда */
+.tv-toc-btn {
+  display: none;
+  height: 32px; padding: 0 12px;
+  align-items: center; gap: 7px;
+  border: 1px solid var(--line-2); border-radius: 8px;
+  background: var(--surface); color: var(--text-2);
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+.tv-toc-btn:hover { color: var(--text); border-color: var(--brand); }
+
+/* ── Раскладка ──────────────────────────────────────────────────────── */
+
+.tv-body {
+  max-width: 1160px; margin: 0 auto;
+  padding: 28px 32px 100px;
+  display: grid; grid-template-columns: 250px 1fr; gap: 28px;
+  align-items: start;
+}
+.tv-main { min-width: 0; }
+
+/* ── Содержание ─────────────────────────────────────────────────────── */
+
+.tv-toc {
+  position: sticky; top: 84px;   /* 64px шапки + воздух */
+  border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface); overflow: hidden;
+}
+.tv-toc-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px 10px;
+}
+.tv-toc-title {
+  font-size: 11.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .07em; color: var(--faint);
+}
+.tv-toc-close {
+  display: none;
+  margin-left: auto; width: 28px; height: 28px;
+  align-items: center; justify-content: center;
+  border: none; border-radius: 7px; background: transparent;
+  color: var(--muted); cursor: pointer;
+}
+.tv-toc-sum { padding: 0 16px 12px; font-size: 13px; color: var(--text-2); }
+.tv-toc-sum b { font-family: 'JetBrains Mono', monospace; color: var(--text); }
+.tv-toc-list { display: flex; flex-direction: column; border-top: 1px solid var(--line); max-height: calc(100vh - 240px); overflow-y: auto; }
+
+.tv-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px;
+  border-left: 2px solid transparent;
+  font-size: 13px; color: var(--text-2);
+  cursor: pointer; transition: background .1s;
+}
+.tv-nav-item + .tv-nav-item { border-top: 1px solid var(--line); }
+.tv-nav-item:hover { background: var(--surface-2); }
+.tv-nav-item.active { border-left-color: var(--brand); background: var(--surface-2); color: var(--text); font-weight: 600; }
+.tv-nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Номер вопроса. Отвеченные помечаются галочкой, а не серым цветом:
+   серый читался как «недоступно», хотя значит ровно обратное. */
+.tv-nav-num {
+  flex-shrink: 0;
+  width: 22px; height: 22px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface-2); color: var(--muted);
+  font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700;
+}
+.tv-nav-item.answered .tv-nav-num { background: var(--green-soft); color: var(--green-text); }
+.tv-nav-item.active .tv-nav-num { background: var(--brand); color: var(--on-brand); }
+/* Текстовая страница — не вопрос, номера у неё нет */
+.tv-nav-item.is-text .tv-nav-num { background: transparent; color: var(--faint); }
+
+.tv-toc-backdrop { display: none; }
+
+/* ── Карточка задания ───────────────────────────────────────────────── */
+
+.tv-card {
+  border: 1px solid var(--line); border-radius: 16px;
+  background: var(--surface); padding: 26px 28px;
+}
+.tv-q-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.tv-q-num {
+  font-size: 11.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em; color: var(--faint);
+}
+.tv-q-badge {
+  font-size: 11.5px; font-weight: 600;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--surface-2); color: var(--text-2);
+}
+.tv-q-badge.accent { background: var(--brand-soft); color: var(--brand-text); }
+
+.tv-question { font-size: 18px; font-weight: 700; line-height: 1.4; margin: 0 0 14px; overflow-wrap: break-word; }
+.tv-page-content { font-size: 14.5px; line-height: 1.75; color: var(--text-2); overflow-wrap: break-word; }
+.tv-page-content:last-child { margin-bottom: 0; }
+.tv-page-content h1, .tv-page-content h2, .tv-page-content h3 { color: var(--text); margin: 1em 0 .4em; }
+.tv-page-content h1:first-child, .tv-page-content h2:first-child, .tv-page-content h3:first-child { margin-top: 0; }
+.tv-page-content p { margin: 0 0 .7em; }
+.tv-page-content ul, .tv-page-content ol { margin: 0 0 .7em; padding-left: 22px; }
+.tv-page-content img { max-width: 100%; }
+.tv-page-content code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: var(--surface-2); padding: 2px 6px; border-radius: 5px; }
+.tv-page-content pre { background: var(--surface-2); padding: 12px 14px; border-radius: 10px; overflow-x: auto; }
+.tv-page-content pre code { background: none; padding: 0; }
+
+/* ── Варианты ответа ────────────────────────────────────────────────── */
+
+.tv-answers { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.tv-answer-label {
+  display: flex !important; align-items: center; gap: 11px;
+  padding: 13px 16px;
+  border: 1px solid var(--line-2); border-radius: 11px;
+  font-size: 14.5px; font-weight: normal; margin-bottom: 0;
+  cursor: pointer; transition: background .1s, border-color .1s;
+}
+.tv-answer-label input { flex-shrink: 0; accent-color: var(--brand); }
+.tv-answer-label:hover { border-color: var(--brand); background: var(--brand-soft); }
+.tv-answer-label.selected { border-color: var(--brand); background: var(--brand-soft); }
+.tv-answer-label.correct { border-color: var(--green-text); background: var(--green-soft); color: var(--green-text); }
+.tv-answer-label.incorrect { border-color: var(--red-text); background: var(--red-soft); color: var(--red-text); text-decoration: line-through; }
+
+.tv-input-field {
+  width: 100%; margin-top: 18px;
+  padding: 13px 15px; box-sizing: border-box;
+  border: 1px solid var(--line-2); border-radius: 11px;
+  background: var(--bg); color: var(--text);
+  font-family: var(--font); font-size: 14.5px;
+  outline: none; transition: border-color .15s;
+}
+.tv-input-field:focus { border-color: var(--brand); }
+.tv-input-field.correct { border-color: var(--green-text); }
+.tv-input-field.incorrect { border-color: var(--red-text); }
+.tv-input-hint { font-size: 13px; margin-top: 6px; }
+.tv-input-hint.correct { color: var(--green-text); }
+.tv-input-hint.incorrect { color: var(--red-text); }
+
+/* ── Кнопки ─────────────────────────────────────────────────────────── */
+
+/* Назад слева, Далее/Завершить справа — чтобы движение «вперёд»
+   всегда было в одном и том же месте экрана. */
+.tv-nav-btns { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.tv-nav-btns .tv-spacer { flex: 1; }
+.tv-btn {
+  height: 44px; padding: 0 20px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--line-2); border-radius: 10px;
+  background: var(--surface); color: var(--text);
+  font-family: var(--font); font-size: 14px; font-weight: 600;
+  text-decoration: none; cursor: pointer; transition: background .15s;
+}
+.tv-btn:hover { background: var(--surface-2); }
+.tv-btn svg { flex-shrink: 0; }
+.tv-btn-primary { background: var(--brand); color: var(--on-brand); border-color: transparent; }
+.tv-btn-primary:hover { background: var(--brand-strong); }
+.tv-btn:disabled { opacity: .35; cursor: default; }
+
+/* ── Задача на код ──────────────────────────────────────────────────── */
+
+.tv-samples { margin-top: 18px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.tv-samples-head {
+  padding: 9px 14px; border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 11.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em; color: var(--faint);
+}
+.tv-sample { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); }
+.tv-sample + .tv-sample { border-top: 1px solid var(--line); }
+.tv-sample-cell { background: var(--surface); padding: 10px 14px; min-width: 0; }
+.tv-sample-label { font-size: 11px; color: var(--faint); margin-bottom: 4px; }
+.tv-sample-cell pre {
+  margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+  white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-2);
+}
+
+.tv-editor { margin-top: 18px; border: 1px solid var(--line-2); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.tv-editor-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 12px; border-bottom: 1px solid var(--line); background: var(--surface-2);
+}
+.tv-code-lang-badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 600;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--brand-soft); color: var(--brand-text);
+}
+.tv-editor-hint { font-size: 12px; color: var(--muted); }
+.tv-editor-acts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.tv-editor-act {
+  height: 28px; padding: 0 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line-2); border-radius: 7px;
+  background: var(--surface); color: var(--text-2);
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: color .12s, border-color .12s;
+}
+.tv-editor-act:hover { color: var(--text); border-color: var(--brand); }
+.tv-code-textarea {
+  display: block; width: 100%; min-height: 280px;
+  padding: 14px; box-sizing: border-box;
+  border: none; background: var(--surface); color: var(--text);
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7;
+  resize: vertical; tab-size: 4; outline: none;
+}
+.tv-code-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+.tv-code-results-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-top: 14px; }
+.tv-code-results-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+  font-size: 13px; background: var(--surface-2);
+}
+.tv-code-verdict { margin-left: auto; font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+.tv-code-verdict.pass { background: var(--green-soft); color: var(--green-text); }
+.tv-code-verdict.fail { background: var(--red-soft); color: var(--red-text); }
+.tv-code-result-list { display: flex; flex-direction: column; }
+.tv-code-result-item { padding: 9px 14px; font-size: 13px; border-bottom: 1px solid var(--line); }
+.tv-code-result-item:last-child { border-bottom: none; }
+.tv-code-result-item.pass { background: var(--green-soft); }
+.tv-code-result-item.fail { background: var(--red-soft); }
+.tv-code-detail { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.tv-code-detail-label { color: var(--muted); margin-right: 4px; }
+.tv-code-detail pre {
+  display: inline; margin: 0; padding: 2px 6px;
+  background: var(--surface-3); border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.tv-code-error { color: var(--red-text); font-size: 13px; padding: 10px 0; }
+
+/* ── Результаты ─────────────────────────────────────────────────────── */
+
+.tv-results { text-align: center; padding: 34px 28px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.tv-score-circle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100px; height: 100px; border-radius: 50%;
+  border: 4px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: 700;
+  margin-bottom: 16px;
+}
+.tv-score-circle.pass { border-color: var(--green-text); color: var(--green-text); }
+.tv-score-circle.fail { border-color: var(--red-text); color: var(--red-text); }
+.tv-result-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
+.tv-result-sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+.tv-result-items { text-align: left; display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.tv-result-item { padding: 12px 16px; border-radius: 10px; font-size: 13.5px; border: 1px solid; }
+.tv-result-item.correct { border-color: var(--green-text); background: var(--green-soft); }
+.tv-result-item.incorrect { border-color: var(--red-text); background: var(--red-soft); }
+.tv-result-item-title { font-weight: 600; margin-bottom: 4px; }
+.tv-result-item-hint { color: var(--muted); font-size: 12.5px; }
+.tv-error-note { color: var(--red-text); font-size: 13.5px; margin-top: 12px; }
+.tv-loading { text-align: center; padding: 80px 20px; color: var(--muted); }
+
+/* ── Адаптив ────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  /* Содержание превращается в выезжающую панель: колонка в 250px
+     оставляла заданию полосу, в которую не влезает ни один вопрос. */
+  .tv-body { grid-template-columns: 1fr; padding: 22px 18px 80px; }
+  .tv-toc-btn { display: inline-flex; }
+
+  .tv-toc {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 120;
+    width: 280px; max-width: 84vw;
+    border: none; border-right: 1px solid var(--line); border-radius: 0;
+    transform: translateX(-100%); transition: transform .22s ease;
+    display: flex; flex-direction: column;
+  }
+  .tv-toc.open { transform: translateX(0); }
+  .tv-toc-close { display: flex; }
+  .tv-toc-list { flex: 1; max-height: none; }
+
+  .tv-toc-backdrop {
+    display: block; position: fixed; inset: 0; z-index: 110;
+    background: rgba(0,0,0,.45);
+    opacity: 0; pointer-events: none; transition: opacity .22s ease;
+  }
+  .tv-toc-backdrop.open { opacity: 1; pointer-events: auto; }
+}
+
+@media (max-width: 680px) {
+  .tv-head-inner { padding: 16px 18px 14px; }
+  .tv-head-row { flex-wrap: wrap; gap: 10px; }
+  .tv-title { font-size: 17px; flex-basis: 100%; }
+  .tv-head-actions { margin-left: 0; }
+
+  .tv-card { padding: 20px 18px; }
+  .tv-question { font-size: 16.5px; }
+  .tv-answer-label { padding: 12px 14px; font-size: 14px; }
+  .tv-results { padding: 28px 18px; }
+
+  /* Кнопки навигации в столбик: рядом «Назад» и «Завершить тест» не влезают */
+  .tv-nav-btns { flex-wrap: wrap; }
+  .tv-nav-btns .tv-spacer { display: none; }
+  .tv-nav-btns .tv-btn { flex: 1 1 140px; }
+  .tv-code-actions .tv-btn { flex: 1 1 160px; }
+
+  .tv-sample { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+  .tv-head-inner { padding: 14px 14px 12px; }
+  .tv-body { padding: 18px 14px 72px; }
+  .tv-card { padding: 18px 14px; }
+  .tv-progress-label { font-size: 12px; }
+}
