@@ -199,9 +199,15 @@ def api_company_tests(request, username):
             status=403,
         )
 
+    # Эндпоинт открыт всем: черновики с их названиями и ссылками в конструктор
+    # видит только владелец, остальным отдаём опубликованные.
     tests = Test.objects.filter(owner_username=username)
+    if not is_owner:
+        tests = tests.filter(status=Test.STATUS_PUBLISHED)
+    tests = tests.annotate(page_total=Count('pages'))
+
     total = tests.count()
-    active = tests.filter(status=Test.STATUS_PUBLISHED).count()
+    active = sum(1 for t in tests if t.status == Test.STATUS_PUBLISHED)
     submissions = sum(t.stats.get('submissions', 0) for t in tests)
 
     serialized = [
@@ -209,7 +215,10 @@ def api_company_tests(request, username):
             'id': t.id,
             'title': t.title,
             'status': t.status,
-            'page_count': t.pages.count(),
+            # Уровень и категория нужны публичной странице тестов компании
+            'level': t.stats.get('level', ''),
+            'category': t.stats.get('category', ''),
+            'page_count': t.page_total,
             'submissions': t.stats.get('submissions', 0),
             'created_at': t.created_at.isoformat(),
             'url': f'/tests/{t.id}/' if t.status == t.STATUS_PUBLISHED else f'/constructor/{t.id}/?owner={username}',

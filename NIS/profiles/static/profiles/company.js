@@ -81,6 +81,11 @@
       ? '<a class="pc-link-more" href="/' + esc(username) + '/contests/">Все конкурсы компании →</a>'
       : '';
 
+    // Раздел тестов ссылки на полный список не имел, хотя показывает только три
+    var allTestsLink = publishedTests.length
+      ? '<a class="pc-link-more" href="/' + esc(username) + '/tests/">Все тесты компании →</a>'
+      : '';
+
     // Tests section (up to 3)
     var testRowsHtml = publishedTests.length
       ? publishedTests.slice(0, 3).map(function (t) {
@@ -139,7 +144,7 @@
       +   contestRowsHtml
       + '</div>'
       + '<div class="pc-section">'
-      +   '<div class="pc-section-head"><div class="pc-section-title">Тесты компании</div></div>'
+      +   '<div class="pc-section-head"><div class="pc-section-title">Тесты компании</div>' + allTestsLink + '</div>'
       +   testRowsHtml
       + '</div>'
       + ratingHtml;

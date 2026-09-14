@@ -150,6 +150,19 @@ class ProfilePageTests(BaseCase):
                 self.assertIsNotNone(rule, f'нет правила .{prefix}-hero-av')
                 self.assertIn('position: relative', rule.group(1))
 
+    def test_company_tests_page_is_reachable_from_profile(self):
+        """Раздел «Тесты компании» показывает три штуки — нужна ссылка на полный список."""
+        self.make_test(owner='firma', published=True)
+        # Статика тестовым клиентом не отдаётся — читаем исходник скрипта
+        script = Path(settings.BASE_DIR) / 'profiles/static/profiles/company.js'
+        self.assertIn("/tests/\">Все тесты компании", script.read_text(encoding='utf-8'))
+        self.assertEqual(Client().get('/firma/tests/').status_code, 200)
+
+    def test_company_tests_page_requires_verified_company(self):
+        """Страницы кандидата и непроверенной компании не должны открываться."""
+        self.assertEqual(Client().get(f'/{self.candidate.username}/tests/').status_code, 404)
+        self.assertEqual(Client().get('/net-takoy-logina/tests/').status_code, 404)
+
     def test_stat_values_are_bottom_aligned(self):
         """Метка в две строки сдвигала число вниз относительно соседних плашек."""
         for url, prefix in ((f'/{self.candidate.username}/', 'pu'), ('/firma/', 'pc')):
