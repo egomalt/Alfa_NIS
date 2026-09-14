@@ -30,6 +30,13 @@
   <div class="cp-stat-card"><div class="cp-stat-value" id="stat-completion-rate">0%</div><div class="cp-stat-label">Активных, %</div></div>
 </div>
 
+<div class="cr-filters">
+  <button class="cr-chip active" data-f="all">Все</button>
+  <button class="cr-chip" data-f="published">Опубликованные</button>
+  <button class="cr-chip" data-f="draft">Черновики</button>
+  <span class="cr-filter-count" id="tests-filter-count"></span>
+</div>
+
 <div class="list-card">
   <div class="list-card-header">
     <h2>Обзор тестов</h2>
@@ -49,9 +56,10 @@
   <div id="tests-empty" hidden>
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="1.5" stroke-linecap="round"><rect x="9" y="3" width="13" height="13" rx="2"/><path d="M5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/></svg>
-      <div style="font-size:15px;font-weight:600;">Тестов пока нет</div>
-      <div style="font-size:13.5px;color:var(--muted);">Создайте первый тест, чтобы начать оценку кандидатов</div>
-      <a href="/constructor/" class="cp-btn-primary" style="text-decoration:none;">Создать тест</a>
+      {# Текст зависит от того, пусто из-за фильтра или тестов нет вовсе #}
+      <div id="tests-empty-title" style="font-size:15px;font-weight:600;">Тестов пока нет</div>
+      <div id="tests-empty-sub" style="font-size:13.5px;color:var(--muted);">Создайте первый тест, чтобы начать оценку кандидатов</div>
+      <a id="tests-empty-create" href="/constructor/" class="cp-btn-primary" style="text-decoration:none;">Создать тест</a>
     </div>
   </div>
 </div>
