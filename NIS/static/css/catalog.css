@@ -1,3 +1,9 @@
+/* Оформление страниц-каталогов: статьи и компании.
+ *
+ * Подключается ТОЛЬКО этими двумя страницами — имена вроде .card, .hero и .tag
+ * заняты на других страницах своими стилями, поэтому в общий career.css
+ * эти правила выносить нельзя.
+ */
 :root { --shadow-md: 0 4px 12px rgba(16,24,40,.09), 0 12px 32px rgba(16,24,40,.11); }
 [data-theme="dark"] { --shadow-md: 0 4px 12px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.36); }
 
@@ -103,3 +109,64 @@ main { max-width: 1160px; margin: 0 auto; padding: 44px 32px 100px; }
 
 /* Empty / Loading */
 .state-msg { grid-column: 1/-1; padding: 80px 20px; text-align: center; color: var(--muted); font-size: 15px; }
+
+
+/* ── Карточки компаний ─────────────────────────────────────────────── */
+
+/* Конструкция страницы общая с каталогом статей, но оформление карточки своё:
+   у компании нет обложки, поэтому вместо градиентной шапки — логотип в строке
+   с названием. Так карточка читается как визитка, а не как превью материала. */
+.co-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 44px; }
+@media (max-width: 900px) { .co-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 580px) { .co-grid { grid-template-columns: 1fr; } }
+
+.co-card .card-body { padding: 20px; }
+
+.co-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+
+.co-logo {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--brand-text);
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.co-logo img { width: 100%; height: 100%; object-fit: cover; }
+
+.co-head-text { min-width: 0; }
+.co-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  line-height: 1.3;
+}
+.co-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.co-check { flex-shrink: 0; color: var(--green-text); }
+.co-meta {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Показатели в подвале карточки */
+.co-stat { display: flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--muted); }
+.co-stat svg { color: var(--faint); flex-shrink: 0; }
+.co-rating { color: var(--amber-text); }
+.co-rating svg { color: var(--amber-text); }

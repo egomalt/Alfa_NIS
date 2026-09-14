@@ -5,159 +5,73 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <script>
-    (function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();
-  </script>
-  <title>Компании — Alfa Career</title>
+  <script>(function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();</script>
+  <title>Компании — Career</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
+  <link rel="stylesheet" href="{% static 'css/catalog.css' %}?v=20260914-1">
   <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
   <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
+  <script src="{% static 'company_catalog/js/app.js' %}?v=20260914-1" defer></script>
 </head>
 <body>
 
-<!-- Navbar -->
-{% include 'partials/navbar.html' with active='companies' chip_id='companies-user-chip' %}
+{% include 'partials/navbar.html' with active='companies' chip_id='cat-user-chip' %}
 
-<!-- Content -->
-<div class="cr-catalog-layout">
-  <!-- Sidebar filter -->
-  <aside class="cr-catalog-aside">
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg);">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-      <input id="search-input" placeholder="Поиск" style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);font-size:14px;outline:none;font-family:inherit;">
+<main>
+
+  <div class="hero">
+    <div class="hero-label">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg>
+      Работодатели
     </div>
+    <div class="hero-title">Компании на платформе</div>
+    <div class="hero-sub">Проверенные работодатели: тесты, конкурсы и оценки от кандидатов</div>
+  </div>
 
-    <div>
-      <div class="cr-filter-label">Индустрия</div>
-      <div id="industry-filters" style="display:flex;flex-direction:column;gap:2px;"></div>
+  <div class="search-row">
+    <div class="search-wrap">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input class="search-input" id="search-input" type="text" placeholder="Поиск по компаниям...">
     </div>
+    <a href="/authorization/signup/" class="btn-write" id="btn-join" style="display:none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Стать компанией
+    </a>
+  </div>
 
-    <div class="cr-divider"></div>
+  <div class="cr-filters" id="industries">
+    <span class="cr-filter-label">Индустрия</span>
+    <span class="cr-filter-count" id="industries-count"></span>
+  </div>
 
-    <label class="cr-toggle-row" id="verified-toggle" style="font-size:13.5px;color:var(--text-2);">
-      <span>Только верифицированные</span>
-      <div class="cr-toggle-track" id="verified-track">
-        <div class="cr-toggle-knob"></div>
+  <div class="content-cols">
+    <section>
+      <div class="section-header">
+        <div class="section-title">Все компании</div>
+        <div class="section-count" id="co-count"></div>
       </div>
-    </label>
-  </aside>
-
-  <!-- Results -->
-  <section>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <span style="font-size:13.5px;color:var(--muted);">
-        <span id="result-count" style="font-family:'JetBrains Mono',monospace;color:var(--text-2);font-weight:500;">0</span> компаний
-      </span>
-    </div>
-    <div class="cr-catalog-list" id="cl-grid">
-      <div style="padding:48px;text-align:center;color:var(--muted);">Загрузка…</div>
-    </div>
-  </section>
-</div>
-
-<script>
-(function(){
-  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-  function initial(name){return(name||'?').trim()[0].toUpperCase();}
-  function testsLabel(n){
-    if(n===0)return'Нет тестов';
-    const m10=n%10,m100=n%100;
-    if(m100>=11&&m100<=19)return`${n} тестов`;
-    if(m10===1)return`${n} тест`;
-    if(m10>=2&&m10<=4)return`${n} теста`;
-    return`${n} тестов`;
-  }
-
-  let allCompanies=[];
-  let search='';
-  let verifiedOnly=false;
-  let selectedIndustries=new Set();
-
-  function stars(avg){
-    if(avg===null||avg===undefined)return'';
-    const full=Math.round(avg);
-    let s='';
-    for(let i=1;i<=5;i++)s+=`<span style="color:${i<=full?'var(--amber-text)':'var(--line-2)'};font-size:13px;">★</span>`;
-    return`<span style="display:inline-flex;align-items:center;gap:2px;">${s}<span style="font-size:12px;font-weight:600;color:var(--text-2);margin-left:4px;">${avg}</span></span>`;
-  }
-
-  function renderRow(c){
-    const avatarHtml=c.avatar_url?`<img src="${esc(c.avatar_url)}" alt="">`:`${esc(initial(c.name))}`;
-    const metaParts=[c.industry,c.city].filter(Boolean).join(' · ');
-    const verified=c.is_verified?`<span class="cr-verified-dot" title="Верифицирована"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>`:'';
-    const ratingHtml=c.avg_rating?stars(c.avg_rating):'';
-    return`<a href="${esc(c.profile_url)}" class="cr-catalog-row">
-      <span class="cr-catalog-initial">${avatarHtml}</span>
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;">
-          <span style="font-size:15.5px;font-weight:600;">${esc(c.name)}</span>${verified}
-        </div>
-        <div class="cr-catalog-meta">${esc(metaParts)}</div>
-        ${c.description?`<div class="cr-catalog-desc">${esc(c.description.slice(0,120))}${c.description.length>120?'…':''}</div>`:''}
+      <div class="co-grid" id="co-grid">
+        <div class="state-msg">Загрузка...</div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;">
-        ${ratingHtml}
-        <span class="cr-tests-count">${esc(testsLabel(c.tests_count))}</span>
-        <span style="font-size:13px;font-weight:600;color:var(--brand-text);">Открыть →</span>
+      <div class="load-more-row" id="load-more-row" style="display:none;">
+        <button class="btn-load" id="btn-load">Загрузить ещё</button>
       </div>
-    </a>`;
-  }
+    </section>
 
-  function filter(){
-    const q=search.toLowerCase();
-    let list=allCompanies;
-    if(q)list=list.filter(c=>c.name.toLowerCase().includes(q)||(c.industry||'').toLowerCase().includes(q)||(c.city||'').toLowerCase().includes(q));
-    if(verifiedOnly)list=list.filter(c=>c.is_verified);
-    if(selectedIndustries.size)list=list.filter(c=>selectedIndustries.has(c.industry));
-    document.getElementById('result-count').textContent=list.length;
-    const grid=document.getElementById('cl-grid');
-    if(!list.length){grid.innerHTML='<div style="padding:48px;text-align:center;color:var(--muted);">Ничего не найдено</div>';return;}
-    grid.innerHTML=list.map(renderRow).join('');
-  }
+    <aside class="aside">
+      <div class="aside-card">
+        <div class="aside-title">Больше всего тестов</div>
+        <div class="trending-list" id="trending-list"></div>
+      </div>
+      <div class="aside-card" id="industries-card" style="display:none;">
+        <div class="aside-title">Индустрии</div>
+        <div class="tag-cloud" id="industry-cloud"></div>
+      </div>
+    </aside>
+  </div>
 
-  function buildIndustryFilters(){
-    const industries=[...new Set(allCompanies.map(c=>c.industry).filter(Boolean))].sort();
-    const el=document.getElementById('industry-filters');
-    if(!el)return;
-    el.innerHTML=industries.map(ind=>`
-      <label class="cr-filter-row" data-industry="${esc(ind)}">
-        <span class="cr-filter-check" data-check="${esc(ind)}"></span>
-        <span>${esc(ind)}</span>
-      </label>`).join('');
-    el.addEventListener('click',e=>{
-      const row=e.target.closest('[data-industry]');
-      if(!row)return;
-      const ind=row.dataset.industry;
-      if(selectedIndustries.has(ind))selectedIndustries.delete(ind);
-      else selectedIndustries.add(ind);
-      row.querySelector('[data-check]').classList.toggle('checked',selectedIndustries.has(ind));
-      filter();
-    });
-  }
-
-  async function init(){
-    try{
-      const res=await fetch('/api/v1/companies/');
-      const data=await res.json();
-      if(!data.ok){document.getElementById('cl-grid').innerHTML='<div style="padding:48px;text-align:center;color:var(--muted);">Ошибка загрузки</div>';return;}
-      allCompanies=data.companies||[];
-      buildIndustryFilters();
-      filter();
-    }catch(_){document.getElementById('cl-grid').innerHTML='<div style="padding:48px;text-align:center;color:var(--muted);">Не удалось загрузить компании</div>';}
-  }
-
-  document.getElementById('search-input').addEventListener('input',e=>{search=e.target.value;filter();});
-
-  document.getElementById('verified-toggle').addEventListener('click',()=>{
-    verifiedOnly=!verifiedOnly;
-    document.getElementById('verified-track').classList.toggle('on',verifiedOnly);
-    filter();
-  });
-
-  document.addEventListener('DOMContentLoaded',init);
-})();
-</script>
+</main>
 </body>
 </html>
