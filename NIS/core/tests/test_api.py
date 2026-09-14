@@ -83,6 +83,27 @@ class QueryCountTests(BaseCase):
         self.assertEqual(response.status_code, 200)
         self.assertLess(len(ctx.captured_queries), 15)
 
+    def test_catalog_resolves_author_names_in_one_query(self):
+        """Имена авторов берутся на всю страницу разом, а не по статье."""
+        for i in range(30):
+            username = f'avtor{i}'
+            Account.objects.create_user(username, name=f'Автор {i}', password=PASSWORD, role=ROLE_USER)
+            self.make_article(author=username, title=f'Статья {i}')
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = Client().get('/api/v1/articles/catalog/')
+
+        articles = response.json()['articles']
+        self.assertEqual(len(articles), 30)
+        self.assertEqual(articles[0]['author_name'], 'Автор 29')
+        self.assertLess(len(ctx.captured_queries), 8)
+
+    def test_catalog_falls_back_to_username_without_account(self):
+        """Статья могла остаться от удалённого аккаунта — карточка не должна пустеть."""
+        self.make_article(author='udalyonnyy', title='Осиротевшая')
+        card = Client().get('/api/v1/articles/catalog/').json()['articles'][0]
+        self.assertEqual(card['author_name'], 'udalyonnyy')
+
 
 class UploadValidationTests(BaseCase):
     def test_avatar_rejects_svg_and_oversized(self):

@@ -30,6 +30,25 @@
     return many;
   }
 
+  function viewsLabel(n) {
+    const views = n || 0;
+    return `${views} ${plural(views, 'просмотр', 'просмотра', 'просмотров')}`;
+  }
+
+  /* Собирает строку «а · б · в», пропуская пустые части.
+     Раньше разделители писались вручную рядом с необязательными значениями,
+     и у статьи без времени чтения оставалась висящая точка. */
+  function joinMeta(...parts) {
+    return parts.filter(Boolean).join(' · ');
+  }
+
+  function avatarOf(article) {
+    const name = article.author_name || article.author_username || '?';
+    const key = article.author_username || name;
+    const [bg, fg] = AV_COLORS[key.charCodeAt(0) % AV_COLORS.length];
+    return { name, letter: name.trim()[0].toUpperCase(), bg, fg };
+  }
+
   let allArticles = [];
   let activeCat = 'all';
   let searchQ = '';
@@ -53,22 +72,21 @@
 
     const cover = COVERS[top.cover_index % COVERS.length];
     document.getElementById('featured-cover-bg').style.cssText = `position:absolute;inset:0;background:${cover};`;
-    document.getElementById('featured-badge-text').textContent = (top.views || 0) + ' просмотров · Свежее';
+    // Счётчик просмотров и так стоит ниже в карточке — в значке оставлена только метка
+    document.getElementById('featured-badge-text').textContent = 'Свежее';
     document.getElementById('featured-tags').innerHTML = (top.tags || []).map(t => `<span class="featured-tag">${esc(t)}</span>`).join('');
     document.getElementById('featured-title').textContent = top.title || 'Без названия';
     document.getElementById('featured-excerpt').textContent = top.excerpt || '';
 
-    const username = top.author_username || '?';
-    const ci = username.charCodeAt(0) % AV_COLORS.length;
-    const [avBg, avFg] = AV_COLORS[ci];
+    const author = avatarOf(top);
     const avEl = document.getElementById('featured-author-av');
-    avEl.textContent = username[0].toUpperCase();
-    avEl.style.cssText = `background:${avBg};color:${avFg};`;
-    document.getElementById('featured-author-name').textContent = username;
-    const dateParts = [];
-    if (top.published_at) dateParts.push(formatDate(top.published_at));
-    if (top.read_time) dateParts.push(top.read_time + ' мин чтения');
-    document.getElementById('featured-author-date').textContent = dateParts.join(' · ');
+    avEl.textContent = author.letter;
+    avEl.style.cssText = `background:${author.bg};color:${author.fg};`;
+    document.getElementById('featured-author-name').textContent = author.name;
+    document.getElementById('featured-author-date').textContent = joinMeta(
+      formatDate(top.published_at),
+      top.read_time ? `${top.read_time} мин чтения` : '',
+    );
     document.getElementById('featured-views-count').textContent = top.views || 0;
     document.getElementById('featured-read-btn').onclick = (e) => {
       e.preventDefault();
@@ -82,7 +100,6 @@
     const tags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).map(([t]) => t);
 
     const cats = document.getElementById('cats');
-    const countEl = document.getElementById('cats-count');
     cats.querySelectorAll('.cr-chip').forEach((b, i) => { if (i > 0) b.remove(); });
 
     tags.forEach(tag => {
@@ -91,7 +108,7 @@
       btn.dataset.cat = tag;
       btn.textContent = tag;
       btn.addEventListener('click', () => filterCat(tag));
-      cats.insertBefore(btn, countEl);
+      cats.appendChild(btn);
     });
     cats.querySelector('[data-cat="all"]').addEventListener('click', () => filterCat('all'));
   }
@@ -106,13 +123,16 @@
   function renderTrending() {
     const top5 = [...allArticles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
     document.getElementById('trending-list').innerHTML = top5.map((a, i) => `
-      <div class="trending-item" onclick="location.href='/articles/${a.id}/'">
+      <a class="trending-item" href="/articles/${a.id}/">
         <div class="trending-num">0${i + 1}</div>
-        <div>
+        <div style="min-width:0;">
           <div class="trending-title">${esc(a.title || 'Без названия')}</div>
-          <div class="trending-meta">${a.views ? a.views + ' просмотров · ' : ''}${a.read_time ? a.read_time + ' мин' : ''}</div>
+          <div class="trending-meta">${esc(joinMeta(
+            a.views ? viewsLabel(a.views) : '',
+            a.read_time ? `${a.read_time} мин` : '',
+          ))}</div>
         </div>
-      </div>`).join('');
+      </a>`).join('');
   }
 
   function renderGrid() {
@@ -120,7 +140,6 @@
     const visible = list.slice(0, shown);
     const total = list.length;
 
-    document.getElementById('cats-count').textContent = total + ' ' + plural(total, 'статья', 'статьи', 'статей');
     document.getElementById('art-count').textContent = total + ' ' + plural(total, 'статья', 'статьи', 'статей');
 
     const grid = document.getElementById('art-grid');
@@ -132,9 +151,7 @@
 
     grid.innerHTML = visible.map(a => {
       const cover = COVERS[a.cover_index % COVERS.length];
-      const username = a.author_username || '?';
-      const ci = username.charCodeAt(0) % AV_COLORS.length;
-      const [avBg, avFg] = AV_COLORS[ci];
+      const author = avatarOf(a);
       return `
       <a class="card" href="/articles/${a.id}/">
         <div class="card-cover">
@@ -151,13 +168,12 @@
           <div class="card-excerpt">${esc(a.excerpt || '')}</div>
           <div class="card-footer">
             <div class="card-author">
-              <div class="card-av" style="background:${avBg};color:${avFg};">${username[0].toUpperCase()}</div>
-              <div class="card-author-name">${esc(username)}</div>
+              <div class="card-av" style="background:${author.bg};color:${author.fg};">${esc(author.letter)}</div>
+              <div class="card-author-name">${esc(author.name)}</div>
             </div>
-            <span class="meta-dot">·</span>
-            ${a.read_time ? `<span class="meta-mono"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>${a.read_time} мин</span>` : ''}
-            <div class="card-footer-right">
-              <span class="stat-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>${a.views || 0}</span>
+            <div class="card-meta">
+              ${a.read_time ? `<span class="meta-mono" title="Время чтения"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>${a.read_time} мин</span>` : ''}
+              <span class="stat-pill" title="${esc(viewsLabel(a.views))}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>${a.views || 0}</span>
             </div>
           </div>
         </div>

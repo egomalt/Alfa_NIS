@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <link rel="stylesheet" href="{% static 'css/catalog.css' %}?v=20260914-1">
+  <link rel="stylesheet" href="{% static 'css/catalog.css' %}?v=20260914-3">
   <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
   <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
-  <script src="{% static 'articles_catalog/js/app.js' %}" defer></script>
+  <script src="{% static 'articles_catalog/js/app.js' %}?v=20260914-1" defer></script>
 </head>
 <body>
 
@@ -80,9 +80,9 @@
     </a>
   </div>
 
+  {# Счётчик стоит в заголовке раздела ниже — здесь он был вторым таким же #}
   <div class="cr-filters" id="cats">
     <button class="cr-chip active" data-cat="all">Все</button>
-    <span class="cr-filter-count" id="cats-count"></span>
   </div>
 
   <div class="content-cols">

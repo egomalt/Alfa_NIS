@@ -166,7 +166,7 @@ function renderClosing() {
   }
 
   list.innerHTML = soon.map((c, i) => `
-    <a class="trending-item" href="/contests/${c.id}/" style="text-decoration:none;color:inherit;">
+    <a class="trending-item" href="/contests/${c.id}/">
       <span class="trending-num">${i + 1}</span>
       <span style="min-width:0;">
         <div class="trending-title">${esc(c.title || 'Конкурс')}</div>

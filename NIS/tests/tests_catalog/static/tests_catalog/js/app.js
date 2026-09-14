@@ -126,7 +126,7 @@
     }
 
     list.innerHTML = top.map((t, i) => `
-      <a class="trending-item" href="${esc(t.url)}" style="text-decoration:none;color:inherit;">
+      <a class="trending-item" href="${esc(t.url)}">
         <span class="trending-num">${i + 1}</span>
         <span style="min-width:0;">
           <div class="trending-title">${esc(t.title || 'Без названия')}</div>
