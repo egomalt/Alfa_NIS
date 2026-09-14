@@ -65,7 +65,9 @@ function renderTable() {
     return;
   }
 
-  wrap.innerHTML = `<div class="cc-table">
+  wrap.innerHTML = `<div class="list-card">
+    <div class="list-card-header"><h2>Обзор конкурсов</h2></div>
+    <div class="cc-scroll">
     <div class="cc-thead">
       <span>Название</span><span>Дедлайн</span><span>Участники</span><span>Решения</span><span>Статус</span><span></span>
     </div>
@@ -95,6 +97,7 @@ function renderTable() {
         </div>
       </div>`;
     }).join('')}
+    </div>
   </div>`;
 }
 
