@@ -10,11 +10,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <link rel="stylesheet" href="{% static 'cabinet/cabinet-user.css' %}?v=20260810-3">
+  <link rel="stylesheet" href="{% static 'cabinet/cabinet-user.css' %}?v=20260914-1">
   <script>
     window.ALFA_APP_BOOTSTRAP = {
       username: "{{ username|escapejs }}",
-      page: "{{ page|default:'profile'|escapejs }}"
+      page: "{{ page|default:'profile'|escapejs }}",
+      panel: "{{ panel|default:page|default:'profile'|escapejs }}"
     };
   </script>
   <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
@@ -23,7 +24,7 @@
 </head>
 <body>
 
-{% include 'partials/navbar.html' with chip_id='cabinet-user-chip' show_logout=1 %}
+{% include 'partials/navbar.html' with chip_id='cabinet-user-chip' %}
 
 <button type="button" class="cab-burger" data-sidebar-burger aria-label="Разделы кабинета">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
@@ -38,7 +39,7 @@
   </main>
 </div>
 
-<script src="{% static 'cabinet/user.js' %}?v=20260810-1"></script>
+<script src="{% static 'cabinet/user.js' %}?v=20260914-1"></script>
 {% block page_script %}{% endblock %}
 </body>
 </html>

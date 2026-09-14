@@ -581,25 +581,34 @@
 
   /* ---------- init ---------- */
 
+  /* panel='none' передают страницы, которые лежат в кабинете, но рисуют себя сами
+     (например статистика теста). Им от этого скрипта нужны только чип в сайдбаре
+     и выход — четыре списочных запроса были бы выброшены впустую. */
+  const panel = (window.ALFA_APP_BOOTSTRAP || {}).panel
+    || (window.ALFA_APP_BOOTSTRAP || {}).page || 'profile';
+
   async function init() {
     if (!username) return;
 
     try {
-      const [candData, testsResp, articlesResp, historyResp, ratingsResp] = await Promise.all([
-        apiFetch(`/api/v1/candidates/${username}/`),
+      const candData = await apiFetch(`/api/v1/candidates/${username}/`);
+      state.candidate = candData.candidate;
+      renderSidebar();
+
+      if (panel === 'none') return;
+
+      const [testsResp, articlesResp, historyResp, ratingsResp] = await Promise.all([
         fetch(`/api/v1/tests/?owner=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false })),
         fetch('/api/v1/articles/my/').then(r => r.json()).catch(() => ({ ok: false })),
         fetch('/api/v1/contests/user-history/').then(r => r.json()).catch(() => ({ ok: false })),
         fetch('/api/v1/companies/my-ratings/').then(r => r.json()).catch(() => ({ ok: false })),
       ]);
 
-      state.candidate = candData.candidate;
       state.tests = testsResp.ok ? (testsResp.tests || []) : [];
       state.articles = articlesResp.ok ? (articlesResp.articles || []) : [];
       state.contestHistory = historyResp.ok ? (historyResp.submissions || []) : [];
       state.myRatings = ratingsResp.ok ? (ratingsResp.ratings || []) : [];
 
-      renderSidebar();
       renderProfileTab();
       renderTestsTab();
       renderArticlesTab();

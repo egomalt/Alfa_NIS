@@ -79,6 +79,9 @@
   }
 
   function renderProfileContent(company) {
+    // Страховка: элементы есть только на странице профиля. Раньше отсутствие
+    // проверки роняло всю цепочку init() на чужой странице
+    if (!el('cpstat-contests')) return;
     var contests = state.contests;
     var totalParticipants = contests.reduce(function (s, c) { return s + (c.participants_count || 0); }, 0);
     var totalTests = state.tests ? state.tests.length : 0;
@@ -521,17 +524,50 @@
 
   // ---- Init ----
   // Активный раздел задаётся сервером (отдельные адреса), а не кликом по вкладке
-  var page = (window.ALFA_APP_BOOTSTRAP || {}).page || 'profile';
+  /* page  — какой пункт подсветить в сайдбаре (есть на всех страницах кабинета);
+     panel — какую панель рисовать этим скриптом. У разделов «Тесты» и «Конкурсы»
+     своя разметка и свои скрипты, им от company.js нужны только сайдбар, замки
+     и выход, поэтому они передают panel='none'. Без этого разделения скрипт
+     уходил в профильную ветку и падал на элементах, которых там нет. */
+  var BOOT = window.ALFA_APP_BOOTSTRAP || {};
+  var page = BOOT.page || 'profile';
+  var panel = BOOT.panel || page;
+
+  var OWN_PANELS = ['profile', 'stats', 'settings'];
+
+  function renderPanel(company) {
+    if (panel === 'stats') {
+      renderStatsTab();
+    } else if (panel === 'settings') {
+      fillSettingsForm();
+    } else {
+      renderHero(company);
+      if (company.is_verified) showProfileContent(company);
+      else showVerifyGate(company);
+    }
+  }
 
   function init() {
+    // Оболочка кабинета — нужна на каждой странице
     initLogout();
-    initVerifyDoc();
-    initAvatarUpload();
-    initSettingsButtons();
+
+    var ownsPanel = OWN_PANELS.indexOf(panel) !== -1;
+    if (ownsPanel) {
+      initVerifyDoc();
+      initAvatarUpload();
+      initSettingsButtons();
+    }
 
     var companyFetch = apiFetch('/api/v1/companies/' + username + '/');
-    var contestsFetch = apiFetch('/api/v1/contests/company/').catch(function () { return { contests: [] }; });
-    var testsFetch = apiFetch('/api/v1/companies/' + username + '/tests/').catch(function () { return { tests: [] }; });
+    // Списки конкурсов и тестов нужны только профилю: на остальных страницах
+    // это были бы дубли запросов, которые уже делают их собственные скрипты
+    var needsLists = panel === 'profile';
+    var contestsFetch = needsLists
+      ? apiFetch('/api/v1/contests/company/').catch(function () { return { contests: [] }; })
+      : Promise.resolve({ contests: [] });
+    var testsFetch = needsLists
+      ? apiFetch('/api/v1/companies/' + username + '/tests/').catch(function () { return { tests: [] }; })
+      : Promise.resolve({ tests: [] });
 
     Promise.all([companyFetch, contestsFetch, testsFetch])
       .then(function (results) {
@@ -544,18 +580,7 @@
         // Разблокируем «Тесты»/«Конкурсы» на любой странице кабинета, если компания подтверждена
         if (company.is_verified) unlockSidebarLinks();
 
-        if (page === 'stats') {
-          renderStatsTab();
-        } else if (page === 'settings') {
-          fillSettingsForm();
-        } else {
-          renderHero(company);
-          if (company.is_verified) {
-            showProfileContent(company);
-          } else {
-            showVerifyGate(company);
-          }
-        }
+        if (ownsPanel) renderPanel(company);
       })
       .catch(function (err) {
         var sub = el('cp-page-sub');

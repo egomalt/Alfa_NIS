@@ -1,25 +1,18 @@
+{% extends base_template %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="csrf-token" content="{{ csrf_token }}">
-  <script>(function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();</script>
-  <title>{{ test_title|default:"Тест" }} — статистика — Career</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <script>
-    window.ALFA_APP_BOOTSTRAP = {
-      testId: {{ test_id }},
-      backUrl: "{{ back_url|escapejs }}"
-    };
-  </script>
-  <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-  <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
-  <style>
-    main { max-width: 980px; margin: 0 auto; padding: 32px 32px 80px; }
+
+{% comment %}
+  Страница «Как проходят тест». Тесты заводят и компании, и кандидаты,
+  поэтому базовый шаблон (а с ним и боковая панель) выбирается по роли автора
+  во вьюхе constructor_stats_shell.
+{% endcomment %}
+
+{% block title %}{{ test_title|default:"Тест" }} — статистика — Career{% endblock %}
+
+{% block head_extra %}
+<script>Object.assign(window.ALFA_APP_BOOTSTRAP, { testId: {{ test_id }} });</script>
+<style>
+    .ts-wrap { max-width: 980px; }
 
     .ts-back { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; text-decoration: none; margin-bottom: 18px; transition: color .12s; }
     .ts-back:hover { color: var(--text); }
@@ -70,22 +63,18 @@
       .ts-panels { grid-template-columns: 1fr; }
     }
     @media (max-width: 680px) {
-      main { padding: 24px 18px 64px; }
       .ts-title { font-size: 20px; }
       .ts-hist { height: 120px; gap: 4px; }
       .ts-hist-label { font-size: 9.5px; }
     }
     @media (max-width: 420px) {
-      main { padding: 20px 14px 56px; }
       .ts-cards { grid-template-columns: 1fr; }
     }
-  </style>
-</head>
-<body>
+</style>
+{% endblock %}
 
-{% include 'partials/navbar.html' with active='tests' chip_id='ts-user-chip' %}
-
-<main>
+{% block panel %}
+<div class="ts-wrap">
   <a class="ts-back" id="ts-back-link" href="{{ back_url }}">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
     Мои тесты
@@ -107,9 +96,10 @@
   <div id="ts-content">
     <div class="ts-loading">Загрузка…</div>
   </div>
-</main>
+</div>
+{% endblock %}
 
+{% block page_script %}
 <script src="{% static 'js/plural.js' %}?v=20260914-1"></script>
-<script src="{% static 'constructor/js/test_stats.js' %}?v=20260914-1"></script>
-</body>
-</html>
+<script src="{% static 'constructor/js/test_stats.js' %}?v=20260914-2"></script>
+{% endblock %}

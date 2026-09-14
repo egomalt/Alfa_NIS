@@ -34,9 +34,9 @@ function renderStats() {
     { v: accepted, l: 'Принято' },
     { v: rejected, l: 'Отклонено' },
   ].map(s => `
-    <div class="cs-stat-card">
-      <div class="cs-stat-value">${s.v}</div>
-      <div class="cs-stat-label">${s.l}</div>
+    <div class="cp-stat-card">
+      <div class="cp-stat-value">${s.v}</div>
+      <div class="cp-stat-label">${s.l}</div>
     </div>`).join('');
 }
 
@@ -233,18 +233,6 @@ function initFilters() {
   });
 }
 
-async function loadSidebarCompany() {
-  try {
-    const data = await api(`/api/v1/companies/${USERNAME}/`);
-    const company = data.company || data;
-    const name = company.name || USERNAME;
-    const el = document.getElementById('sidebar-name');
-    const av = document.getElementById('sidebar-avatar');
-    if (el) el.textContent = name;
-    if (av) av.textContent = name.charAt(0).toUpperCase();
-  } catch (_) {}
-}
-
 async function loadContest() {
   try {
     const data = await api(`/api/v1/contests/${CONTEST_ID}/`);
@@ -309,10 +297,13 @@ function showContactPopup(btn, s) {
   document.body.appendChild(popup);
 
   const rect = btn.getBoundingClientRect();
-  const popupW = 260;
+  // Ширину берём фактическую: в CSS она зажата под ширину экрана,
+  // а жёсткие 260 уводили попап за правый край на телефоне
+  const popupW = popup.offsetWidth;
   let left = rect.left + window.scrollX;
-  let top = rect.bottom + window.scrollY + 6;
+  const top = rect.bottom + window.scrollY + 6;
   if (left + popupW > window.innerWidth - 12) left = window.innerWidth - popupW - 12;
+  left = Math.max(window.scrollX + 12, left);
   popup.style.left = left + 'px';
   popup.style.top = top + 'px';
 
@@ -340,7 +331,6 @@ document.getElementById('cs-sub-list').addEventListener('click', e => {
 });
 
 initFilters();
-loadSidebarCompany();
 loadContest();
 loadSubmissions();
 loadStatistics();
