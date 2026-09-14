@@ -1,9 +1,12 @@
 """Пагинация, число запросов к базе и дымовой обход всех адресов."""
 import json
+import re
+from pathlib import Path
 
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
-from django.test import Client
+from django.test import Client, SimpleTestCase
 from django.test.utils import CaptureQueriesContext
 
 from articles.constructor.models import Article
@@ -103,6 +106,52 @@ class QueryCountTests(BaseCase):
         self.make_article(author='udalyonnyy', title='Осиротевшая')
         card = Client().get('/api/v1/articles/catalog/').json()['articles'][0]
         self.assertEqual(card['author_name'], 'udalyonnyy')
+
+
+class ArticleAuthorLinkTests(BaseCase):
+    """Блок автора под статьёй ведёт в профиль — и только туда, где он открывается."""
+
+    def _page(self, author):
+        article = self.make_article(author=author, title='Статья')
+        return Client().get(f'/articles/{article.id}/').content.decode()
+
+    def test_candidate_author_is_linked_by_name(self):
+        body = self._page('kandidat')
+        self.assertIn('href="/kandidat/"', body)
+        self.assertIn('Кандидат', body)          # имя, а не логин
+        self.assertEqual(Client().get('/kandidat/').status_code, 200)
+
+    def test_verified_company_author_is_linked(self):
+        self.assertIn('href="/firma/"', self._page('firma'))
+
+    def test_author_without_public_profile_is_not_linked(self):
+        """Ссылка на модератора и на удалённый аккаунт вела бы в 404."""
+        self.assertEqual(Client().get('/moder/').status_code, 404)
+        self.assertNotIn('href="/moder/"', self._page('moder'))
+        self.assertNotIn('href="/udalyonnyy/"', self._page('udalyonnyy'))
+
+
+class TemplateCommentTests(SimpleTestCase):
+    """Комментарии в шаблонах не должны попадать на страницу.
+
+    Django понимает {# … #} только в одну строку: многострочный такой
+    комментарий не распознаётся и выводится читателю как обычный текст.
+    Для нескольких строк нужен {% comment %}.
+    """
+
+    def test_no_multiline_hash_comments(self):
+        broken = []
+        for path in Path(settings.BASE_DIR).rglob('*.html'):
+            if 'venv' in path.parts:
+                continue
+            text = path.read_text(encoding='utf-8')
+            for match in re.finditer(r'\{#', text):
+                end = text.find('#}', match.start())
+                if end == -1 or '\n' in text[match.start():end]:
+                    broken.append(f'{path.relative_to(settings.BASE_DIR)}:{text[:match.start()].count(chr(10)) + 1}')
+
+        self.assertEqual(broken, [], 'многострочный {# #} выводится на страницу, нужен {% comment %}: '
+                                     + ', '.join(broken))
 
 
 class UploadValidationTests(BaseCase):

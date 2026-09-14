@@ -5,8 +5,10 @@ from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
 from articles.constructor.models import Article, ArticleVote
-from authorization.views import get_current_account
 from articles.serializers import cover_gradient
+from authorization.models import Account, ROLE_COMPANY, ROLE_USER
+from authorization.views import get_current_account
+from companies.models import Company
 from core.auth import api_login_required
 from core.utils import load_json_body
 from users.models import UserProfile
@@ -24,6 +26,30 @@ AV_COLORS = [
 def _av(username):
     ci = ord(username[0]) % len(AV_COLORS) if username else 0
     return AV_COLORS[ci]
+
+
+def _author_link(username):
+    """Имя автора и ссылка на его профиль: (имя, ссылка или None).
+
+    Адрес /<username>/ отдаёт 404 модераторам, удалённым аккаунтам и компаниям
+    без верификации, поэтому ссылку ставим только там, где страница откроется.
+    Имя берём из аккаунта — в статье хранится один логин.
+    """
+    if not username:
+        return '', None
+
+    account = Account.objects.filter(username=username).first()
+    if account is None:
+        return username, None
+
+    name = account.name or username
+    if account.role == ROLE_USER:
+        return name, f'/{username}/'
+    if account.role == ROLE_COMPANY:
+        company = Company.objects.filter(username=username).first()
+        if company is not None and company.is_verified:
+            return name, f'/{username}/'
+    return name, None
 
 
 def article_read(request, article_id):
@@ -71,10 +97,13 @@ def article_read(request, article_id):
     author_total_views = author_articles.aggregate(t=Sum('views'))['t'] or 0
 
     user_profile = UserProfile.objects.filter(username=article.author_username).first()
+    author_name, author_url = _author_link(article.author_username)
 
     av_bg, av_fg = _av(article.author_username or '?')
 
     context = {
+        'author_name': author_name,
+        'author_url': author_url,
         'article': article,
         'cover_gradient': cover_gradient(article.cover_index),
         'vote_score': article.likes,
