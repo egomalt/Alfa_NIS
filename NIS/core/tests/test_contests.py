@@ -157,3 +157,49 @@ class MalformedInputTests(BaseCase):
             with self.subTest(payload=payload):
                 response = Client().post(f'/api/v1/tests/{test.id}/submit/', payload, 'application/json')
                 self.assertLess(response.status_code, 500)
+
+
+class ArticleContentTests(BaseCase):
+    """Тело статьи: сохранение из редактора и защита от вставки скриптов."""
+
+    def test_editor_can_save_html_body(self):
+        """Редактор шлёт тело строкой HTML. Проверка «должно быть списком» ломала сохранение."""
+        article = self.make_article(author='kandidat', published=False)
+        payload = json.dumps({
+            'title': 'Моя статья', 'excerpt': 'Описание',
+            'content': '<p>Текст <strong>жирный</strong></p>', 'tags': ['Python'],
+        })
+        response = self.login('kandidat').patch(f'/api/v1/articles/{article.id}/', payload, 'application/json')
+        self.assertEqual(response.status_code, 200)
+
+        article.refresh_from_db()
+        self.assertIn('<strong>жирный</strong>', article.content)
+
+    def test_script_is_stripped_from_body(self):
+        """Шаблон выводит тело без экранирования — без очистки это хранимая XSS."""
+        article = self.make_article(author='kandidat', published=False)
+        payload = json.dumps({'content':
+            '<p>ок</p><script>alert(1)</script><img src=x onerror="alert(1)">'
+            '<a href="javascript:alert(1)">клик</a><iframe src="//evil.ru"></iframe>'})
+        self.login('kandidat').patch(f'/api/v1/articles/{article.id}/', payload, 'application/json')
+
+        article.refresh_from_db()
+        for dangerous in ('<script', 'onerror', 'javascript:', '<iframe'):
+            self.assertNotIn(dangerous, article.content)
+        self.assertIn('<p>ок</p>', article.content)
+
+    def test_clean_body_reaches_reader_page(self):
+        article = self.make_article(author='kandidat', published=True)
+        self.login('kandidat').patch(
+            f'/api/v1/articles/{article.id}/',
+            json.dumps({'content': '<p>Полезно</p><script>alert(1)</script>'}), 'application/json')
+
+        body = Client().get(f'/articles/{article.id}/').content.decode()
+        self.assertIn('Полезно', body)
+        self.assertNotIn('<script>alert(1)</script>', body)
+
+    def test_tags_must_still_be_a_list(self):
+        article = self.make_article(author='kandidat', published=False)
+        response = self.login('kandidat').patch(
+            f'/api/v1/articles/{article.id}/', json.dumps({'tags': 'не список'}), 'application/json')
+        self.assertEqual(response.status_code, 400)
