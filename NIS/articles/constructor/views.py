@@ -7,6 +7,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from authorization.models import ROLE_USER
+from articles.sanitize import clean_article_html
 from articles.serializers import cover_gradient
 from core.auth import api_login_required, page_login_required
 from core.utils import load_json_body
@@ -69,15 +70,19 @@ def api_article_update(request, article_id):
             setattr(article, field, str(body[field] or '')[:limit])
             fields.append(field)
 
-    for field in ('content', 'tags'):
-        if field in body:
-            value = body[field]
-            if not isinstance(value, list):
-                return JsonResponse({'ok': False, 'message': f'Поле {field} должно быть списком.'}, status=400)
-            if field == 'tags':
-                value = [str(t)[:50] for t in value[:MAX_TAGS]]
-            setattr(article, field, value)
-            fields.append(field)
+    # Тело статьи — HTML-строка из редактора, а не список. Раньше здесь стояла
+    # проверка «должно быть списком», из-за чего сохранение падало с ошибкой 400.
+    # Пропускаем через очистку: шаблон выводит тело без экранирования.
+    if 'content' in body:
+        article.content = clean_article_html(body['content'])
+        fields.append('content')
+
+    if 'tags' in body:
+        value = body['tags']
+        if not isinstance(value, list):
+            return JsonResponse({'ok': False, 'message': 'Поле tags должно быть списком.'}, status=400)
+        article.tags = [str(t)[:50] for t in value[:MAX_TAGS]]
+        fields.append('tags')
 
     for field, maximum in (('cover_index', 999), ('read_time', 1000)):
         if field in body:
