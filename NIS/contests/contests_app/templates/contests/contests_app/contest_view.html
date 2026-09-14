@@ -11,7 +11,7 @@
 <title id="cv-page-title">Конкурс — Career</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="{% static 'css/career.css' %}">
+<link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
 <style>
 .cv-hero { background: var(--surface); border-bottom: 1px solid var(--line); }
 .cv-hero-inner { max-width: 1160px; margin: 0 auto; padding: 30px 32px 0; }
@@ -142,9 +142,9 @@ textarea.cv-submit-input { min-height: 120px; line-height: 1.6; resize: vertical
 <script>
   window.ALFA_APP_BOOTSTRAP = { page: "contest_view", contestId: {{ contest_id }} };
 </script>
-<script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-<script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
-<script type="module" src="{% static 'contests/contests_app/contest_view.js' %}?v=20260914-1"></script>
+<script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
+<script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
+<script type="module" src="{% static 'contests/contests_app/contest_view.js' %}?v={{ ASSET_V }}"></script>
 </head>
 <body>
 
@@ -221,7 +221,7 @@ textarea.cv-submit-input { min-height: 120px; line-height: 1.6; resize: vertical
 <script>
   window.ALFA_MOD_TARGET = { type: 'contest', id: {{ contest_id }} };
 </script>
-<script src="{% static 'js/report.js' %}?v=20260913-1"></script>
-<script src="{% static 'js/moderation-bar.js' %}?v=20260810-1"></script>
+<script src="{% static 'js/report.js' %}?v={{ ASSET_V }}"></script>
+<script src="{% static 'js/moderation-bar.js' %}?v={{ ASSET_V }}"></script>
 </body>
 </html>

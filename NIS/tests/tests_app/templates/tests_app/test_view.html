@@ -11,8 +11,8 @@
   <title>{{ test_title|default:"Тест" }} — Career</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <link rel="stylesheet" href="{% static 'main/test_view/test_view.css' %}?v=20260914-1">
+  <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
+  <link rel="stylesheet" href="{% static 'main/test_view/test_view.css' %}?v={{ ASSET_V }}">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     window.ALFA_APP_BOOTSTRAP = {
@@ -22,9 +22,9 @@
       page: "test_view"
     };
   </script>
-  <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-  <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
-  <script src="{% static 'main/test_view/app.js' %}?v=20260914-1" defer></script>
+  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
+  <script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
+  <script src="{% static 'main/test_view/app.js' %}?v={{ ASSET_V }}" defer></script>
 </head>
 <body>
 

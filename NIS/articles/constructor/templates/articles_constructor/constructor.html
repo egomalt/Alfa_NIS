@@ -7,7 +7,7 @@
 <meta name="csrf-token" content="{{ csrf_token }}">
 <title>Редактор статей — Career</title>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'articles_constructor/css/app.css' %}?v=20260914-1">
+<link rel="stylesheet" href="{% static 'articles_constructor/css/app.css' %}?v={{ ASSET_V }}">
 <script>
   (function(){
     var t = localStorage.getItem('alfa_theme');
@@ -161,7 +161,7 @@
   </button>
 </div>
 
-<script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-<script src="{% static 'articles_constructor/app.js' %}?v=20260914-1"></script>
+<script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
+<script src="{% static 'articles_constructor/app.js' %}?v={{ ASSET_V }}"></script>
 </body>
 </html>

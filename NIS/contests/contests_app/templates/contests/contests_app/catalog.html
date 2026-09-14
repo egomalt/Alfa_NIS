@@ -11,8 +11,8 @@
 <title>Конкурсы — Career</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="{% static 'css/career.css' %}">
-<link rel="stylesheet" href="{% static 'css/catalog.css' %}?v=20260914-3">
+<link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
+<link rel="stylesheet" href="{% static 'css/catalog.css' %}?v={{ ASSET_V }}">
 <style>
 /* Модалка «войдите, чтобы участвовать» — только на этой странице */
 .modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; padding: 24px; }
@@ -32,9 +32,9 @@
 <script>
   window.ALFA_APP_BOOTSTRAP = { page: "contests_catalog" };
 </script>
-<script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-<script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
-<script type="module" src="{% static 'contests/contests_app/catalog.js' %}?v=20260718-2"></script>
+<script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
+<script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
+<script type="module" src="{% static 'contests/contests_app/catalog.js' %}?v={{ ASSET_V }}"></script>
 </head>
 <body>
 

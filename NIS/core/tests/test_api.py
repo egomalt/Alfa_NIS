@@ -463,6 +463,22 @@ class CabinetSidebarTests(BaseCase):
                 client = self.login('firma' if url.startswith(('/cabinet/company', '/constructor')) else 'kandidat')
                 self.assertNotIn('data-logout-btn', client.get(url).content.decode())
 
+    def test_sidebar_can_be_closed_and_has_no_home_link(self):
+        """Панель выезжает поверх страницы — нужен способ её задвинуть."""
+        body = self.login('firma').get('/cabinet/company/').content.decode()
+        self.assertIn('data-sidebar-close', body)
+        # «На главную» убрана: логотип в верхней шапке ведёт туда же
+        self.assertNotIn('На главную', body)
+
+    def test_assets_carry_a_single_version(self):
+        """Раньше версии проставлялись руками и разъезжались, а career.css
+        подключался вообще без версии — правки не доезжали до браузера."""
+        body = self.login('firma').get('/cabinet/company/').content.decode()
+        versions = set(re.findall(r'\?v=([^"\']+)', body))
+        self.assertEqual(versions, {settings.ASSET_VERSION})
+        for match in re.findall(r'(?:href|src)="(/static/[^"]+\.(?:css|js))"', body):
+            self.fail(f'ссылка на статику без версии: {match}')
+
     def test_old_duplicate_sidebar_is_gone(self):
         client = self.login('firma')
         for url in self._company_pages():

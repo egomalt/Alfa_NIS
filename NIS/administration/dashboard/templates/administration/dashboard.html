@@ -9,10 +9,10 @@
   <title>Админ-панель — Alfa Career</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <link rel="stylesheet" href="{% static 'administration/dashboard.css' %}?v=20260810-3">
+  <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
+  <link rel="stylesheet" href="{% static 'administration/dashboard.css' %}?v={{ ASSET_V }}">
   <script>window.ALFA_ADMIN_BOOTSTRAP = { username: "{{ username|escapejs }}" };</script>
-  <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
+  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
 </head>
 <body>
 
@@ -175,11 +175,11 @@
   </div>
 </div>
 
-<script src="{% static 'js/pager.js' %}?v=20260914-1"></script>
-<script src="{% static 'administration/dashboard.js' %}?v=20260810-1"></script>
-<script src="{% static 'administration/overview.js' %}?v=20260722-1"></script>
-<script src="{% static 'administration/verification.js' %}?v=20260722-1"></script>
-<script src="{% static 'administration/users.js' %}?v=20260722-1"></script>
-<script src="{% static 'administration/reports.js' %}?v=20260722-1"></script>
+<script src="{% static 'js/pager.js' %}?v={{ ASSET_V }}"></script>
+<script src="{% static 'administration/dashboard.js' %}?v={{ ASSET_V }}"></script>
+<script src="{% static 'administration/overview.js' %}?v={{ ASSET_V }}"></script>
+<script src="{% static 'administration/verification.js' %}?v={{ ASSET_V }}"></script>
+<script src="{% static 'administration/users.js' %}?v={{ ASSET_V }}"></script>
+<script src="{% static 'administration/reports.js' %}?v={{ ASSET_V }}"></script>
 </body>
 </html>

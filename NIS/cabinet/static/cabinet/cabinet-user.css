@@ -1,5 +1,5 @@
 /* Общие стили кабинета кандидата. Токены — из career.css. */
-.ud-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 64px); }
+.ud-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 64px); }
 .ud-sidebar { border-right: 1px solid var(--line); background: var(--surface); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
 .ud-user-chip { display: flex; align-items: center; gap: 10px; padding: 10px 10px 18px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
 .ud-user-av { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background: var(--brand-soft); color: var(--brand-text); font-weight: 700; font-size: 16px; flex-shrink: 0; overflow: hidden; }
@@ -14,7 +14,7 @@
 .ud-side-spacer { flex: 1; }
 .ud-logout { color: var(--red-text); }
 .ud-logout:hover { background: var(--red-soft); }
-.ud-main { padding: 28px 32px 70px; overflow-y: auto; }
+.ud-main { min-width: 0; padding: 28px 32px 70px; overflow-y: auto; }
 .ud-tab-panel { display: block; }
 
 .ud-page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
@@ -101,12 +101,20 @@
 .cab-burger { display: none; align-items: center; gap: 8px; margin: 12px 16px 0; padding: 0 14px; height: 40px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); color: var(--text); font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit; }
 .cab-burger:hover { border-color: var(--brand); color: var(--brand-text); }
 .cab-scrim { display: none; }
+/* Кнопка «закрыть» внутри выехавшей панели. На широком экране панель
+   всегда на месте, закрывать нечего — кнопки нет. */
+.cab-close { display: none; margin-left: auto; width: 30px; height: 30px; flex-shrink: 0;
+  align-items: center; justify-content: center; border: 1px solid var(--line-2);
+  border-radius: 8px; background: var(--surface); color: var(--muted); cursor: pointer; }
+.cab-close:hover { color: var(--text); border-color: var(--brand); }
+.cab-chip-text { min-width: 0; }
 
 @media (max-width: 980px) { .ud-two-col { grid-template-columns: 1fr; } .ud-stats-row { grid-template-columns: repeat(2,1fr); } .ud-shortcuts { grid-template-columns: repeat(2,1fr); } }
 @media (max-width: 720px) {
-  .ud-layout { grid-template-columns: 1fr; }
+  .ud-layout { grid-template-columns: minmax(0, 1fr); }
   .cab-burger { display: inline-flex; }
-  .ud-sidebar { position: fixed; top: 64px; left: 0; bottom: 0; width: 240px; transform: translateX(-100%); transition: transform .22s ease; z-index: 80; height: auto; }
+  .cab-close { display: inline-flex; }
+  .ud-sidebar { position: fixed; top: 64px; left: 0; width: 240px; height: calc(100dvh - 64px); transform: translateX(-100%); transition: transform .22s ease; z-index: 80; overscroll-behavior: contain; }
   .ud-layout.sidebar-open .ud-sidebar { transform: none; box-shadow: 0 10px 40px rgba(16,24,40,.25); }
   .ud-layout.sidebar-open .cab-scrim { display: block; position: fixed; inset: 64px 0 0 0; background: rgba(0,0,0,.4); z-index: 70; }
 }

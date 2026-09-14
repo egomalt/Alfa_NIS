@@ -8,12 +8,12 @@
   <title>Профиль кандидата — Alfa Career</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/career.css' %}">
+  <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
   <script>
     window.ALFA_APP_BOOTSTRAP = { username: "{{ username|escapejs }}", type: "user" };
   </script>
-  <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-  <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
+  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
+  <script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
   <style>
     main { max-width: 980px; margin: 0 auto; padding: 32px 32px 80px; }
 
@@ -79,12 +79,12 @@
   </div>
 </main>
 
-<script src="{% static 'js/plural.js' %}?v=20260914-1"></script>
-<script src="{% static 'profiles/user.js' %}?v=20260914-2"></script>
+<script src="{% static 'js/plural.js' %}?v={{ ASSET_V }}"></script>
+<script src="{% static 'profiles/user.js' %}?v={{ ASSET_V }}"></script>
 <meta name="csrf-token" content="{{ csrf_token }}">
 <script>
   window.ALFA_MOD_TARGET = { type: 'user', username: "{{ username|escapejs }}" };
 </script>
-<script src="{% static 'js/moderation-bar.js' %}?v=20260810-1"></script>
+<script src="{% static 'js/moderation-bar.js' %}?v={{ ASSET_V }}"></script>
 </body>
 </html>

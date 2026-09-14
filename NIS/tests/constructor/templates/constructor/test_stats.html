@@ -100,6 +100,6 @@
 {% endblock %}
 
 {% block page_script %}
-<script src="{% static 'js/plural.js' %}?v=20260914-1"></script>
-<script src="{% static 'constructor/js/test_stats.js' %}?v=20260914-2"></script>
+<script src="{% static 'js/plural.js' %}?v={{ ASSET_V }}"></script>
+<script src="{% static 'constructor/js/test_stats.js' %}?v={{ ASSET_V }}"></script>
 {% endblock %}

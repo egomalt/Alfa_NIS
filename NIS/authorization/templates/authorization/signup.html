@@ -11,15 +11,15 @@
   <title>Регистрация — Alfa Career</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/career.css' %}">
+  <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
   <script>
     window.ALFA_APP_BOOTSTRAP = {
       path: "{{ app_path|escapejs }}",
       page: "signup"
     };
   </script>
-  <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
-  <script type="module" src="{% static 'authorization/app.js' %}?v=20260914-1"></script>
+  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
+  <script type="module" src="{% static 'authorization/app.js' %}?v={{ ASSET_V }}"></script>
 </head>
 <body>
 <div class="cr-auth-page">

@@ -71,10 +71,14 @@
       e.stopPropagation();
       layout.classList.toggle('sidebar-open');
     });
-    // клик по затемнению или пункту меню закрывает панель
+    // Закрыть панель: крестиком внутри неё, кликом по затемнению или по пункту меню
     layout.addEventListener('click', e => {
-      if (e.target.classList.contains('cab-scrim')) close();
+      if (e.target.closest('[data-sidebar-close]')) close();
+      else if (e.target.classList.contains('cab-scrim')) close();
       else if (e.target.closest('.ud-side-link, .cp-side-link')) close();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') close();
     });
   });
 })();
