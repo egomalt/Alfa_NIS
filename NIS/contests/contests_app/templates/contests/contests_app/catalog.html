@@ -12,38 +12,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="{% static 'css/career.css' %}">
+<link rel="stylesheet" href="{% static 'css/catalog.css' %}?v=20260914-3">
 <style>
-main { max-width: 1160px; margin: 0 auto; padding: 40px 32px 90px; }
-.page-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 16px; flex-wrap: wrap; }
-.page-title { font-size: 28px; font-weight: 800; letter-spacing: -.025em; margin-bottom: 5px; }
-.page-subtitle { font-size: 15px; color: var(--muted); }
-
-/* Фильтры — единый компонент .cr-filters / .cr-chip в career.css */
-
-.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-@media (max-width: 900px) { .grid { grid-template-columns: repeat(2,1fr); } }
-@media (max-width: 580px) { .grid { grid-template-columns: 1fr; } }
-
-.card { display: flex; flex-direction: column; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); transition: border-color .15s, box-shadow .15s; }
-.card:hover { border-color: var(--line-2); box-shadow: var(--shadow); }
-.card-header { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
-.card-co-icon { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: var(--brand-soft); color: var(--brand-text); font-weight: 700; font-size: 13px; flex-shrink: 0; }
-.card-co-name { font-size: 12.5px; color: var(--muted); }
-.card-status { margin-left: auto; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
-.card-title { font-size: 15.5px; font-weight: 700; line-height: 1.3; margin-bottom: 7px; }
-.card-desc { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; flex: 1; }
-.card-facts { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-.card-deadline { display: flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--faint); }
-.card-deadline.urgent { color: var(--brand-text); font-weight: 600; }
-.card-category { font-size: 12px; font-weight: 500; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--text-2); }
-.card-prize { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--amber-text); background: var(--amber-soft); padding: 6px 10px; border-radius: 8px; margin-bottom: 16px; }
-.btn-start { height: 38px; width: 100%; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface); color: var(--text); font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; font-family: inherit; }
-.btn-start:hover { background: var(--brand); color: var(--on-brand); border-color: transparent; }
-
-.empty { grid-column: 1/-1; padding: 60px; text-align: center; border: 2px dashed var(--line-2); border-radius: 16px; }
-.empty-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-.empty-sub { font-size: 14px; color: var(--muted); }
-
+/* Модалка «войдите, чтобы участвовать» — только на этой странице */
 .modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; padding: 24px; }
 .modal-backdrop.open { display: flex; }
 .modal-card { width: 100%; max-width: 400px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); padding: 30px; box-shadow: var(--shadow-lg); text-align: center; }
@@ -70,11 +41,25 @@ main { max-width: 1160px; margin: 0 auto; padding: 40px 32px 90px; }
 {% include 'partials/navbar.html' with active='contests' chip_id='catalog-user-chip' %}
 
 <main>
-  <div class="page-header">
-    <div>
-      <div class="page-title">Конкурсы</div>
-      <div class="page-subtitle">Решайте реальные кейсы компаний и получайте офферы</div>
+
+  <div class="hero">
+    <div class="hero-label">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"/></svg>
+      Соревнования
     </div>
+    <div class="hero-title">Конкурсы от компаний</div>
+    <div class="hero-sub">Решайте реальные кейсы, показывайте себя работодателю и получайте офферы</div>
+  </div>
+
+  <div class="search-row">
+    <div class="search-wrap">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input class="search-input" id="search-input" type="search" placeholder="Поиск по конкурсам..." autocomplete="off">
+    </div>
+    <a href="/cabinet/company/contests/new/" class="btn-write" id="btn-create" style="display:none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Создать конкурс
+    </a>
   </div>
 
   <div class="cr-filters">
@@ -85,7 +70,7 @@ main { max-width: 1160px; margin: 0 auto; padding: 40px 32px 90px; }
       <button class="cr-chip" data-status="finished">Завершённые</button>
     </div>
     <div class="cr-filter-divider"></div>
-    <div class="cr-filter-group">
+    <div class="cr-filter-group" style="flex-wrap:wrap;">
       <span class="cr-filter-label">Категория</span>
       <button class="cr-chip active" data-cat="all">Все</button>
       <button class="cr-chip" data-cat="backend">Backend</button>
@@ -94,10 +79,30 @@ main { max-width: 1160px; margin: 0 auto; padding: 40px 32px 90px; }
       <button class="cr-chip" data-cat="analytics">Аналитика</button>
       <button class="cr-chip" data-cat="design">Дизайн</button>
     </div>
-    <span class="cr-filter-count" id="cat-count"></span>
   </div>
 
-  <div class="grid" id="cat-grid"></div>
+  <div class="content-cols">
+    <section>
+      <div class="section-header">
+        <div class="section-title">Все конкурсы</div>
+        <div class="section-count" id="cat-count"></div>
+      </div>
+      <div class="cn-grid" id="cat-grid">
+        <div class="state-msg">Загрузка…</div>
+      </div>
+      <div class="load-more-row" id="load-more-row" style="display:none;">
+        <button class="btn-load" id="btn-load">Загрузить ещё</button>
+      </div>
+    </section>
+
+    <aside class="aside">
+      <div class="aside-card">
+        <div class="aside-title">Скоро завершатся</div>
+        <div class="trending-list" id="closing-list"></div>
+      </div>
+    </aside>
+  </div>
+
 </main>
 
 <div class="modal-backdrop" id="cat-auth-modal">
