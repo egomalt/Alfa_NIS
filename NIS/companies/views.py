@@ -9,8 +9,11 @@ from core.auth import api_login_required, page_login_required
 from core.utils import load_json_body, serialize_form_errors
 
 from .forms import CompanyProfileForm, CompanyVerificationForm
-from .models import Company, CompanyRating
+from .models import Company, CompanyRating, ensure_company
 from core.pagination import paginate
+from django.db.models import Avg, Count
+from django.utils import timezone
+from tests.constructor.models import Test
 
 # Каталоги фильтруются на стороне браузера, поэтому страница крупная:
 # ограничение защищает от выгрузки всей таблицы, но не режет текущий интерфейс.
@@ -22,10 +25,7 @@ CATALOG_PER_PAGE = 100
 def company_tests_page(request):
     """Раздел «Тесты» кабинета компании (страница в доменном приложении)."""
     account = request.account
-    company, _ = Company.objects.get_or_create(
-        username=account.username,
-        defaults={'name': account.name, 'contact_email': account.email},
-    )
+    company = ensure_company(account)
     if not company.is_verified:
         return redirect('/cabinet/company/')
     return render(request, 'companies/tests.html', {
@@ -36,7 +36,6 @@ def company_tests_page(request):
 
 
 def _company_rating(company):
-    from django.db.models import Avg, Count
     agg = company.ratings.aggregate(avg=Avg('rating'), cnt=Count('id'))
     avg = agg['avg']
     total = agg['cnt'] or 0
@@ -88,8 +87,6 @@ def _serialize_company(company, include_private=False):
 
 @require_GET
 def api_companies_list(request):
-    from django.db.models import Avg, Count
-    from tests.constructor.models import Test
 
     companies_qs = Company.objects.filter(verification_status=Company.VERIF_APPROVED).order_by('-created_at')
     companies, page_meta = paginate(request, companies_qs, CATALOG_PER_PAGE)
@@ -155,7 +152,6 @@ def api_company_profile(request, username):
 @require_http_methods(['POST'])
 @api_login_required(ROLE_COMPANY)
 def api_company_verification(request, username):
-    from django.utils import timezone
     company = get_object_or_404(Company, username=username)
     if request.account.username != username:
         return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
@@ -178,7 +174,6 @@ def api_company_verification(request, username):
 
 @require_GET
 def api_company_tests(request, username):
-    from tests.constructor.models import Test
 
     company = get_object_or_404(Company, username=username)
     current = get_current_account(request)
@@ -246,7 +241,6 @@ def api_my_company_ratings(request):
 @require_http_methods(['POST'])
 @api_login_required(ROLE_USER)
 def api_company_rate(request, username):
-    from django.db.models import Avg
 
     account = request.account
 

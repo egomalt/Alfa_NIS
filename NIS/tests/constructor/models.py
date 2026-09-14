@@ -20,6 +20,10 @@ class Test(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        indexes = [
+            models.Index(fields=['status'], name='test_status_idx'),
+            models.Index(fields=['owner_username', 'status'], name='test_owner_status_idx'),
+        ]
         ordering = ['-created_at']
 
     def __str__(self):

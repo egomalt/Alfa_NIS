@@ -8,6 +8,8 @@ from django.views.decorators.http import require_GET, require_POST
 from core.utils import serialize_form_errors
 from .forms import AccountLoginForm, AccountRegistrationForm
 from .models import Account, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER
+from companies.models import Company
+from users.models import UserProfile
 
 
 def get_current_account(request):
@@ -35,9 +37,6 @@ def accounts_shell(request):
 
 @require_POST
 def api_register(request):
-    from companies.models import Company
-    from users.models import UserProfile
-
     form = AccountRegistrationForm(request.POST)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
@@ -136,12 +135,10 @@ def api_me(request):
 
     avatar = None
     if account.role == ROLE_USER:
-        from users.models import UserProfile
         profile = UserProfile.objects.filter(username=account.username).first()
         if profile and profile.avatar:
             avatar = profile.avatar.url
     elif account.role == ROLE_COMPANY:
-        from companies.models import Company
         company = Company.objects.filter(username=account.username).first()
         if company and company.avatar:
             avatar = company.avatar.url

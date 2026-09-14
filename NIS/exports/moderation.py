@@ -1,19 +1,13 @@
 """Сбор сводки модерации и сборка PDF-отчёта для админ-панели."""
+from django.utils import timezone
+
 from administration.reports.api_views import _new_counts_by_target
-from administration.reports.models import ESCALATION_THRESHOLD, Report
-from authorization.models import (
-    Account, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER, STATUS_BANNED,
-)
+from administration.reports.models import ESCALATION_THRESHOLD, Report, TARGET_LABELS
+from authorization.models import Account, ROLE_LABELS, STATUS_BANNED
 from companies.models import Company
 
-from .pdf import ReportBuilder
+from .pdf import ReportBuilder, fmt_date
 
-ROLE_LABELS = {ROLE_USER: 'Кандидат', ROLE_COMPANY: 'Компания', ROLE_MODERATOR: 'Модератор'}
-TARGET_LABELS = dict(Report.TARGET_CHOICES)
-
-
-def _date(dt):
-    return dt.strftime('%d.%m.%Y') if dt else '—'
 
 
 def build_admin_pdf():
@@ -39,7 +33,7 @@ def build_admin_pdf():
     # Заявки на верификацию
     r.section('Заявки на верификацию')
     if pending:
-        rows = [[c.name or c.username, c.industry or '—', c.city or '—', _date(c.submitted_at)] for c in pending]
+        rows = [[c.name or c.username, c.industry or '—', c.city or '—', fmt_date(c.submitted_at)] for c in pending]
         r.table(['Компания', 'Индустрия', 'Город', 'Подано'], rows, col_ratios=[2.6, 2.0, 1.6, 1.4])
     else:
         r.empty_note('Очередь верификации пуста.')
@@ -55,7 +49,7 @@ def build_admin_pdf():
                 TARGET_LABELS.get(rep.target_type, rep.target_type),
                 rep.target_title + mark,
                 rep.reporter_username or '—',
-                _date(rep.created_at),
+                fmt_date(rep.created_at),
             ])
         r.table(['Тип', 'Цель', 'Заявитель', 'Дата'], rows, col_ratios=[1.4, 3.0, 1.8, 1.3])
     else:
@@ -67,7 +61,7 @@ def build_admin_pdf():
         rows = [[
             u.name or u.username,
             ROLE_LABELS.get(u.role, u.role),
-            _date(u.ban_until) if u.ban_until else 'навсегда',
+            fmt_date(u.ban_until) if u.ban_until else 'навсегда',
             (u.ban_reason or '—')[:80],
         ] for u in banned]
         r.table(['Пользователь', 'Роль', 'Бан до', 'Причина'], rows, col_ratios=[2.0, 1.3, 1.4, 3.0])
@@ -78,5 +72,4 @@ def build_admin_pdf():
 
 
 def admin_filename():
-    from django.utils import timezone
     return 'career-moderation-%s.pdf' % timezone.localtime(timezone.now()).strftime('%Y%m%d')

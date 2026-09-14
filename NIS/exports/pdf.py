@@ -10,6 +10,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from django.http import HttpResponse
 from reportlab.platypus import (
     BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer, Table, TableStyle,
 )
@@ -200,7 +201,11 @@ class ReportBuilder:
 
 def pdf_response(filename, data):
     """Готовый HttpResponse со скачиванием PDF."""
-    from django.http import HttpResponse
     resp = HttpResponse(data, content_type='application/pdf')
     resp['Content-Disposition'] = 'attachment; filename="%s"' % filename
     return resp
+
+
+def fmt_date(value):
+    """Дата для отчётов. Раньше эта функция была скопирована в три файла экспорта."""
+    return value.strftime('%d.%m.%Y') if value else '—'

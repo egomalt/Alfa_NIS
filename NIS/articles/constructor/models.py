@@ -20,6 +20,11 @@ class Article(models.Model):
     published_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        # Каталоги и профили фильтруют парой «автор + статус», отсюда составной индекс
+        indexes = [
+            models.Index(fields=['status', '-published_at'], name='article_status_pub_idx'),
+            models.Index(fields=['author_username', 'status'], name='article_author_status_idx'),
+        ]
         db_table = 'articles'
         ordering = ['-created_at']
 

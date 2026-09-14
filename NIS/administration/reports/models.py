@@ -51,3 +51,7 @@ class Report(models.Model):
 
     def __str__(self):
         return f'{self.get_target_type_display()}: {self.target_title}'
+
+
+# Подписи типов для интерфейса и отчётов — берём отсюда, а не дублируем по файлам
+TARGET_LABELS = dict(Report.TARGET_CHOICES)

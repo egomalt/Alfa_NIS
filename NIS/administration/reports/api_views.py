@@ -1,16 +1,19 @@
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 
+from articles.constructor.models import Article
+from authorization.models import Account, ROLE_USER
+from companies.models import Company
+from contests.contests_cabinet.models import Contest
 from core.auth import api_login_required, moderator_required
 from core.pagination import paginate
 from core.utils import load_json_body
-from .models import ESCALATION_THRESHOLD, Report
+from tests.constructor.models import Test
+from .models import ESCALATION_THRESHOLD, Report, TARGET_LABELS
 
 VALID_STATUSES = [Report.STATUS_NEW, Report.STATUS_RESOLVED, Report.STATUS_DISMISSED]
-
-TARGET_LABELS = dict(Report.TARGET_CHOICES)
 
 MAX_REASON_LENGTH = 2000
 REPORTS_PER_PAGE = 100
@@ -51,11 +54,6 @@ def _resolve_target(target_type, target_id):
     Заголовок, ссылку и автора определяет сервер, а не клиент: иначе в очередь
     модерации можно было бы подсунуть произвольный текст и чужое имя.
     """
-    from articles.constructor.models import Article
-    from authorization.models import Account, ROLE_USER
-    from companies.models import Company
-    from contests.contests_cabinet.models import Contest
-    from tests.constructor.models import Test
 
     if target_type in (Report.TARGET_ARTICLE, Report.TARGET_CONTEST, Report.TARGET_TEST):
         if not target_id.isdigit():
@@ -105,15 +103,18 @@ def api_report_create(request):
         return JsonResponse({'ok': False, 'message': 'Нельзя пожаловаться на свой материал.'}, status=400)
 
     try:
-        Report.objects.create(
-            target_type=target_type,
-            target_id=target_id,
-            target_title=title[:255],
-            target_url=url,
-            author_username=author_username,
-            reporter_username=request.account.username,
-            reason=reason[:MAX_REASON_LENGTH],
-        )
+        # Вставку оборачиваем в свой atomic: иначе пойманная IntegrityError оставляет
+        # внешнюю транзакцию в сломанном состоянии, и следующий запрос к БД падает.
+        with transaction.atomic():
+            Report.objects.create(
+                target_type=target_type,
+                target_id=target_id,
+                target_title=title[:255],
+                target_url=url,
+                author_username=author_username,
+                reporter_username=request.account.username,
+                reason=reason[:MAX_REASON_LENGTH],
+            )
     except IntegrityError:
         return JsonResponse({'ok': False, 'message': 'Вы уже жаловались на этот материал.'}, status=409)
 
@@ -151,10 +152,6 @@ def api_report_takedown(request, report_id):
     Раньше кнопка «Снять материал» только меняла статус жалобы — материал
     оставался опубликованным, а модератор считал вопрос закрытым.
     """
-    from articles.constructor.models import Article
-    from contests.contests_cabinet.models import Contest
-    from tests.constructor.models import Test
-
     report = get_object_or_404(Report, id=report_id)
 
     models_by_type = {

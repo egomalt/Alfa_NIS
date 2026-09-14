@@ -7,7 +7,7 @@ from companies.models import CompanyRating
 from contests.contests_cabinet.models import ContestSubmission
 from users.models import UserProfile
 
-from .pdf import ReportBuilder
+from .pdf import ReportBuilder, fmt_date
 
 ARTICLE_STATUS = {
     Article.STATUS_DRAFT: 'Черновик',
@@ -18,10 +18,6 @@ SUB_STATUS = {
     ContestSubmission.STATUS_ACCEPTED: 'Принято',
     ContestSubmission.STATUS_REJECTED: 'Отклонено',
 }
-
-
-def _date(dt):
-    return dt.strftime('%d.%m.%Y') if dt else '—'
 
 
 def build_user_pdf(account):
@@ -49,7 +45,7 @@ def build_user_pdf(account):
 
     # Профиль
     r.section('Профиль')
-    r.note('Аккаунт: @%s · На платформе: %d дн. (с %s)' % (username, days, _date(account.created_at)))
+    r.note('Аккаунт: @%s · На платформе: %d дн. (с %s)' % (username, days, fmt_date(account.created_at)))
     if profile and profile.skills:
         r.note('Навыки: ' + ', '.join(profile.skills))
     if profile and profile.bio:
@@ -72,7 +68,7 @@ def build_user_pdf(account):
             ARTICLE_STATUS.get(a.status, a.status),
             a.views,
             a.likes,
-            _date(a.published_at),
+            fmt_date(a.published_at),
         ] for a in articles]
         r.table(['Название', 'Статус', 'Просмотры', 'Лайки', 'Дата'], rows,
                 col_ratios=[3.2, 1.5, 1.2, 1.0, 1.3])
@@ -86,7 +82,7 @@ def build_user_pdf(account):
             s.contest.title,
             s.contest.company_username,
             'Победитель' if s.winner else SUB_STATUS.get(s.status, s.status),
-            _date(s.created_at),
+            fmt_date(s.created_at),
         ] for s in subs]
         r.table(['Конкурс', 'Компания', 'Результат', 'Дата'], rows,
                 col_ratios=[3.0, 1.8, 1.5, 1.3])

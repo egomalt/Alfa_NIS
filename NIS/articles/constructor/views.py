@@ -7,6 +7,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from authorization.models import ROLE_USER
+from articles.serializers import cover_gradient
 from core.auth import api_login_required, page_login_required
 from core.utils import load_json_body
 
@@ -114,25 +115,14 @@ def api_article_delete(request, article_id):
     return JsonResponse({'ok': True})
 
 
-COVERS = [
-    'linear-gradient(135deg,#1e3a5f 0%,#2d6a9f 100%)',
-    'linear-gradient(135deg,#D62839 0%,#7a1020 100%)',
-    'linear-gradient(135deg,#134e5e 0%,#1a7a6e 100%)',
-    'linear-gradient(135deg,#3d1f6e 0%,#6b3fa0 100%)',
-    'linear-gradient(135deg,#2d3a1a 0%,#4a7a2d 100%)',
-    'linear-gradient(135deg,#5c3d00 0%,#b07000 100%)',
-]
-
-
 @ensure_csrf_cookie
 @page_login_required(ROLE_USER)
 def article_preview(request, article_id):
     article = Article.objects.filter(id=article_id, author_username=request.account.username).first()
     if not article:
         raise Http404
-    cover_gradient = COVERS[article.cover_index % len(COVERS)] if article.cover_index >= 0 else None
     return render(request, 'articles_constructor/preview.html', {
         'article': article,
         'article_id': article_id,
-        'cover_gradient': cover_gradient,
+        'cover_gradient': cover_gradient(article.cover_index),
     })
