@@ -10,22 +10,32 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <link rel="stylesheet" href="{% static 'tests_catalog/css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/catalog.css' %}?v=20260914-2">
   <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
   <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
-  <script src="{% static 'tests_catalog/js/app.js' %}" defer></script>
+  <script src="{% static 'tests_catalog/js/app.js' %}?v=20260914-2" defer></script>
 </head>
 <body>
 
 {% include 'partials/navbar.html' with active='tests' chip_id='tests-catalog-user-chip' %}
 
 <main>
-  <div class="page-header">
-    <div>
-      <div class="page-title">Тренировочные тесты</div>
-      <div class="page-subtitle">Готовьтесь по реальным заданиям работодателей</div>
+
+  <div class="hero">
+    <div class="hero-label">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Практика
     </div>
-    <a href="/constructor/" class="btn-create" id="btn-create" hidden>
+    <div class="hero-title">Тренировочные тесты</div>
+    <div class="hero-sub">Готовьтесь по реальным заданиям работодателей — без привязки к вакансии</div>
+  </div>
+
+  <div class="search-row">
+    <div class="search-wrap">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input class="search-input" id="search-input" type="search" placeholder="Поиск по тестам..." autocomplete="off">
+    </div>
+    <a href="/constructor/" class="btn-write" id="btn-create" style="display:none;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       Создать тест
     </a>
@@ -49,19 +59,30 @@
       <button class="cr-chip" data-cat="analytics">Аналитика</button>
       <button class="cr-chip" data-cat="other">Другое</button>
     </div>
-    <div class="cr-filter-divider"></div>
-    <div class="cr-filter-group">
-      <span class="cr-filter-label">Поиск</span>
-      <input id="catalog-search" class="cr-filter-search" type="search" placeholder="Название или автор"
-             autocomplete="off" spellcheck="false">
-    </div>
-    <span class="cr-filter-count" id="count"></span>
   </div>
 
-  <div class="grid" id="grid">
-    <div class="empty"><div class="empty-title">Загрузка…</div></div>
+  <div class="content-cols">
+    <section>
+      <div class="section-header">
+        <div class="section-title">Все задания</div>
+        <div class="section-count" id="count"></div>
+      </div>
+      <div class="te-grid" id="grid">
+        <div class="state-msg">Загрузка…</div>
+      </div>
+      <div class="load-more-row" id="load-more-row" style="display:none;">
+        <button class="btn-load" id="btn-load">Загрузить ещё</button>
+      </div>
+    </section>
+
+    <aside class="aside">
+      <div class="aside-card">
+        <div class="aside-title">Чаще всего проходят</div>
+        <div class="trending-list" id="trending-list"></div>
+      </div>
+    </aside>
   </div>
+
 </main>
-
 </body>
 </html>

@@ -243,3 +243,37 @@ class CompanyCatalogTests(BaseCase):
 
     def test_catalog_page_opens(self):
         self.assertEqual(Client().get('/companies/').status_code, 200)
+
+
+class TestsCatalogTests(BaseCase):
+    """Каталог тестов: поля карточки и фильтры из адреса."""
+
+    def test_card_fields_present(self):
+        self.make_test(owner='firma', published=True)
+        test = Client().get('/api/v1/tests/catalog/').json()['tests'][0]
+        for key in ('id', 'title', 'description', 'owner_name', 'level',
+                    'category', 'page_count', 'submissions', 'url'):
+            self.assertIn(key, test)
+
+    def test_submissions_count_is_returned(self):
+        """Число прохождений раньше в каталог не попадало, хотя считается при сдаче."""
+        test = self.make_test(owner='firma', published=True)
+        test.stats = {'level': 'junior', 'category': 'backend', 'submissions': 42}
+        test.save(update_fields=['stats'])
+
+        card = Client().get('/api/v1/tests/catalog/').json()['tests'][0]
+        self.assertEqual(card['submissions'], 42)
+        self.assertEqual(card['level'], 'junior')
+        self.assertEqual(card['category'], 'backend')
+
+    def test_only_published_tests_in_catalog(self):
+        self.make_test(owner='firma', published=True, title='Опубликован')
+        self.make_test(owner='firma', published=False, title='Черновик')
+        titles = [t['title'] for t in Client().get('/api/v1/tests/catalog/').json()['tests']]
+        self.assertIn('Опубликован', titles)
+        self.assertNotIn('Черновик', titles)
+
+    def test_catalog_page_opens_with_url_filters(self):
+        for url in ['/tests/', '/tests/?cat=backend', '/tests/?level=junior', '/tests/?q=тест']:
+            with self.subTest(url=url):
+                self.assertEqual(Client().get(url).status_code, 200)
