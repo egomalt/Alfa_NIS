@@ -47,7 +47,8 @@ input, button { font-family: inherit; }
 
 /* Meta row */
 .meta-row { display: flex; align-items: center; gap: 16px; margin-bottom: 36px; padding-bottom: 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.author-block { display: flex; align-items: center; gap: 11px; }
+.author-block { display: flex; align-items: center; gap: 11px; text-decoration: none; color: inherit; }
+a.author-block:hover .author-name { color: var(--brand-text); }
 .author-av { width: 40px; height: 40px; border-radius: 10px; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .author-name { font-size: 14.5px; font-weight: 700; }
 .author-sub { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
@@ -89,11 +90,25 @@ input, button { font-family: inherit; }
 .vote-count.down { color: #6b3fa0; }
 
 /* Author card */
-.author-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 28px; margin-bottom: 36px; }
+.author-card { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 28px; margin-bottom: 36px; text-decoration: none; color: inherit; }
+/* Карточка-ссылка на профиль автора */
+.author-card.is-link { transition: border-color .15s, box-shadow .18s, transform .18s; }
+.author-card.is-link:hover { border-color: var(--line-2); box-shadow: var(--shadow); transform: translateY(-2px); }
+.author-card.is-link:hover .author-card-name { color: var(--brand-text); }
+.author-card.is-link:hover .author-card-go { border-color: var(--brand); color: var(--brand-text); background: var(--brand-soft); }
 .author-card-top { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
 .author-card-av { width: 52px; height: 52px; border-radius: 13px; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.author-card-name { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
+.author-card-head { min-width: 0; }
+.author-card-name { font-size: 17px; font-weight: 700; margin-bottom: 3px; transition: color .15s; }
 .author-card-role { font-size: 13px; color: var(--muted); }
+.author-card-go {
+  margin-left: auto; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 13px;
+  border: 1px solid var(--line-2); border-radius: 9px;
+  color: var(--text-2); font-size: 12.5px; font-weight: 600;
+  transition: border-color .15s, color .15s, background .15s;
+}
 .author-bio { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
 .author-stats { display: flex; gap: 20px; }
 .author-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; }

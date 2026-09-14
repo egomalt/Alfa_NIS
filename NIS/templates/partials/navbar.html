@@ -22,8 +22,10 @@
   </button>
   <div {% if chip_id %}id="{{ chip_id }}"{% endif %} data-user-chip></div>
   {% if show_logout %}
-  {# Показывается и привязывается в static/js/career.js — он и так знает, кто вошёл.
-     Раньше здесь были три разных id, из которых обработчик слушал только один. #}
+  {% comment %}
+    Показывается и привязывается в static/js/career.js — он и так знает, кто вошёл.
+    Раньше здесь были три разных id, из которых обработчик слушал только один.
+  {% endcomment %}
   <button type="button" class="cr-btn-secondary cr-logout-btn" data-logout-btn hidden>Выйти</button>
   {% endif %}
 </header>

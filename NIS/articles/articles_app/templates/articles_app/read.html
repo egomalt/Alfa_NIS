@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/career.css' %}">
-  <link rel="stylesheet" href="{% static 'articles_app/css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'articles_app/css/app.css' %}?v=20260914-1">
   <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
   <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
 </head>
@@ -57,15 +57,16 @@
   <article class="article">
 
     <div class="meta-row">
-      <div class="author-block">
+      {# Подпись автора ведёт в его профиль — но только если профиль открывается #}
+      {% if author_url %}<a class="author-block" href="{{ author_url }}">{% else %}<div class="author-block">{% endif %}
         <div class="author-av" style="background:{{ av_bg }};color:{{ av_fg }};">{{ initial }}</div>
         <div>
-          <div class="author-name">{{ article.author_username }}</div>
+          <div class="author-name">{{ author_name }}</div>
           {% if user_profile and user_profile.bio %}
           <div class="author-sub">{{ user_profile.bio|truncatechars:60 }}</div>
           {% endif %}
         </div>
-      </div>
+      {% if author_url %}</a>{% else %}</div>{% endif %}
       <div class="meta-divider"></div>
       {% if article.read_time %}
       <div class="meta-item">
@@ -117,15 +118,25 @@
       </button>
     </div>
 
-    <div class="author-card">
+    {% comment %}
+      Вся карточка — ссылка на профиль автора. Если профиля нет (модератор,
+      удалённый аккаунт, непроверенная компания), остаётся обычный блок.
+    {% endcomment %}
+    {% if author_url %}<a class="author-card is-link" href="{{ author_url }}">{% else %}<div class="author-card">{% endif %}
       <div class="author-card-top">
         <div class="author-card-av" style="background:{{ av_bg }};color:{{ av_fg }};">{{ initial }}</div>
-        <div>
-          <div class="author-card-name">{{ article.author_username }}</div>
+        <div class="author-card-head">
+          <div class="author-card-name">{{ author_name }}</div>
           {% if user_profile and user_profile.bio %}
           <div class="author-card-role">{{ user_profile.bio|truncatechars:80 }}</div>
           {% endif %}
         </div>
+        {% if author_url %}
+        <span class="author-card-go">
+          Профиль
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </span>
+        {% endif %}
       </div>
       {% if user_profile and user_profile.bio %}
       <div class="author-bio">{{ user_profile.bio }}</div>
@@ -140,7 +151,7 @@
           <div class="author-stat-label">просмотров</div>
         </div>
       </div>
-    </div>
+    {% if author_url %}</a>{% else %}</div>{% endif %}
 
   </article>
 
