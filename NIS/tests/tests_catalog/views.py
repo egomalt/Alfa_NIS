@@ -34,6 +34,9 @@ def api_tests_catalog(request):
             'level': stats.get('level', ''),
             'category': stats.get('category', ''),
             'page_count': test.pages.count(),
+            # Число прохождений — признак «этот тест стоит внимания».
+            # Раньше в каталог не попадало, хотя считается при сдаче.
+            'submissions': stats.get('submissions', 0),
             'url': f'/tests/{test.id}/',
         })
     return JsonResponse({'ok': True, 'tests': result, **page_meta})
