@@ -1268,8 +1268,11 @@ input, textarea, select {
 .tests-table th:last-child, .tests-table td:last-child { padding-right: 24px; }
 .tests-table tr:last-child td { border-bottom: none; }
 .tests-table tbody tr:hover td { background: var(--surface-2); }
-.tests-table a { color: var(--brand-text); text-decoration: none; font-weight: 500; }
-.tests-table a:hover { text-decoration: underline; }
+/* Название — обычный текст, как заголовок строки в таблице конкурсов.
+   Красным в строке остаётся только то, что действительно требует внимания,
+   а состояние передаёт цветная плашка статуса. */
+.tests-table a { color: var(--text); text-decoration: none; font-weight: 600; }
+.tests-table a:hover { color: var(--brand-text); }
 
 .action-icon-btn {
   display: inline-flex;

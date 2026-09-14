@@ -80,7 +80,7 @@ function renderTable() {
           <div style="font-size:14px;font-weight:600;margin-bottom:2px;">${c.title || 'Без названия'}</div>
           <div style="font-size:12px;color:var(--muted);">${c.category || ''}</div>
         </div>
-        <div style="font-size:13px;${urgent ? 'color:var(--brand-text);font-weight:600;' : ''}">${formatDeadline(c.deadline)}</div>
+        <div class="cc-deadline${urgent ? ' urgent' : ''}">${formatDeadline(c.deadline)}</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-2);">${c.participants_count || 0}</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-2);">${c.submissions_count || 0}</div>
         <div><span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:${m.bg};color:${m.color};">${m.label}</span></div>

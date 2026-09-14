@@ -12,7 +12,6 @@
 {% block head_extra %}
 <script>Object.assign(window.ALFA_APP_BOOTSTRAP, { testId: {{ test_id }} });</script>
 <style>
-    .ts-wrap { max-width: 980px; }
 
     .ts-back { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; text-decoration: none; margin-bottom: 18px; transition: color .12s; }
     .ts-back:hover { color: var(--text); }
@@ -31,7 +30,7 @@
     .ts-card-label { font-size: 12.5px; color: var(--muted); margin-top: auto; }
 
     .ts-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
-    .ts-panel { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 20px 22px; }
+    .ts-panel { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 20px 22px; }
     .ts-panel-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
     .ts-panel-note { font-size: 12px; color: var(--faint); line-height: 1.45; margin-bottom: 16px; }
     .ts-panel-empty { font-size: 13px; color: var(--muted); }
@@ -48,7 +47,7 @@
     .ts-verdict { font-size: 12.5px; color: var(--text-2); padding: 10px 12px; border-radius: 10px; background: var(--surface-2); margin-top: 14px; line-height: 1.5; }
 
     /* Гистограмма результатов */
-    .ts-hist { display: flex; align-items: flex-end; gap: 8px; height: 150px; }
+    .ts-hist { display: flex; align-items: flex-end; gap: 8px; flex: 1; min-height: 150px; }
     .ts-hist-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; }
     .ts-hist-bars { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
     .ts-hist-bar { width: 60%; max-width: 34px; min-height: 2px; border-radius: 5px 5px 0 0; background: var(--brand); transition: height .35s; }
@@ -64,7 +63,7 @@
     }
     @media (max-width: 680px) {
       .ts-title { font-size: 20px; }
-      .ts-hist { height: 120px; gap: 4px; }
+      .ts-hist { min-height: 120px; gap: 4px; }
       .ts-hist-label { font-size: 9.5px; }
     }
     @media (max-width: 420px) {
@@ -74,7 +73,6 @@
 {% endblock %}
 
 {% block panel %}
-<div class="ts-wrap">
   <a class="ts-back" id="ts-back-link" href="{{ back_url }}">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
     Мои тесты
@@ -96,7 +94,6 @@
   <div id="ts-content">
     <div class="ts-loading">Загрузка…</div>
   </div>
-</div>
 {% endblock %}
 
 {% block page_script %}

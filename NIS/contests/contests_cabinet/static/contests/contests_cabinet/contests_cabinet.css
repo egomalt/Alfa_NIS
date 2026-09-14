@@ -24,6 +24,11 @@
 .cc-trow { padding: 14px 16px; align-items: center; border-bottom: 1px solid var(--line); transition: background .12s; cursor: pointer; }
 .cc-trow:last-child { border-bottom: none; }
 .cc-trow:hover { background: var(--surface-2); }
+/* Срок на исходе. Янтарный, а не фирменный красный: красный на сайте
+   означает бренд и опасные действия (удалить, выйти), и когда им же
+   подсвечена дата, строка начинает пестрить без нужды. */
+.cc-deadline { font-size: 13px; }
+.cc-deadline.urgent { color: var(--amber-text); font-weight: 600; }
 /* Три кнопки по 26px с зазорами не влезали в колонку 68px и
    упирались в правый край таблицы */
 .cc-actions { display: flex; gap: 6px; justify-content: flex-end; }
