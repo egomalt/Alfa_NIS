@@ -151,6 +151,7 @@ main { max-width: 1160px; margin: 0 auto; padding: 44px 32px 100px; }
   line-height: 1.3;
 }
 .co-name span {
+  min-width: 0;          /* без этого длинное название вытолкнет галочку за карточку */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -170,3 +171,33 @@ main { max-width: 1160px; margin: 0 auto; padding: 44px 32px 100px; }
 .co-stat svg { color: var(--faint); flex-shrink: 0; }
 .co-rating { color: var(--amber-text); }
 .co-rating svg { color: var(--amber-text); }
+
+
+/* ── Адаптив ───────────────────────────────────────────────────────── */
+
+/* Сетки карточек перестраиваются выше, рядом со своими блоками:
+   1000px — прячется боковая панель, 900px — две колонки, 580px — одна.
+   Здесь остальное: поля страницы, размер заголовка и строка поиска. */
+
+@media (max-width: 680px) {
+  main { padding: 28px 18px 72px; }
+
+  .hero { margin-bottom: 32px; }
+  .hero-title { font-size: 30px; }
+  .hero-sub { font-size: 14.5px; }
+
+  /* Кнопка не помещается рядом с полем — переносим её под поиск на всю ширину */
+  .search-row { flex-wrap: wrap; }
+  .search-wrap { flex-basis: 100%; }
+  .btn-write { width: 100%; justify-content: center; }
+
+  .cr-filters { margin-bottom: 26px; }
+  .featured-body { padding: 24px 22px; }
+  .co-card .card-body { padding: 18px; }
+}
+
+@media (max-width: 420px) {
+  main { padding: 24px 14px 64px; }
+  .hero-title { font-size: 26px; }
+  .hero-sub { font-size: 14px; }
+}

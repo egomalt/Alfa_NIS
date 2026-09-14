@@ -1,19 +1,20 @@
+from django.db.models import Avg, Count, IntegerField, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
 from core.auth import api_login_required, page_login_required
+from core.pagination import paginate
 from core.utils import load_json_body, serialize_form_errors
+from tests.constructor.models import Test
 
 from .forms import CompanyProfileForm, CompanyVerificationForm
 from .models import Company, CompanyRating, ensure_company
-from core.pagination import paginate
-from django.db.models import Avg, Count
-from django.utils import timezone
-from tests.constructor.models import Test
 
 # Каталоги фильтруются на стороне браузера, поэтому страница крупная:
 # ограничение защищает от выгрузки всей таблицы, но не режет текущий интерфейс.
@@ -88,14 +89,23 @@ def _serialize_company(company, include_private=False):
 @require_GET
 def api_companies_list(request):
 
-    companies_qs = Company.objects.filter(verification_status=Company.VERIF_APPROVED).order_by('-created_at')
-    companies, page_meta = paginate(request, companies_qs, CATALOG_PER_PAGE)
-    counts = (
-        Test.objects.filter(status=Test.STATUS_PUBLISHED)
+    # Сортируем по числу опубликованных тестов: каталог нужен кандидату, чтобы
+    # найти, где что порешать, — компании без единого теста внизу.
+    # Тесты связаны с компанией строкой owner_username, поэтому считаем подзапросом.
+    published_tests = (
+        Test.objects
+        .filter(status=Test.STATUS_PUBLISHED, owner_username=OuterRef('username'))
         .values('owner_username')
-        .annotate(cnt=Count('id'))
+        .annotate(n=Count('id'))
+        .values('n')
     )
-    published_counts = {row['owner_username']: row['cnt'] for row in counts}
+    companies_qs = (
+        Company.objects
+        .filter(verification_status=Company.VERIF_APPROVED)
+        .annotate(tests_total=Coalesce(Subquery(published_tests, output_field=IntegerField()), 0))
+        .order_by('-tests_total', '-created_at')
+    )
+    companies, page_meta = paginate(request, companies_qs, CATALOG_PER_PAGE)
 
     ratings_qs = (
         CompanyRating.objects
@@ -113,7 +123,7 @@ def api_companies_list(request):
             'is_verified': c.is_verified,
             'industry': c.industry,
             'city': c.city,
-            'tests_count': published_counts.get(c.username, 0),
+            'tests_count': c.tests_total,
             'profile_url': f'/{c.username}/',
             'avg_rating': ratings_map.get(c.username, (None, 0))[0],
             'rating_count': ratings_map.get(c.username, (None, 0))[1],
