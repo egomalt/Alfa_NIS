@@ -22,6 +22,28 @@
     <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-rating">—</div><div class="cp-stat-label">Оценка от кандидатов</div></div>
   </div>
 
+  <div class="cp-stats-row">
+    <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-submissions">—</div><div class="cp-stat-label">Решений прислано</div></div>
+    <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-winners">—</div><div class="cp-stat-label">Победителей выбрано</div></div>
+    <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-pending">—</div><div class="cp-stat-label">Ждут проверки</div></div>
+    <div class="cp-stat-card"><div class="cp-stat-value" id="cpst2-attempts">—</div><div class="cp-stat-label">Прохождений тестов</div></div>
+  </div>
+
+  <div class="cp-section" id="cp-activity-section">
+    <div class="cp-section-title">Активность за 12 недель</div>
+    <div class="cp-legend">
+      <span class="cp-legend-item"><i class="cp-legend-dot cp-dot-subs"></i>решения на конкурсы</span>
+      <span class="cp-legend-item"><i class="cp-legend-dot cp-dot-att"></i>прохождения тестов</span>
+    </div>
+    <div class="cp-chart" id="cp-activity-chart"></div>
+  </div>
+
+  <div class="cp-section" id="cp-skills-section" style="display:none;">
+    <div class="cp-section-title">Кто к вам приходит</div>
+    <div class="cp-section-note">Навыки из профилей тех, кто присылал решения на ваши конкурсы</div>
+    <div class="cp-skills" id="cp-skills"></div>
+  </div>
+
   <div class="cp-section" id="cp-stats-rating-section" style="display:none;">
     <div class="cp-section-title">Рейтинг компании</div>
     <div class="cp-rating-hero">
@@ -33,14 +55,9 @@
     </div>
   </div>
 
-  <div class="cp-section">
-    <div class="cp-section-title">Конкурсы</div>
-    <div id="cp-stats-contests"></div>
-  </div>
-
-  <div class="cp-section">
-    <div class="cp-section-title">Тесты</div>
-    <div id="cp-stats-tests"></div>
-  </div>
+  {% comment %}
+    Списки конкурсов и тестов отсюда убраны: они целиком дублировали
+    разделы «Конкурсы» и «Тесты» в боковом меню. Здесь — только сводка.
+  {% endcomment %}
 </div>
 {% endblock %}

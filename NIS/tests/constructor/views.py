@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
@@ -7,7 +7,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from core.auth import api_login_required, page_login_required
 from core.utils import load_json_body
-from tests import code_results
+from tests import attempts, code_results, statistics
 
 from .executor import LANGUAGES, run_in_docker
 from .models import Test, TestAnswer, TestPage
@@ -72,6 +72,20 @@ def constructor_shell(request, test_id=None):
     })
 
 
+@ensure_csrf_cookie
+@page_login_required(*TEST_OWNER_ROLES)
+def constructor_stats_shell(request, test_id):
+    """Страница «Как проходят тест». Доступна только автору теста."""
+    test = Test.objects.filter(id=test_id, owner_username=request.account.username).first()
+    if test is None:
+        raise Http404
+    return render(request, 'constructor/test_stats.html', {
+        'test_id': test_id,
+        'test_title': test.title,
+        'back_url': '/cabinet/company/tests/' if request.account.role == ROLE_COMPANY else '/cabinet/user/tests/',
+    })
+
+
 def _serialize_answer(answer):
     return {
         'id': answer.id,
@@ -107,7 +121,7 @@ def _serialize_test(test, include_pages=False):
         'level': stats.get('level', ''),
         'category': stats.get('category', ''),
         'page_count': test.pages.count(),
-        'submissions': stats.get('submissions', 0),
+        'submissions': attempts.count_for(test),
         'created_at': test.created_at.isoformat(),
         'updated_at': test.updated_at.isoformat(),
         'url': f'/tests/{test.id}/',
@@ -126,8 +140,21 @@ def api_tests_list(request):
     Параметр ?owner= намеренно игнорируется: раньше по нему можно было вытащить
     чужие черновики. Публичные тесты компании отдаёт /api/v1/companies/<username>/tests/.
     """
-    tests = Test.objects.filter(owner_username=request.account.username).prefetch_related('pages')
+    tests = (Test.objects
+             .filter(owner_username=request.account.username)
+             .prefetch_related('pages')
+             .annotate(finished_attempts=attempts.finished_count()))
     return JsonResponse({'ok': True, 'tests': [_serialize_test(t) for t in tests]})
+
+
+@require_GET
+@api_login_required()
+def api_test_statistics(request, test_id):
+    """Как проходят тест — только автору: это непубличные данные."""
+    test, error = _owned_test_or_error(request, test_id)
+    if error:
+        return error
+    return JsonResponse({'ok': True, **statistics.collect(test)})
 
 
 def _owned_test_or_error(request, test_id):

@@ -11,8 +11,10 @@ from authorization.views import get_current_account
 from core.auth import api_login_required, page_login_required
 from core.pagination import paginate
 from core.utils import load_json_body, serialize_form_errors
+from tests import attempts
 from tests.constructor.models import Test
 
+from . import statistics
 from .forms import CompanyProfileForm, CompanyVerificationForm
 from .models import Company, CompanyRating, ensure_company
 
@@ -204,11 +206,12 @@ def api_company_tests(request, username):
     tests = Test.objects.filter(owner_username=username)
     if not is_owner:
         tests = tests.filter(status=Test.STATUS_PUBLISHED)
-    tests = tests.annotate(page_total=Count('pages'))
+    tests = tests.annotate(page_total=Count('pages', distinct=True),
+                           finished_attempts=attempts.finished_count())
 
     total = tests.count()
     active = sum(1 for t in tests if t.status == Test.STATUS_PUBLISHED)
-    submissions = sum(t.stats.get('submissions', 0) for t in tests)
+    submissions = sum(t.finished_attempts for t in tests)
 
     serialized = [
         {
@@ -219,7 +222,7 @@ def api_company_tests(request, username):
             'level': t.stats.get('level', ''),
             'category': t.stats.get('category', ''),
             'page_count': t.page_total,
-            'submissions': t.stats.get('submissions', 0),
+            'submissions': t.finished_attempts,
             'created_at': t.created_at.isoformat(),
             'url': f'/tests/{t.id}/' if t.status == t.STATUS_PUBLISHED else f'/constructor/{t.id}/?owner={username}',
             'edit_url': f'/constructor/{t.id}/',
@@ -239,6 +242,17 @@ def api_company_tests(request, username):
             'completion_rate': round(active / total * 100) if total else 0,
         },
     })
+
+
+@require_GET
+@api_login_required(ROLE_COMPANY)
+def api_company_statistics(request, username):
+    """Сводка для страницы «Статистика» в кабинете. Только своя компания:
+    сюда попадают числа по черновикам и непроверенным решениям."""
+    if request.account.username != username:
+        return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
+    company = get_object_or_404(Company, username=username)
+    return JsonResponse({'ok': True, **statistics.collect(company)})
 
 
 @require_GET

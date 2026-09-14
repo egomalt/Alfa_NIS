@@ -1,0 +1,115 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <script>(function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();</script>
+  <title>{{ test_title|default:"Тест" }} — статистика — Career</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/career.css' %}">
+  <script>
+    window.ALFA_APP_BOOTSTRAP = {
+      testId: {{ test_id }},
+      backUrl: "{{ back_url|escapejs }}"
+    };
+  </script>
+  <script src="{% static 'main/theme.js' %}?v=20260914-1" defer></script>
+  <script src="{% static 'js/career.js' %}?v=20260914-1" defer></script>
+  <style>
+    main { max-width: 980px; margin: 0 auto; padding: 32px 32px 80px; }
+
+    .ts-back { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; text-decoration: none; margin-bottom: 18px; transition: color .12s; }
+    .ts-back:hover { color: var(--text); }
+
+    .ts-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+    .ts-title { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 6px; overflow-wrap: break-word; }
+    .ts-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+    .ts-chip { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); }
+    .ts-head-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .ts-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; text-decoration: none; transition: color .12s, border-color .12s; }
+    .ts-btn:hover { color: var(--text); border-color: var(--brand); }
+
+    .ts-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px; }
+    .ts-card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 16px 18px; display: flex; flex-direction: column; gap: 5px; }
+    .ts-card-value { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+    .ts-card-label { font-size: 12.5px; color: var(--muted); margin-top: auto; }
+
+    .ts-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    .ts-panel { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 20px 22px; }
+    .ts-panel-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .ts-panel-note { font-size: 12px; color: var(--faint); line-height: 1.45; margin-bottom: 16px; }
+    .ts-panel-empty { font-size: 13px; color: var(--muted); }
+
+    /* Сравнение с площадкой: две полосы в одной шкале 0–100% */
+    .ts-compare-row { margin-bottom: 16px; }
+    .ts-compare-row:last-child { margin-bottom: 0; }
+    .ts-compare-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+    .ts-compare-val { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+    .ts-compare-track { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-bottom: 5px; }
+    .ts-compare-fill { height: 100%; border-radius: 999px; transition: width .4s; }
+    .ts-compare-fill.own { background: var(--brand); }
+    .ts-compare-fill.platform { background: var(--line-2); }
+    .ts-verdict { font-size: 12.5px; color: var(--text-2); padding: 10px 12px; border-radius: 10px; background: var(--surface-2); margin-top: 14px; line-height: 1.5; }
+
+    /* Гистограмма результатов */
+    .ts-hist { display: flex; align-items: flex-end; gap: 8px; height: 150px; }
+    .ts-hist-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; }
+    .ts-hist-bars { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+    .ts-hist-bar { width: 60%; max-width: 34px; min-height: 2px; border-radius: 5px 5px 0 0; background: var(--brand); transition: height .35s; }
+    .ts-hist-bar.pass { background: var(--green-text); }
+    .ts-hist-label { font-size: 10.5px; color: var(--faint); white-space: nowrap; }
+    .ts-hist-count { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+
+    .ts-loading { padding: 60px; text-align: center; color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .ts-cards { grid-template-columns: repeat(2,1fr); }
+      .ts-panels { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      main { padding: 24px 18px 64px; }
+      .ts-title { font-size: 20px; }
+      .ts-hist { height: 120px; gap: 4px; }
+      .ts-hist-label { font-size: 9.5px; }
+    }
+    @media (max-width: 420px) {
+      main { padding: 20px 14px 56px; }
+      .ts-cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+{% include 'partials/navbar.html' with active='tests' chip_id='ts-user-chip' %}
+
+<main>
+  <a class="ts-back" id="ts-back-link" href="{{ back_url }}">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
+    Мои тесты
+  </a>
+
+  <div class="ts-head">
+    <div>
+      <div class="ts-title" id="ts-title">{{ test_title|default:"Тест" }}</div>
+      <div class="ts-meta" id="ts-meta"></div>
+    </div>
+    <div class="ts-head-actions">
+      <a class="ts-btn" href="/constructor/{{ test_id }}/">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Редактировать
+      </a>
+    </div>
+  </div>
+
+  <div id="ts-content">
+    <div class="ts-loading">Загрузка…</div>
+  </div>
+</main>
+
+<script src="{% static 'js/plural.js' %}?v=20260914-1"></script>
+<script src="{% static 'constructor/js/test_stats.js' %}?v=20260914-1"></script>
+</body>
+</html>

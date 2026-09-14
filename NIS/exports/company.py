@@ -1,8 +1,7 @@
 """Сбор статистики компании и сборка PDF-отчёта."""
-from django.db.models import Avg, Count
-
-from companies.models import CompanyRating
+from companies import statistics
 from contests.contests_cabinet.models import Contest
+from tests import attempts
 from tests.constructor.models import Test
 
 from .pdf import ReportBuilder, fmt_date
@@ -23,19 +22,24 @@ def build_company_pdf(company):
     contests = list(Contest.objects.filter(company_username=company.username).order_by('-created_at'))
     tests = list(Test.objects.filter(owner_username=company.username).order_by('-created_at'))
 
-    published_tests = [t for t in tests if t.status == Test.STATUS_PUBLISHED]
-    total_participants = sum(c.participants_count or 0 for c in contests)
-    agg = CompanyRating.objects.filter(company=company).aggregate(avg=Avg('rating'), cnt=Count('id'))
-    avg = agg['avg']
+    # Числа берём там же, где их берёт кабинет, — иначе отчёт и страница расходятся
+    totals = statistics.collect(company)['totals']
+    avg = totals['avg_rating']
     rating_str = ('%.1f ★' % avg) if avg is not None else '—'
 
     r = ReportBuilder('Статистика компании', company.name or company.username)
 
     r.kpi([
-        (len(contests), 'Конкурсов создано'),
-        (len(published_tests), 'Тестов опубликовано'),
-        (total_participants, 'Участников привлечено'),
-        (rating_str, 'Оценка (%d отз.)' % (agg['cnt'] or 0)),
+        (totals['contests'], 'Конкурсов создано'),
+        (totals['published_tests'], 'Тестов опубликовано'),
+        (totals['participants'], 'Участников привлечено'),
+        (rating_str, 'Оценка (%d отз.)' % totals['rating_count']),
+    ])
+    r.kpi([
+        (totals['submissions'], 'Решений прислано'),
+        (totals['winners'], 'Победителей выбрано'),
+        (totals['pending_submissions'], 'Ждут проверки'),
+        (totals['test_attempts'], 'Прохождений тестов'),
     ])
 
     # Конкурсы
@@ -59,7 +63,7 @@ def build_company_pdf(company):
         rows = [[
             t.title,
             TEST_STATUS.get(t.status, t.status),
-            (t.stats or {}).get('submissions', 0),
+            attempts.count_for(t),
         ] for t in tests]
         r.table(['Название', 'Статус', 'Прохождения'], rows, col_ratios=[3.4, 1.4, 1.4])
     else:

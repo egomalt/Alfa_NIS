@@ -1,4 +1,3 @@
-from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -7,7 +6,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from core.utils import load_json_body
 
 from authorization.views import get_current_account
-from tests import code_results
+from tests import attempts, code_results
 from tests.constructor.models import Test, TestPage
 from tests.constructor.views import public_code_meta
 
@@ -74,6 +73,11 @@ def api_test_view(request, test_id):
             page_data['page_meta'] = public_code_meta(page)
         pages.append(page_data)
 
+    # Момент открытия теста: без него нельзя отличить брошенную попытку
+    # от непройденного теста. Предпросмотр автора в статистику не попадает.
+    if not is_preview:
+        attempts.start(request, test)
+
     return JsonResponse({
         'ok': True,
         'test': {
@@ -138,12 +142,9 @@ def api_test_submit(request, test_id):
         results.append(result)
 
     if not is_preview:
-        with transaction.atomic():
-            test.refresh_from_db(fields=['stats'])
-            stats = test.stats or {}
-            stats['submissions'] = stats.get('submissions', 0) + 1
-            test.stats = stats
-            test.save(update_fields=['stats'])
+        # Счётчик в Test.stats больше не ведём: число прохождений считается
+        # по закрытым попыткам, поэтому перезагрузкой страницы его не накрутить
+        attempts.finish(request, test, score, total)
 
     return JsonResponse({
         'ok': True,

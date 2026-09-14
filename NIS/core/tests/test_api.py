@@ -1,6 +1,7 @@
 """Пагинация, число запросов к базе и дымовой обход всех адресов."""
 import json
 import re
+from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
@@ -8,10 +9,12 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import Client, SimpleTestCase
 from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
 
 from articles.constructor.models import Article
 from authorization.models import Account, ROLE_USER
 from contests.contests_cabinet.models import ContestSubmission
+from tests.constructor.models import TestAttempt, TestPage
 from users.models import UserProfile
 
 from .base import PASSWORD, BaseCase
@@ -171,6 +174,215 @@ class ProfilePageTests(BaseCase):
                 rule = re.search(rf'\.{prefix}-stat-value \{{([^}}]*)\}}', css)
                 self.assertIsNotNone(rule, f'нет правила .{prefix}-stat-value')
                 self.assertIn('margin-top: auto', rule.group(1))
+
+
+class CompanyStatisticsTests(BaseCase):
+    """Сводка кабинета: доступ, числа и график активности."""
+
+    URL = '/api/v1/companies/firma/statistics/'
+
+    def test_only_the_company_itself_sees_it(self):
+        """В сводку попадают черновики и непроверенные решения."""
+        self.assertEqual(Client().get(self.URL).status_code, 401)
+        self.assertEqual(self.login('kandidat').get(self.URL).status_code, 403)
+        self.assertEqual(self.login('konkurent').get(self.URL).status_code, 403)
+        self.assertEqual(self.login('firma').get(self.URL).status_code, 200)
+
+    def test_totals_count_winners_and_pending(self):
+        contest = self.make_contest(owner='firma')
+        ContestSubmission.objects.create(contest=contest, candidate_username='a', winner=True,
+                                         status=ContestSubmission.STATUS_ACCEPTED)
+        ContestSubmission.objects.create(contest=contest, candidate_username='b')
+        ContestSubmission.objects.create(contest=contest, candidate_username='c')
+
+        test = self.make_test(owner='firma')
+        TestAttempt.objects.create(test=test, candidate_username='a',
+                                   finished_at=timezone.now(), score=1, max_score=1)
+        TestAttempt.objects.create(test=test, candidate_username='b')  # не закончил
+
+        totals = self.login('firma').get(self.URL).json()['totals']
+        self.assertEqual(totals['submissions'], 3)
+        self.assertEqual(totals['winners'], 1)
+        self.assertEqual(totals['pending_submissions'], 2)
+        self.assertEqual(totals['test_attempts'], 1)
+
+    def test_weekly_series_is_continuous(self):
+        """Недели без активности заполняются нулями: дыры врут о том, что было."""
+        weekly = self.login('firma').get(self.URL).json()['weekly']
+        self.assertEqual(len(weekly), 12)
+        weeks = [row['week'] for row in weekly]
+        self.assertEqual(weeks, sorted(weeks))
+        for row in weekly:
+            self.assertIn('submissions', row)
+            self.assertIn('attempts', row)
+
+    def test_skills_come_from_participants_only(self):
+        """Портрет участников — навыки тех, кто присылал решения, а не всех подряд."""
+        UserProfile.objects.create(username='uchastnik', skills=['Python', 'SQL'])
+        UserProfile.objects.create(username='postoronniy', skills=['Haskell'])
+        contest = self.make_contest(owner='firma')
+        ContestSubmission.objects.create(contest=contest, candidate_username='uchastnik')
+
+        skills = self.login('firma').get(self.URL).json()['skills']
+        names = [s['name'] for s in skills]
+        self.assertCountEqual(names, ['Python', 'SQL'])
+        self.assertNotIn('Haskell', names)
+
+    def test_pdf_export_uses_the_same_numbers(self):
+        """Отчёт и страница считали статистику по отдельности и могли разойтись."""
+        contest = self.make_contest(owner='firma')
+        ContestSubmission.objects.create(contest=contest, candidate_username='a', winner=True)
+
+        client = self.login('firma')
+        totals = client.get(self.URL).json()['totals']
+        self.assertEqual(totals['winners'], 1)
+
+        response = client.get('/export/company/statistics.pdf')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+
+
+class ContestStatisticsTests(BaseCase):
+    """Воронка и подача по дням — метрики одного конкурса."""
+
+    def _url(self, contest):
+        return f'/api/v1/contests/{contest.id}/statistics/'
+
+    def test_only_the_owner_sees_it(self):
+        contest = self.make_contest(owner='firma')
+        self.assertEqual(Client().get(self._url(contest)).status_code, 401)
+        self.assertEqual(self.login('kandidat').get(self._url(contest)).status_code, 403)
+        # Чужая компания получает 404: существование чужого конкурса не подтверждаем
+        self.assertEqual(self.login('konkurent').get(self._url(contest)).status_code, 404)
+        self.assertEqual(self.login('firma').get(self._url(contest)).status_code, 200)
+
+    def test_funnel_shows_where_people_drop_off(self):
+        contest = self.make_contest(owner='firma', participants_count=10)
+        for i in range(4):
+            ContestSubmission.objects.create(contest=contest, candidate_username=f'k{i}')
+        ContestSubmission.objects.filter(contest=contest, candidate_username='k0').update(
+            status=ContestSubmission.STATUS_ACCEPTED)
+        ContestSubmission.objects.filter(contest=contest, candidate_username='k1').update(
+            status=ContestSubmission.STATUS_REJECTED)
+
+        funnel = self.login('firma').get(self._url(contest)).json()['funnel']
+        self.assertEqual(funnel['participants'], 10)
+        self.assertEqual(funnel['submitted'], 4)
+        self.assertEqual(funnel['submit_rate'], 40)
+        self.assertEqual(funnel['reviewed'], 2)
+        self.assertEqual(funnel['review_rate'], 50)
+
+    def test_funnel_survives_zero_participants(self):
+        """Деление на ноль: конкурс без единого участника."""
+        contest = self.make_contest(owner='firma', participants_count=0)
+        funnel = self.login('firma').get(self._url(contest)).json()['funnel']
+        self.assertEqual(funnel['submit_rate'], 0)
+        self.assertEqual(funnel['review_rate'], 0)
+
+    def test_daily_window_ends_on_the_deadline(self):
+        contest = self.make_contest(owner='firma')
+        data = self.login('firma').get(self._url(contest)).json()
+
+        self.assertEqual(len(data['daily']), data['window_days'])
+        days = [row['day'] for row in data['daily']]
+        self.assertEqual(days, sorted(days))
+        self.assertEqual(days[-1], contest.deadline.date().isoformat())
+
+    def test_submissions_before_the_window_are_counted_separately(self):
+        """Иначе сумма столбиков расходится с числом решений, и график врёт."""
+        contest = self.make_contest(owner='firma')
+        old = ContestSubmission.objects.create(contest=contest, candidate_username='davniy')
+        ContestSubmission.objects.filter(pk=old.pk).update(
+            created_at=contest.deadline - timedelta(days=60))
+
+        data = self.login('firma').get(self._url(contest)).json()
+        self.assertEqual(sum(row['count'] for row in data['daily']), 0)
+        self.assertEqual(data['before_window'], 1)
+
+    def test_contest_without_deadline_returns_no_series(self):
+        contest = self.make_contest(owner='firma', deadline=None)
+        data = self.login('firma').get(self._url(contest)).json()
+        self.assertEqual(data['daily'], [])
+        self.assertIsNone(data['deadline'])
+
+
+class TestStatisticsTests(BaseCase):
+    """Как проходят тест: средний балл, доля справившихся, брошенные попытки."""
+
+    def _finish(self, test, username, score, max_score=4):
+        return TestAttempt.objects.create(
+            test=test, candidate_username=username,
+            finished_at=timezone.now(), score=score, max_score=max_score)
+
+    def _url(self, test):
+        return f'/api/v1/tests/{test.id}/statistics/'
+
+    def test_only_the_author_sees_it(self):
+        test = self.make_test(owner='firma')
+        self.assertEqual(Client().get(self._url(test)).status_code, 401)
+        self.assertEqual(self.login('kandidat').get(self._url(test)).status_code, 403)
+        self.assertEqual(self.login('firma').get(self._url(test)).status_code, 200)
+
+    def test_average_and_pass_rate(self):
+        test = self.make_test(owner='firma')
+        for i, score in enumerate([4, 3, 2, 0]):   # 100%, 75%, 50%, 0%
+            self._finish(test, f'k{i}', score)
+
+        data = self.login('firma').get(self._url(test)).json()['attempts']
+        self.assertEqual(data['finished'], 4)
+        self.assertEqual(data['avg_percent'], 56)          # (100+75+50+0)/4
+        self.assertEqual(data['pass_rate'], 50)            # порог 60%: 100 и 75
+
+    def test_unfinished_attempts_split_into_running_and_abandoned(self):
+        """Тот, кто прямо сейчас решает, не должен попадать в «бросили»."""
+        test = self.make_test(owner='firma')
+        self._finish(test, 'doshel', 4)
+        TestAttempt.objects.create(test=test, candidate_username='seychas-reshaet')
+        stale = TestAttempt.objects.create(test=test, candidate_username='brosil')
+        TestAttempt.objects.filter(pk=stale.pk).update(
+            started_at=timezone.now() - timedelta(days=3))
+
+        data = self.login('firma').get(self._url(test)).json()['attempts']
+        self.assertEqual(data['started'], 3)
+        self.assertEqual(data['finished'], 1)
+        self.assertEqual(data['abandoned'], 1)
+        self.assertEqual(data['in_progress'], 1)
+
+    def test_test_without_questions_does_not_divide_by_zero(self):
+        """max_score = 0 у теста без вопросов — среднее посчитать не из чего."""
+        test = self.make_test(owner='firma', with_quiz=False)
+        TestAttempt.objects.create(test=test, candidate_username='k',
+                                   finished_at=timezone.now(), score=0, max_score=0)
+
+        data = self.login('firma').get(self._url(test)).json()['attempts']
+        self.assertEqual(data['finished'], 1)
+        self.assertIsNone(data['avg_percent'])
+        self.assertIsNone(data['pass_rate'])
+
+    def test_distribution_covers_every_attempt(self):
+        test = self.make_test(owner='firma')
+        for i, score in enumerate([0, 1, 2, 3, 4]):
+            self._finish(test, f'k{i}', score)
+
+        data = self.login('firma').get(self._url(test)).json()
+        self.assertEqual(sum(b['count'] for b in data['distribution']), 5)
+
+    def test_platform_average_covers_published_tests(self):
+        """Сравнение берётся по площадке, а не по одному этому тесту."""
+        mine = self.make_test(owner='firma', title='Мой')
+        other = self.make_test(owner='konkurent', title='Чужой')
+        self._finish(mine, 'a', 4)
+        self._finish(other, 'b', 0)
+
+        platform = self.login('firma').get(self._url(mine)).json()['platform']
+        self.assertEqual(platform['scored'], 2)
+        self.assertEqual(platform['avg_percent'], 50)
+
+    def test_stats_page_opens_for_the_author_only(self):
+        test = self.make_test(owner='firma')
+        url = f'/constructor/{test.id}/stats/'
+        self.assertEqual(self.login('firma').get(url).status_code, 200)
+        self.assertEqual(self.login('konkurent').get(url).status_code, 404)
 
 
 class ConstructorTests(BaseCase):
@@ -387,6 +599,107 @@ class CompanyCatalogTests(BaseCase):
         self.assertEqual(Client().get('/companies/').status_code, 200)
 
 
+class TestAttemptTests(BaseCase):
+    """Учёт прохождений: открытие, завершение и защита от накрутки."""
+
+    def _open(self, client, test):
+        return client.get(f'/api/v1/tests/{test.id}/view/')
+
+    def _submit(self, client, test, answers=None):
+        return client.post(f'/api/v1/tests/{test.id}/submit/',
+                           json.dumps({'answers': answers or {}}), 'application/json')
+
+    def test_opening_records_an_unfinished_attempt(self):
+        test = self.make_test(owner='firma')
+        self._open(self.login('kandidat'), test)
+
+        attempt = TestAttempt.objects.get(test=test)
+        self.assertEqual(attempt.candidate_username, 'kandidat')
+        self.assertIsNone(attempt.finished_at)
+
+    def test_reload_does_not_create_a_second_attempt(self):
+        """Счётчик раньше накручивался повторной отправкой, попытки — перезагрузкой."""
+        test = self.make_test(owner='firma')
+        client = self.login('kandidat')
+        for _ in range(4):
+            self._open(client, test)
+        self.assertEqual(TestAttempt.objects.filter(test=test).count(), 1)
+
+    def test_submit_closes_the_attempt_and_stores_score(self):
+        test = self.make_test(owner='firma')
+        page = test.pages.first()
+        correct = page.answers.get(is_correct=True)
+
+        client = self.login('kandidat')
+        self._open(client, test)
+        self._submit(client, test, {str(page.id): [correct.id]})
+
+        attempt = TestAttempt.objects.get(test=test)
+        self.assertIsNotNone(attempt.finished_at)
+        self.assertEqual((attempt.score, attempt.max_score), (1, 1))
+        self.assertEqual(attempt.percent, 100)
+
+    def test_anonymous_attempts_are_counted_separately(self):
+        """Тест открыт всем: анонимов различаем по сессии, а не сливаем в одного."""
+        test = self.make_test(owner='firma')
+        self._open(Client(), test)
+        self._open(Client(), test)
+        self.assertEqual(TestAttempt.objects.filter(test=test).count(), 2)
+
+    def test_preview_by_owner_is_not_recorded(self):
+        """Автор смотрит свой черновик — это не прохождение."""
+        test = self.make_test(owner='firma', published=False)
+        client = self.login('firma')
+        self._open(client, test)  # без preview черновик недоступен
+        client.get(f'/api/v1/tests/{test.id}/view/?preview=1')
+        self._submit(client, test)
+        self.assertEqual(TestAttempt.objects.filter(test=test).count(), 0)
+
+    def test_catalog_counts_only_finished(self):
+        test = self.make_test(owner='firma')
+        client = self.login('kandidat')
+        self._open(client, test)
+
+        card = Client().get('/api/v1/tests/catalog/').json()['tests'][0]
+        self.assertEqual(card['submissions'], 0)
+
+        self._submit(client, test)
+        card = Client().get('/api/v1/tests/catalog/').json()['tests'][0]
+        self.assertEqual(card['submissions'], 1)
+
+    def test_page_count_is_not_multiplied_by_attempts(self):
+        """Два Count по разным связям в одном запросе перемножают строки.
+
+        Без distinct у Count('pages') тест с 3 страницами и 57 попытками
+        показывал в каталоге 171 вопрос.
+        """
+        test = self.make_test(owner='firma', with_quiz=False)
+        for order in range(3):
+            TestPage.objects.create(test=test, order=order, type=TestPage.TYPE_QUIZ, title=f'В{order}')
+        for i in range(5):
+            TestAttempt.objects.create(test=test, candidate_username=f'k{i}',
+                                       finished_at=timezone.now(), score=1, max_score=3)
+
+        card = Client().get('/api/v1/tests/catalog/').json()['tests'][0]
+        self.assertEqual(card['page_count'], 3)
+        self.assertEqual(card['submissions'], 5)
+
+        company_card = Client().get('/api/v1/companies/firma/tests/').json()['tests'][0]
+        self.assertEqual(company_card['page_count'], 3)
+        self.assertEqual(company_card['submissions'], 5)
+
+    def test_catalog_has_no_query_per_test(self):
+        """Счётчик считается аннотацией, а не отдельным запросом на карточку."""
+        for i in range(25):
+            self.make_test(owner='firma', title=f'Тест {i}')
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = Client().get('/api/v1/tests/catalog/')
+
+        self.assertEqual(len(response.json()['tests']), 25)
+        self.assertLess(len(ctx.captured_queries), 8)
+
+
 class TestsCatalogTests(BaseCase):
     """Каталог тестов: поля карточки и фильтры из адреса."""
 
@@ -397,14 +710,23 @@ class TestsCatalogTests(BaseCase):
                     'category', 'page_count', 'submissions', 'url'):
             self.assertIn(key, test)
 
-    def test_submissions_count_is_returned(self):
-        """Число прохождений раньше в каталог не попадало, хотя считается при сдаче."""
+    def test_submissions_count_comes_from_finished_attempts(self):
+        """Счётчик перестал быть числом в stats: считаем завершённые попытки.
+
+        Открытые попытки в число прохождений не входят — иначе оно росло бы
+        от одного открытия страницы.
+        """
         test = self.make_test(owner='firma', published=True)
         test.stats = {'level': 'junior', 'category': 'backend', 'submissions': 42}
         test.save(update_fields=['stats'])
 
+        for i in range(3):
+            TestAttempt.objects.create(test=test, candidate_username=f'kto{i}',
+                                       finished_at=timezone.now(), score=1, max_score=1)
+        TestAttempt.objects.create(test=test, candidate_username='eshchyo-idyot')
+
         card = Client().get('/api/v1/tests/catalog/').json()['tests'][0]
-        self.assertEqual(card['submissions'], 42)
+        self.assertEqual(card['submissions'], 3)
         self.assertEqual(card['level'], 'junior')
         self.assertEqual(card['category'], 'backend')
 

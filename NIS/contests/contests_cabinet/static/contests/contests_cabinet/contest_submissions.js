@@ -40,6 +40,89 @@ function renderStats() {
     </div>`).join('');
 }
 
+/* Воронка: сколько зарегистрировавшихся дошли до отправки и сколько работ
+   разобрано. Ширина полосы — доля от первой ступени, а не от максимума:
+   именно так видно, где теряются люди. */
+function renderFunnel(funnel) {
+  const box = document.getElementById('cs-funnel');
+  if (!box) return;
+
+  const base = funnel.participants || 0;
+  if (!base) {
+    box.innerHTML = '<div class="cs-panel-empty">На конкурс ещё никто не зарегистрировался</div>';
+    return;
+  }
+
+  const steps = [
+    { name: 'Зарегистрировались', value: funnel.participants },
+    { name: 'Прислали решение', value: funnel.submitted, pct: funnel.submit_rate },
+    { name: 'Работа разобрана', value: funnel.reviewed, pct: funnel.review_rate, done: true },
+  ];
+
+  box.innerHTML = steps.map(step => {
+    const width = Math.round((step.value || 0) / base * 100);
+    return `
+      <div class="cs-step">
+        <div class="cs-step-head">
+          <span class="cs-step-name">${step.name}</span>
+          ${step.pct !== undefined ? `<span class="cs-step-pct">${step.pct}% от предыдущего</span>` : ''}
+          <span class="cs-step-val">${step.value || 0}</span>
+        </div>
+        <div class="cs-step-track">
+          <div class="cs-step-fill${step.done ? ' done' : ''}" style="width:${width}%"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderDaily(stats) {
+  const box = document.getElementById('cs-daily');
+  const note = document.getElementById('cs-daily-note');
+  if (!box) return;
+
+  const daily = stats.daily || [];
+  if (!daily.length) {
+    box.innerHTML = '<div class="cs-panel-empty">У конкурса не задан дедлайн</div>';
+    if (note) note.textContent = '';
+    return;
+  }
+
+  if (note) {
+    note.textContent = stats.before_window
+      ? `Последние ${stats.window_days} дней срока. Ещё ${stats.before_window} прислали раньше.`
+      : `Последние ${stats.window_days} дней срока, справа — день дедлайна.`;
+  }
+
+  const peak = daily.reduce((m, d) => Math.max(m, d.count), 0);
+  if (!peak) {
+    box.innerHTML = '<div class="cs-panel-empty">В этом окне решений не было</div>';
+    return;
+  }
+
+  box.innerHTML = daily.map(d => {
+    const date = new Date(d.day + 'T00:00:00');
+    const label = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    return `
+      <div class="cs-daily-col">
+        <div class="cs-daily-bars">
+          <div class="cs-daily-bar" style="height:${d.count / peak * 100}%" title="${label}: ${d.count}"></div>
+        </div>
+        <div class="cs-daily-label">${label}</div>
+      </div>`;
+  }).join('');
+}
+
+async function loadStatistics() {
+  try {
+    const data = await api(`/api/v1/contests/${CONTEST_ID}/statistics/`);
+    renderFunnel(data.funnel || {});
+    renderDaily(data);
+  } catch (_) {
+    const box = document.getElementById('cs-funnel');
+    if (box) box.innerHTML = '<div class="cs-panel-empty">Не удалось загрузить статистику</div>';
+  }
+}
+
 function filtered() {
   if (activeFilter === 'all')   return submissions;
   if (activeFilter === 'liked') return submissions.filter(s => s.liked);
@@ -136,6 +219,7 @@ async function decide(id, status) {
     s.status = status;
     renderStats();
     renderList();
+    loadStatistics();
   } catch (err) { alert(err.message || 'Не удалось сохранить решение.'); }
 }
 
@@ -259,3 +343,4 @@ initFilters();
 loadSidebarCompany();
 loadContest();
 loadSubmissions();
+loadStatistics();

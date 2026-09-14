@@ -96,14 +96,6 @@
 .cp-dist-track { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
 .cp-dist-fill { height: 100%; background: var(--amber-text); border-radius: 999px; transition: width .4s; }
 .cp-dist-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); text-align: right; }
-.cp-srow { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; }
-.cp-srow:last-child { margin-bottom: 0; }
-.cp-srow-main { flex: 1; min-width: 0; }
-.cp-srow-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
-.cp-srow-meta { font-size: 12.5px; color: var(--muted); }
-.cp-srow-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-2); white-space: nowrap; }
-.cp-srow-pill { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
-.cp-empty-note { font-size: 13.5px; color: var(--muted); }
 
 /* ── Адаптив кабинета компании ────────────────────────────────────── */
 .cab-burger { display: none; align-items: center; gap: 8px; margin: 12px 16px 0; padding: 0 14px; height: 40px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); color: var(--text); font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit; }
@@ -119,3 +111,34 @@
   .cp-layout.sidebar-open .cab-scrim { display: block; position: fixed; inset: 64px 0 0 0; background: rgba(0,0,0,.4); z-index: 70; }
 }
 @media (max-width: 560px) { .cp-stats-row { grid-template-columns: repeat(2,1fr); } .cp-shortcuts { grid-template-columns: 1fr; } .cp-main { padding: 20px 16px 60px; } }
+
+/* ── Статистика: активность по неделям и портрет участников ─────────────── */
+
+.cp-section-note { font-size: 12.5px; color: var(--muted); margin: -8px 0 16px; }
+
+.cp-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.cp-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.cp-legend-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+.cp-dot-subs { background: var(--brand); }
+.cp-dot-att { background: var(--green-text); }
+
+/* Столбики рисуем сами: подключать библиотеку графиков ради одного блока
+   не стоит, а высота в процентах считается от самой большой недели. */
+.cp-chart { display: flex; align-items: flex-end; gap: 8px; height: 170px; }
+.cp-chart-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; }
+.cp-chart-bars { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px; }
+.cp-chart-bar { width: 45%; max-width: 18px; border-radius: 4px 4px 0 0; transition: height .35s; min-height: 2px; }
+.cp-chart-bar.subs { background: var(--brand); }
+.cp-chart-bar.att { background: var(--green-text); }
+.cp-chart-label { font-size: 10.5px; color: var(--faint); white-space: nowrap; }
+.cp-chart-empty { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 13px; color: var(--muted); }
+
+.cp-skills { display: flex; flex-wrap: wrap; gap: 8px; }
+.cp-skill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); font-size: 13px; }
+.cp-skill-count { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--muted); }
+
+@media (max-width: 720px) {
+  .cp-chart { height: 140px; gap: 4px; }
+  /* Двенадцать подписей в строку не помещаются — оставляем каждую вторую */
+  .cp-chart-col:nth-child(even) .cp-chart-label { visibility: hidden; }
+}
