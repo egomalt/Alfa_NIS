@@ -64,6 +64,11 @@ def constructor_shell(request, test_id=None):
         'owner_username': account.username,
         'is_authenticated': True,
         'back_url': back_url,
+        # Список языков берём из исполнителя, а не пишем в шаблоне руками:
+        # раньше там было семь вариантов при трёх работающих, и задача на Go
+        # сохранялась, но запуститься не могла никогда.
+        'languages': [{'key': key, 'label': cfg['label']} for key, cfg in LANGUAGES.items()],
+        'max_time_limit': MAX_TIME_LIMIT,
     })
 
 

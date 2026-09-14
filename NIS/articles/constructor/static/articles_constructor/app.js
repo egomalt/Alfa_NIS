@@ -7,6 +7,24 @@ let currentArticleId = BOOTSTRAP.articleId;
 let activeCover = -1;
 let tags = [];
 let isSaving = false;
+let isDirty = false;
+
+function escHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function markDirty() { isDirty = true; }
+
+/* Ошибки сохранения и публикации раньше гасились молча: пользователь думал,
+   что статья ушла на сервер. Теперь любой сбой виден в шапке. */
+function setStatus(message, kind = '') {
+    const el = document.getElementById('status-msg');
+    if (!el) return;
+    el.textContent = message || '';
+    el.className = 'status-msg' + (kind ? ' ' + kind : '');
+}
 
 const COVERS = [
     'linear-gradient(135deg,#1e3a5f 0%,#2d6a9f 100%)',
@@ -26,6 +44,7 @@ function setCover(idx) {
     document.getElementById('cover-placeholder').style.display = 'none';
     document.getElementById('cover-set-area').style.display = '';
     document.getElementById('cover-bg').style.background = COVERS[idx];
+    markDirty();
 }
 
 function cycleCover() { setCover((activeCover + 1) % COVERS.length); }
@@ -34,6 +53,7 @@ function removeCover() {
     activeCover = -1;
     document.getElementById('cover-placeholder').style.display = '';
     document.getElementById('cover-set-area').style.display = 'none';
+    markDirty();
 }
 
 // ── Auto-resize ───────────────────────────────────────────────────────────────
@@ -72,25 +92,30 @@ document.getElementById('title-input').addEventListener('input', updateStats);
 // ── Tags ──────────────────────────────────────────────────────────────────────
 
 function renderTags() {
+    // Тег попадает в разметку: без экранирования кавычка или угловая скобка
+    // ломали чип, а тег вида <img onerror=…> исполнялся при открытии статьи
     document.getElementById('tags-wrap').innerHTML = tags.map((t, i) => `
-        <span class="tag-chip">${t}
-            <button onclick="removeTag(${i})">
+        <span class="tag-chip">${escHtml(t)}
+            <button type="button" onclick="removeTag(${i})" aria-label="Убрать тег">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
         </span>
     `).join('');
 }
 
-function removeTag(i) { tags.splice(i, 1); renderTags(); }
+function removeTag(i) { tags.splice(i, 1); renderTags(); markDirty(); }
 
 function handleTagInput(e) {
     if (e.key !== 'Enter') return;
     e.preventDefault();
     const val = e.target.value.trim();
-    if (val && !tags.includes(val) && tags.length < 8) {
-        tags.push(val);
-        renderTags();
-    }
+    if (!val) { e.target.value = ''; return; }
+    if (tags.includes(val)) { setStatus('Такой тег уже есть', 'warn'); e.target.value = ''; return; }
+    if (tags.length >= 8) { setStatus('Больше 8 тегов не добавить', 'warn'); return; }
+    tags.push(val);
+    renderTags();
+    markDirty();
+    setStatus('');
     e.target.value = '';
 }
 
@@ -194,7 +219,7 @@ document.getElementById('body-editor').addEventListener('keydown', e => {
 // ── Save / Publish ────────────────────────────────────────────────────────────
 
 function collectData() {
-    const rt = parseInt(document.getElementById('stat-readtime').textContent) || 1;
+    const rt = parseInt(document.getElementById('stat-readtime').textContent, 10) || 1;
     return {
         title: document.getElementById('title-input').value,
         excerpt: document.getElementById('lead-input').value,
@@ -224,30 +249,37 @@ async function ensureArticleId() {
     return true;
 }
 
+/* Возвращает true, только если статья действительно сохранена.
+   Это важно для публикации: раньше она шла дальше даже после неудачного
+   сохранения и выкладывала в бой прошлую версию текста. */
 async function doSave() {
-    if (isSaving) return;
+    if (isSaving) return false;
     isSaving = true;
     const btn = document.getElementById('btn-save');
-    btn.textContent = 'Сохраняю...';
+    btn.textContent = 'Сохраняю…';
     btn.disabled = true;
+    setStatus('');
 
     try {
-        if (!await ensureArticleId()) throw new Error();
+        if (!await ensureArticleId()) throw new Error('Не удалось создать черновик');
 
         const res = await fetch(`/api/v1/articles/${currentArticleId}/`, {
             method: 'PATCH',
             headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
             body: JSON.stringify(collectData()),
         });
-        if ((await res.json()).ok) {
-            btn.textContent = '✓ Сохранено';
-            btn.classList.add('saved');
-            setTimeout(() => { btn.textContent = 'Сохранить'; btn.classList.remove('saved'); }, 1800);
-        } else {
-            btn.textContent = 'Сохранить';
-        }
-    } catch {
+        const data = await res.json().catch(() => ({}));
+        if (!data.ok) throw new Error(data.message || 'Не удалось сохранить');
+
+        isDirty = false;
+        btn.textContent = '✓ Сохранено';
+        btn.classList.add('saved');
+        setTimeout(() => { btn.textContent = 'Сохранить'; btn.classList.remove('saved'); }, 1800);
+        return true;
+    } catch (err) {
         btn.textContent = 'Сохранить';
+        setStatus(err.message || 'Не удалось сохранить', 'error');
+        return false;
     } finally {
         btn.disabled = false;
         isSaving = false;
@@ -255,17 +287,26 @@ async function doSave() {
 }
 
 async function doPublish() {
-    await doSave();
-    if (!currentArticleId) return;
+    if (!await doSave()) return;
 
-    const res = await fetch(`/api/v1/articles/${currentArticleId}/publish/`, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': CSRF },
-    });
-    if ((await res.json()).ok) {
+    const btn = document.getElementById('btn-publish');
+    btn.disabled = true;
+    try {
+        const res = await fetch(`/api/v1/articles/${currentArticleId}/publish/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!data.ok) throw new Error(data.message || 'Не удалось опубликовать');
+
         document.getElementById('status-badge').textContent = 'Опубликована';
         document.getElementById('status-badge').className = 'badge-published';
-        document.getElementById('btn-publish').style.display = 'none';
+        btn.style.display = 'none';
+        setStatus('Статья опубликована', 'ok');
+    } catch (err) {
+        setStatus(err.message || 'Не удалось опубликовать', 'error');
+    } finally {
+        btn.disabled = false;
     }
 }
 
@@ -291,7 +332,10 @@ if (articleData) {
     }
     tags = articleData.tags || [];
     renderTags();
-    setCover(articleData.cover_index >= 0 ? articleData.cover_index : Math.floor(Math.random() * COVERS.length));
+    // Сохранённое «без обложки» (-1) раньше затиралось случайным градиентом:
+    // статью нельзя было оставить без обложки, она возвращалась при каждой правке
+    if (articleData.cover_index >= 0) setCover(articleData.cover_index);
+    else removeCover();
     if (articleData.status === 'published') {
         document.getElementById('status-badge').textContent = 'Опубликована';
         document.getElementById('status-badge').className = 'badge-published';
@@ -303,9 +347,21 @@ if (articleData) {
     setCover(Math.floor(Math.random() * COVERS.length));
 }
 
-// Auto-save every 30s только если статья уже создана
+// Загрузка готового состояния — ещё не правка
+isDirty = false;
+
+['title-input', 'lead-input', 'body-editor', 'tag-input'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', markDirty);
+});
+
+// Текст живёт в странице до нажатия «Сохранить» — уход со страницы его теряет
+window.addEventListener('beforeunload', event => {
+    if (!isDirty) return;
+    event.preventDefault();
+    event.returnValue = '';
+});
+
+// Автосохранение раз в 30 с — только если статья создана и что-то изменилось
 setInterval(() => {
-    const hasContent = document.getElementById('title-input').value ||
-        document.getElementById('body-editor').innerText.trim();
-    if (hasContent && currentArticleId) doSave();
+    if (isDirty && currentArticleId && !isSaving) doSave();
 }, 30000);

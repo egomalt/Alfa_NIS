@@ -108,8 +108,10 @@
         syncSaveBtn();
     }
 
+    /* Возвращает true, только если тест действительно сохранён: публикация
+       и предпросмотр по этому признаку решают, можно ли идти дальше. */
     async function save() {
-        if (state.saving || !state.title.trim()) return;
+        if (state.saving || !state.title.trim()) return false;
         state.saving = true;
         state.dirty = false;
         setStatus('Сохранение…');
@@ -133,10 +135,12 @@
             syncSaveBtn();
             syncPublishBtn();
             syncPreviewBtn();
+            return true;
         } catch (e) {
-            setStatus('Ошибка');
+            setStatus(e.message || 'Не удалось сохранить', 'error');
             state.dirty = true;
             syncSaveBtn();
+            return false;
         } finally {
             state.saving = false;
         }
@@ -144,9 +148,11 @@
 
     // ── UI sync ───────────────────────────────────────────────────────────────
 
-    function setStatus(msg) {
+    function setStatus(msg, kind = '') {
         const el = document.getElementById('cst-save-status');
-        if (el) el.textContent = msg;
+        if (!el) return;
+        el.textContent = msg || '';
+        el.className = 'save-status' + (kind ? ' ' + kind : '');
     }
 
     function syncSaveBtn() {
@@ -307,7 +313,9 @@
             const q = document.getElementById('p-question-input');
             const a = document.getElementById('p-answer');
             if (q) q.value = page.title || '';
-            if (a) a.value = page.answers.length > 0 ? page.answers[0].text : '';
+            // Все принимаемые ответы показываем одной строкой через запятую —
+            // ровно так, как обещает подсказка под полем
+            if (a) a.value = (page.answers || []).map(ans => ans.text).join(', ');
         } else if (page.type === 'code') {
             const q = document.getElementById('p-question-code');
             if (q) q.value = page.content || '';
@@ -427,7 +435,16 @@
 
     function deletePage(index) {
         if (index === 0 && state.pages[0]?.type === 'info') return;
+        const page = state.pages[index];
+        // Один промах по крестику стирал готовый вопрос без следа
+        const filled = (page.title || '').trim() || (page.content || '').trim()
+            || (page.answers || []).some(a => (a.text || '').trim());
+        if (filled && !confirm(`Удалить страницу «${page.title || 'Без названия'}»?`)) return;
+
         state.pages.splice(index, 1);
+        // Курсор держим на той же странице: при удалении страницы выше
+        // индекс съезжал и открывалась соседняя
+        if (index < state.currentIndex) state.currentIndex -= 1;
         if (state.currentIndex >= state.pages.length) state.currentIndex = state.pages.length - 1;
         markDirty();
         renderPageList();
@@ -457,13 +474,8 @@
             markDirty();
         });
 
-        // Theme toggle
-        document.getElementById('cst-theme-btn')?.addEventListener('click', () => {
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const next = isDark ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            try { localStorage.setItem('alfa_theme', next); } catch(_) {}
-        });
+        // Переключатель темы обрабатывает общий main/theme.js по [data-theme-toggle] —
+        // своя копия здесь расходилась с ним и не обновляла подпись кнопки
 
         // Add page
         document.getElementById('cst-add-page')?.addEventListener('click', addPage);
@@ -479,24 +491,25 @@
         // Preview
         document.getElementById('cst-preview-btn')?.addEventListener('click', async () => {
             if (!state.testId && !state.title.trim()) return;
-            if (state.dirty || !state.testId) await save();
+            // Несохранённые правки в предпросмотр не попадут — не уходим со страницы,
+            // пока сохранение не прошло, иначе правки просто потеряются
+            if ((state.dirty || !state.testId) && !await save()) return;
             if (state.testId) window.location.assign(`/tests/${state.testId}/?preview=1`);
         });
 
         // Publish
         document.getElementById('cst-publish-btn')?.addEventListener('click', async () => {
             if (!state.testId || state.published) return;
-            if (state.dirty) await save();
-            if (!state.testId) return;
+            if (state.dirty && !await save()) return;
             try {
                 setStatus('Публикация…');
                 await apiFetch(`/api/v1/tests/${state.testId}/publish/`, { method: 'POST' });
                 state.published = true;
-                setStatus('Опубликован');
+                setStatus('Опубликован', 'ok');
                 syncSaveBtn();
                 syncPublishBtn();
             } catch (e) {
-                setStatus(e.message || 'Ошибка');
+                setStatus(e.message || 'Не удалось опубликовать', 'error');
             }
         });
 
@@ -560,12 +573,15 @@
         document.getElementById('p-answer')?.addEventListener('input', e => {
             const page = state.pages[state.currentIndex];
             if (!page) return;
-            if (!page.answers.length) {
-                page.answers.push({ localId: uid(), text: e.target.value, is_correct: true, order: 0 });
-            } else {
-                page.answers[0].text = e.target.value;
-                page.answers[0].is_correct = true;
-            }
+            /* Подсказка обещает «несколько вариантов через запятую», но строка
+               целиком клалась в один ответ: сервер сравнивает ответ участника
+               с каждым вариантом по отдельности, поэтому «flex, block» принималось
+               только если человек дословно напечатал «flex, block». Режем на варианты. */
+            page.answers = e.target.value
+                .split(',')
+                .map(text => text.trim())
+                .filter(Boolean)
+                .map((text, i) => ({ localId: uid(), text, is_correct: true, order: i }));
             markDirty();
         });
 
@@ -606,9 +622,9 @@
                     }));
                     renderTestCases();
                     markDirty();
-                    setStatus(`Загружено ${page.page_meta.test_cases.length} тест-кейсов`);
+                    setStatus(`Загружено ${page.page_meta.test_cases.length} тест-кейсов`, 'ok');
                 } catch (err) {
-                    alert(`Ошибка: ${err.message}`);
+                    setStatus(`Не удалось разобрать JSON: ${err.message}`, 'error');
                 }
                 e.target.value = '';
             };
@@ -654,6 +670,13 @@
         syncPublishBtn();
         syncPreviewBtn();
     }
+
+    // Тест живёт в памяти страницы до нажатия «Сохранить»
+    window.addEventListener('beforeunload', event => {
+        if (!state.dirty) return;
+        event.preventDefault();
+        event.returnValue = '';
+    });
 
     document.addEventListener('DOMContentLoaded', init);
 })();

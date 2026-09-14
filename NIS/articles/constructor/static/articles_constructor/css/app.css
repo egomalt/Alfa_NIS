@@ -129,8 +129,60 @@ input, textarea, select, button { font-family: inherit; }
 .danger-btn { display: flex; align-items: center; gap: 7px; height: 36px; width: 100%; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--muted); font-size: 13px; cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
 .danger-btn:hover { border-color: var(--red-text); color: var(--red-text); background: var(--red-soft); }
 
+/* Сообщение о результате сохранения/публикации */
+.status-msg { font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.status-msg.error { color: var(--red-text); }
+.status-msg.warn { color: var(--amber-text); }
+.status-msg.ok { color: var(--green-text); }
+
 /* Scrollbar */
 * { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Адаптив ────────────────────────────────────────────────────────────────
+   Раскладка была намертво двухколоночной: редактор + панель 280px, и шапка
+   в одну нерезиновую строку. Ниже 1000px панель настроек уходит под текст,
+   ниже 760px шапка разбивается на две строки. */
+
+@media (max-width: 1000px) {
+  /* Высота перестаёт быть фиксированной: страница скроллится целиком,
+     иначе на телефоне две области со своим скроллом воюют друг с другом */
+  .app { height: auto; min-height: 100vh; }
+  .body { flex-direction: column; overflow: visible; }
+  .editor-area { overflow: visible; padding: 32px 24px 60px; }
+  .settings {
+    width: auto; border-left: none; border-top: 1px solid var(--line);
+    overflow: visible; padding: 20px 24px 40px;
+  }
+  .sp-stats { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 760px) {
+  .topbar { height: auto; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+  .topbar-center { order: 3; flex-basis: 100%; justify-content: flex-start; }
+  .topbar-actions { margin-left: auto; }
+  .divider-v { display: none; }
+  /* Слово «Career» рядом с кнопкой «Назад» — лишний расход ширины */
+  .logo-text { display: none; }
+  .topbar-title { max-width: 100%; }
+
+  .editor-area { padding: 24px 16px 56px; }
+  .settings { padding: 18px 16px 36px; }
+  .title-input { font-size: 27px; min-height: 36px; }
+  .lead-input { font-size: 16px; }
+  .body-editor { font-size: 16px; }
+  .cover-placeholder, .cover-set { height: 160px; }
+  .sp-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 460px) {
+  .topbar-actions { flex-wrap: wrap; }
+  .topbar-meta { display: none; }
+  .title-input { font-size: 23px; }
+  .editor-area { padding: 20px 14px 48px; }
+  .settings { padding: 16px 14px 32px; }
+  /* Плавающая панель форматирования шире экрана — прижимаем к краям */
+  .floating-toolbar { left: 50% !important; max-width: calc(100vw - 16px); flex-wrap: wrap; justify-content: center; }
+}
