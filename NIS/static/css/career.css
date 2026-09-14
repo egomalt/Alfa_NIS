@@ -1231,11 +1231,13 @@ input, textarea, select {
 .tests-header h1 { font-size: 1.3rem; font-weight: 800; margin: 0 0 4px; letter-spacing: -.01em; }
 .tests-header p { font-size: 13.5px; color: var(--muted); margin: 0; }
 
+/* Ряд карточек над таблицей тестов — единственное место применения */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   padding: 20px 28px;
+  margin-bottom: 24px;
 }
 .stat-box {
   display: flex;
@@ -1259,9 +1261,12 @@ input, textarea, select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
 }
-.tests-table-header h2 { font-size: 15px; font-weight: 700; margin: 0; }
+.tests-table-header { padding: 20px 24px 18px; }
+.tests-table-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
+/* Карточка со списком: таблица прижимается к её краям, поэтому свои
+   отступы у карточки нулевые, а ячейки отступают сами */
+.tests-card { padding: 0; overflow: hidden; margin: 0; }
 .muted-note { font-size: 12.5px; color: var(--muted); }
 
 .table-wrapper { overflow-x: auto; }
@@ -1282,10 +1287,14 @@ input, textarea, select {
   white-space: nowrap;
 }
 .tests-table td {
-  padding: 12px;
+  padding: 14px 12px;
   border-bottom: 1px solid var(--line);
   color: var(--text-2);
 }
+/* Крайние колонки выравниваются с заголовком карточки («Обзор тестов»),
+   у которого отступ 24px: иначе первая колонка визуально уезжает влево */
+.tests-table th:first-child, .tests-table td:first-child { padding-left: 24px; }
+.tests-table th:last-child, .tests-table td:last-child { padding-right: 24px; }
 .tests-table tr:last-child td { border-bottom: none; }
 .tests-table tbody tr:hover td { background: var(--surface-2); }
 .tests-table a { color: var(--brand-text); text-decoration: none; font-weight: 500; }
@@ -1306,17 +1315,47 @@ input, textarea, select {
   transition: border-color .15s, color .15s;
   flex-shrink: 0;
 }
-/* Ячейка действий: кнопки стояли впритык к правому краю таблицы.
-   Флексом делаем внутреннюю обёртку — display:flex на самой ячейке
-   выбил бы её из табличной раскладки и разъехалась бы строка. */
-.tests-table td:last-child { padding-right: 18px; }
+/* Ячейка действий: флексом делаем внутреннюю обёртку — display:flex
+   на самой ячейке выбил бы её из табличной раскладки. */
 .action-row { display: flex; gap: 6px; justify-content: flex-end; }
 .action-icon-btn:hover { border-color: var(--line-2); color: var(--text); }
 .action-icon-btn.danger:hover { border-color: var(--red-text); color: var(--red-text); }
 
+/* Телефон: строка таблицы становится карточкой — тем же приёмом,
+   что и список конкурсов. Подписи берутся из data-label, который
+   проставляет companies/app.js при отрисовке строки. */
+@media (max-width: 680px) {
+  .tests-table thead { display: none; }
+  .tests-table, .tests-table tbody { display: block; }
+  .tests-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 10px;
+    padding: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .tests-table tr:last-child { border-bottom: none; }
+  .tests-table td,
+  .tests-table td:first-child,
+  .tests-table td:last-child { display: block; padding: 0; border-bottom: none; }
+  /* Название и кнопки действий — на всю ширину карточки */
+  .tests-table td:first-child, .tests-table td:last-child { grid-column: 1 / -1; }
+  .tests-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--faint);
+    margin-bottom: 2px;
+  }
+  .tests-table tbody tr:hover td { background: transparent; }
+}
+
 #tests-empty {
   text-align: center;
-  padding: 48px 0;
+  padding: 48px 24px;
   color: var(--muted);
   font-size: 14px;
 }
