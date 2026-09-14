@@ -32,6 +32,26 @@ def _safe_time_limit(raw_value):
     return max(1, min(seconds, MAX_TIME_LIMIT))
 
 
+def public_code_meta(page):
+    """Часть page_meta задачи на код, которую можно показать проходящему тест.
+
+    Скрытые тест-кейсы наружу не отдаём — видны только помеченные is_sample,
+    их автор пишет как примеры к условию. Язык здесь же: раньше страница
+    прохождения его не получала и всегда подставляла Python.
+    """
+    meta = page.page_meta or {}
+    samples = [
+        {'input': case.get('input', ''), 'expected': case.get('expected', '')}
+        for case in (meta.get('test_cases') or [])
+        if case.get('is_sample')
+    ]
+    return {
+        'language': meta.get('language') or 'python',
+        'time_limit': _safe_time_limit(meta.get('time_limit')),
+        'samples': samples[:MAX_TEST_CASES],
+    }
+
+
 @ensure_csrf_cookie
 @page_login_required(*TEST_OWNER_ROLES)
 def constructor_shell(request, test_id=None):
@@ -225,7 +245,6 @@ def api_code_run(request, page_id):
     body = load_json_body(request)
 
     code = (body.get('code') or '').strip()
-    language = (body.get('language') or '').strip()
     sample_only = body.get('sample_only', True)
 
     if not code:
@@ -233,10 +252,14 @@ def api_code_run(request, page_id):
     if len(code) > MAX_CODE_LENGTH:
         return JsonResponse({'ok': False, 'message': 'Код слишком длинный.'}, status=400)
 
-    if language not in LANGUAGES:
-        return JsonResponse({'ok': False, 'message': f'Неподдерживаемый язык: {language}'}, status=400)
-
     meta = page.page_meta or {}
+    # Язык задаёт автор задачи, а не тот, кто её решает. Раньше он приходил в теле
+    # запроса, и страница прохождения всегда слала 'python' — решение на C++
+    # запускалось питоном и гарантированно падало.
+    language = (meta.get('language') or '').strip()
+    if language not in LANGUAGES:
+        return JsonResponse({'ok': False, 'message': f'Неподдерживаемый язык задачи: {language}'}, status=400)
+
     test_cases = (meta.get('test_cases') or [])[:MAX_TEST_CASES]
     time_limit = _safe_time_limit(meta.get('time_limit'))
 
