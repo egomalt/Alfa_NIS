@@ -19,6 +19,10 @@ def my_contests_user(request):
 def company_contests(request):
     return render(request, 'contests/contests_cabinet/company_contests.html', {
         'username': request.account.username,
+        # page подсвечивает пункт сайдбара, panel='none' — у страницы свой скрипт,
+        # профильную панель кабинета рисовать не нужно
+        'page': 'contests',
+        'panel': 'none',
     })
 
 
@@ -40,4 +44,6 @@ def contest_submissions(request, contest_id):
     return render(request, 'contests/contests_cabinet/contest_submissions.html', {
         'username': request.account.username,
         'contest_id': contest_id,
+        'page': 'contests',
+        'panel': 'none',
     })

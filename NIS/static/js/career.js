@@ -46,29 +46,9 @@
     return document.querySelector('meta[name="csrf-token"]')?.content || '';
   }
 
-  const logoutButtons = document.querySelectorAll('[data-logout-btn]');
-  if (logoutButtons.length) {
-    fetch('/api/v1/auth/me/')
-      .then(r => r.json())
-      .then(data => {
-        if (!data.ok || !data.account) return;
-        logoutButtons.forEach(btn => { btn.hidden = false; });
-      })
-      .catch(() => {});
-
-    logoutButtons.forEach(btn => btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      try {
-        await fetch('/api/v1/auth/signout/', {
-          method: 'POST',
-          headers: { 'X-CSRFToken': csrfToken() },
-          credentials: 'same-origin',
-        });
-      } finally {
-        window.location.assign('/');
-      }
-    }));
-  }
+  /* Кнопка выхода живёт только в сайдбарах кабинетов и там же обрабатывается
+     (#cp-logout-btn в cabinet/company.js, #ud-logout-btn в cabinet/user.js).
+     Дубль в верхней шапке убран — он же тянул лишний запрос /auth/me/. */
 
   /* ── Бургер верхнего навбара ─────────────────────────────────────── */
   document.querySelectorAll('[data-nav-burger]').forEach(btn => {

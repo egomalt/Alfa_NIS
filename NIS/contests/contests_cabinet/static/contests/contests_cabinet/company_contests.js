@@ -44,9 +44,9 @@ function renderStats() {
     { v: participants, l: 'Участников' },
     { v: submissions, l: 'Решений прислано' },
   ].map(s => `
-    <div class="cc-stat-card">
-      <div class="cc-stat-value" style="font-family:'JetBrains Mono',monospace;">${s.v}</div>
-      <div class="cc-stat-label">${s.l}</div>
+    <div class="cp-stat-card">
+      <div class="cp-stat-value">${s.v}</div>
+      <div class="cp-stat-label">${s.l}</div>
     </div>`).join('');
 }
 
@@ -128,18 +128,6 @@ function initFilters() {
   });
 }
 
-async function loadSidebarCompany() {
-  try {
-    const data = await api(`/api/v1/companies/${USERNAME}/`);
-    const company = data.company || data;
-    const name = company.name || USERNAME;
-    const el = document.getElementById('sidebar-name');
-    const av = document.getElementById('sidebar-avatar');
-    if (el) el.textContent = name;
-    if (av) av.textContent = name.charAt(0).toUpperCase();
-  } catch (_) {}
-}
-
 async function load() {
   try {
     const data = await api('/api/v1/contests/company/');
@@ -154,5 +142,4 @@ async function load() {
 
 initFilters();
 initTableActions();
-loadSidebarCompany();
 load();

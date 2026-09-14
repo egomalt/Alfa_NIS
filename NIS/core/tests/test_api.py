@@ -415,6 +415,73 @@ class ConstructorTests(BaseCase):
         self.assertIn('id="status-msg"', article_page)
 
 
+class CabinetSidebarTests(BaseCase):
+    """Боковая панель кабинета должна быть одна и та же на всех страницах.
+
+    Раньше их было две: полная в /cabinet/company/* и урезанная копия
+    в разделах тестов и конкурсов — без «Статистики», выхода и замков.
+    """
+
+    def _company_pages(self):
+        contest = self.make_contest(owner='firma')
+        test = self.make_test(owner='firma')
+        return [
+            '/cabinet/company/', '/cabinet/company/statistics/', '/cabinet/company/settings/',
+            '/cabinet/company/tests/', '/cabinet/company/contests/',
+            f'/cabinet/company/contests/{contest.id}/submissions/',
+            f'/constructor/{test.id}/stats/',
+        ]
+
+    def test_every_page_has_the_same_sidebar_links(self):
+        client = self.login('firma')
+        expected = None
+        for url in self._company_pages():
+            with self.subTest(url=url):
+                body = client.get(url).content.decode()
+                aside = re.search(r'<aside class="cp-sidebar">(.*?)</aside>', body, re.S)
+                self.assertIsNotNone(aside, 'нет общей боковой панели')
+                links = set(re.findall(r'href="([^"]+)"', aside.group(1)))
+                if expected is None:
+                    expected = links
+                    self.assertIn('/cabinet/company/statistics/', links)
+                self.assertEqual(links, expected)
+
+    def test_sidebar_carries_logout_and_mobile_burger(self):
+        client = self.login('firma')
+        for url in self._company_pages():
+            with self.subTest(url=url):
+                body = client.get(url).content.decode()
+                self.assertIn('id="cp-logout-btn"', body)
+                self.assertIn('data-sidebar-burger', body)
+                self.assertIn('cab-scrim', body)
+
+    def test_logout_is_not_duplicated_in_the_top_bar(self):
+        """Кнопка выхода живёт только в сайдбаре."""
+        pages = self._company_pages() + ['/cabinet/user/', '/cabinet/user/tests/']
+        for url in pages:
+            with self.subTest(url=url):
+                client = self.login('firma' if url.startswith(('/cabinet/company', '/constructor')) else 'kandidat')
+                self.assertNotIn('data-logout-btn', client.get(url).content.decode())
+
+    def test_old_duplicate_sidebar_is_gone(self):
+        client = self.login('firma')
+        for url in self._company_pages():
+            with self.subTest(url=url):
+                self.assertNotIn('cc-sidebar', client.get(url).content.decode())
+
+    def test_test_statistics_picks_sidebar_by_role(self):
+        """Тесты заводят обе роли — кандидат не должен видеть меню компании."""
+        company_test = self.make_test(owner='firma')
+        own_test = self.make_test(owner='kandidat')
+
+        company_page = self.login('firma').get(f'/constructor/{company_test.id}/stats/').content.decode()
+        self.assertIn('cp-sidebar', company_page)
+
+        candidate_page = self.login('kandidat').get(f'/constructor/{own_test.id}/stats/').content.decode()
+        self.assertIn('ud-sidebar', candidate_page)
+        self.assertNotIn('cp-sidebar', candidate_page)
+
+
 class TemplateCommentTests(SimpleTestCase):
     """Комментарии в шаблонах не должны попадать на страницу.
 
@@ -471,6 +538,7 @@ class SmokeTests(BaseCase):
         '/cabinet/user/articles/new/', '/cabinet/company/', '/cabinet/company/settings/',
         '/cabinet/company/statistics/', '/cabinet/company/tests/', '/cabinet/company/contests/',
         '/cabinet/company/contests/new/', '/administration/', '/kandidat/', '/firma/',
+        '/firma/tests/',
         '/kandidat/articles/', '/firma/contests/', '/tests/?q=тест', '/tests/?cat=backend',
         '/export/user/statistics.pdf', '/export/company/statistics.pdf', '/export/admin/statistics.pdf',
     ]

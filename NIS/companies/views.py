@@ -32,9 +32,11 @@ def company_tests_page(request):
     if not company.is_verified:
         return redirect('/cabinet/company/')
     return render(request, 'companies/tests.html', {
-        'app_path': request.path,
-        'owner_username': account.username,
+        'username': account.username,
+        # page подсвечивает пункт в сайдбаре, panel='none' говорит company.js
+        # не рисовать здесь профильную панель — у страницы свой скрипт
         'page': 'tests',
+        'panel': 'none',
     })
 
 

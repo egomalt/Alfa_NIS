@@ -63,12 +63,6 @@
         return payload;
     }
 
-    function syncSidebar(company) {
-        const initial = (company.name || 'A').charAt(0).toUpperCase();
-        setText('sidebar-name', company.name || company.username || '');
-        setText('sidebar-avatar', initial);
-    }
-
     function buildActions(test, companyUsername) {
         const cell = document.createElement('td');
         cell.style.whiteSpace = 'nowrap';
@@ -160,7 +154,6 @@
         state.company = payload.company;
         state.tests = payload.tests || [];
         state.stats = payload.stats || null;
-        syncSidebar(state.company);
         syncTestsPage(state.company, state.tests, state.stats);
     }
 
@@ -180,7 +173,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
         showFlash('');
 
-        const username = BOOTSTRAP.ownerUsername || '';
+        const username = BOOTSTRAP.username || '';
         if (!username) {
             showFlash('Не удалось определить компанию по адресу страницы.');
             return;

@@ -1876,6 +1876,10 @@ h1, h2, h3, h4,
   .cr-steps-grid, .cr-tests-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
+/* Четыре карточки в два столбца на телефоне ещё держатся, в 430px — уже нет */
+@media (max-width: 430px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    Элементы, добавленные при доработке функционала.
@@ -2011,15 +2015,6 @@ h1, h2, h3, h4,
 .errorlist li + li { margin-top: 3px; }
 
 /* ── Кнопка «Выйти» в навбаре ─────────────────────────────────────── */
-.cr-logout-btn {
-  height: 34px;
-  padding: 0 13px;
-  margin-left: 4px;
-  border-radius: 8px;
-  font-size: 13px;
-  transition: color .12s, border-color .12s;
-}
-.cr-logout-btn:hover { color: var(--red-text); border-color: var(--red-text); }
 
 /* ── Поле поиска в панели фильтров ────────────────────────────────── */
 .cr-filter-search {

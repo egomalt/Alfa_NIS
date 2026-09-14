@@ -76,13 +76,23 @@ def constructor_shell(request, test_id=None):
 @page_login_required(*TEST_OWNER_ROLES)
 def constructor_stats_shell(request, test_id):
     """Страница «Как проходят тест». Доступна только автору теста."""
-    test = Test.objects.filter(id=test_id, owner_username=request.account.username).first()
+    account = request.account
+    test = Test.objects.filter(id=test_id, owner_username=account.username).first()
     if test is None:
         raise Http404
+
+    # Страница лежит в кабинете, а кабинета два: тесты заводят и компании,
+    # и кандидаты. Базовый шаблон (и вместе с ним боковая панель) — по роли.
+    is_company = account.role == ROLE_COMPANY
     return render(request, 'constructor/test_stats.html', {
+        'base_template': 'cabinet/base_company.html' if is_company else 'cabinet/base_user.html',
+        'username': account.username,
         'test_id': test_id,
         'test_title': test.title,
-        'back_url': '/cabinet/company/tests/' if request.account.role == ROLE_COMPANY else '/cabinet/user/tests/',
+        'page': 'tests',
+        # Панель рисует собственный скрипт страницы
+        'panel': 'none',
+        'back_url': '/cabinet/company/tests/' if is_company else '/cabinet/user/tests/',
     })
 
 
