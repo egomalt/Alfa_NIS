@@ -13,6 +13,7 @@
         company: null,
         tests: [],
         stats: null,
+        filter: 'all',
     };
 
     const STATUS_LABELS = { draft: 'Черновик', published: 'Опубликован' };
@@ -134,30 +135,63 @@
         return row;
     }
 
-    function syncTestsPage(company, tests, stats) {
-        setText('stat-total-tests', String(stats?.total_tests ?? 0));
-        setText('stat-active-tests', String(stats?.active_tests ?? 0));
-        setText('stat-submissions', String(stats?.submissions ?? 0));
-        setText('stat-completion-rate', `${stats?.completion_rate ?? 0}%`);
+    /** Тесты под выбранным фильтром. Плашки сверху считают по всем — это сводка. */
+    function filteredTests() {
+        if (state.filter === 'all') return state.tests;
+        return state.tests.filter(t => t.status === state.filter);
+    }
 
+    function renderTable() {
         const wrapper = document.getElementById('tests-table-wrapper');
         const body = document.getElementById('tests-table-body');
         const empty = document.getElementById('tests-empty');
         if (!wrapper || !body || !empty) return;
 
+        // Клик по фильтру возможен до того, как ответил сервер
+        if (!state.company) return;
+
+        const shown = filteredTests();
+        setText('tests-filter-count', state.tests.length ? `${shown.length} из ${state.tests.length}` : '');
+
         body.innerHTML = '';
 
-        if (!tests.length) {
+        if (!shown.length) {
             wrapper.hidden = true;
             empty.hidden = false;
+            // Пусто из-за фильтра и пусто вообще — разные сообщения
+            setText('tests-empty-title', state.tests.length ? 'Тестов не найдено' : 'Тестов пока нет');
+            setText('tests-empty-sub', state.tests.length
+                ? 'Под выбранный фильтр ничего не подходит'
+                : 'Создайте первый тест, чтобы начать оценку кандидатов');
+            const createBtn = document.getElementById('tests-empty-create');
+            if (createBtn) createBtn.hidden = Boolean(state.tests.length);
             return;
         }
 
-        for (const test of tests) {
-            body.appendChild(buildRow(test, company.username));
+        for (const test of shown) {
+            body.appendChild(buildRow(test, state.company.username));
         }
         wrapper.hidden = false;
         empty.hidden = true;
+    }
+
+    function initFilters() {
+        const chips = document.querySelectorAll('.cr-chip[data-f]');
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                state.filter = chip.dataset.f;
+                chips.forEach(c => c.classList.toggle('active', c === chip));
+                renderTable();
+            });
+        });
+    }
+
+    function syncTestsPage(company, tests, stats) {
+        setText('stat-total-tests', String(stats?.total_tests ?? 0));
+        setText('stat-active-tests', String(stats?.active_tests ?? 0));
+        setText('stat-submissions', String(stats?.submissions ?? 0));
+        setText('stat-completion-rate', `${stats?.completion_rate ?? 0}%`);
+        renderTable();
     }
 
     async function loadTests(username) {
@@ -183,6 +217,7 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
         showFlash('');
+        initFilters();
 
         const username = BOOTSTRAP.username || '';
         if (!username) {

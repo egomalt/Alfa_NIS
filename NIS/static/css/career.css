@@ -1252,6 +1252,8 @@ input, textarea, select {
   text-transform: uppercase;
   letter-spacing: .06em;
   color: var(--faint);
+  /* Серая полоса шапки — как у таблицы конкурсов */
+  background: var(--surface-2);
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }

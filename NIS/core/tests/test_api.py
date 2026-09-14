@@ -499,6 +499,15 @@ class CabinetSidebarTests(BaseCase):
         self.assertIn('min-width: 0', mobile.group(1))
         self.assertIn('.cc-thead { display: none; }', mobile.group(1))
 
+    def test_tests_page_has_status_filters(self):
+        """Список тестов фильтруется так же, как список конкурсов."""
+        body = self.login('firma').get('/cabinet/company/tests/').content.decode()
+        for value in ('all', 'published', 'draft'):
+            self.assertIn(f'data-f="{value}"', body)
+        self.assertIn('id="tests-filter-count"', body)
+        # Пустое состояние различает «нет вовсе» и «не подходит под фильтр»
+        self.assertIn('id="tests-empty-title"', body)
+
     def test_lists_use_the_same_card(self):
         """Списки тестов и конкурсов должны выглядеть одинаково.
 
