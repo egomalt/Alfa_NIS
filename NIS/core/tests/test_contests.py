@@ -203,3 +203,22 @@ class ArticleContentTests(BaseCase):
         response = self.login('kandidat').patch(
             f'/api/v1/articles/{article.id}/', json.dumps({'tags': 'не список'}), 'application/json')
         self.assertEqual(response.status_code, 400)
+
+    def test_content_is_stored_as_plain_text(self):
+        """Поле было JSONField: значения лежали в кавычках и с \\uXXXX-экранированием."""
+        article = self.make_article(author='kandidat', published=False)
+        self.login('kandidat').patch(
+            f'/api/v1/articles/{article.id}/',
+            json.dumps({'content': '<p>Кириллица и «кавычки»</p>'}), 'application/json')
+
+        article.refresh_from_db()
+        self.assertIsInstance(article.content, str)
+        self.assertEqual(article.content, '<p>Кириллица и «кавычки»</p>')
+        self.assertFalse(article.content.startswith('"'))
+        self.assertNotIn('\\u04', article.content)
+
+    def test_new_article_has_empty_body_not_list(self):
+        response = self.login('kandidat').post('/api/v1/articles/create/')
+        from articles.constructor.models import Article
+        article = Article.objects.get(id=response.json()['article_id'])
+        self.assertEqual(article.content, '')
