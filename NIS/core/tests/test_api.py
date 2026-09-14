@@ -218,3 +218,28 @@ class AdminSearchTests(BaseCase):
 
         by_name = client.get('/api/v1/admin/users/?q=Фирма').json()['users']
         self.assertTrue(any(u['username'] == 'firma' for u in by_name))
+
+
+class CompanyCatalogTests(BaseCase):
+    """Каталог компаний: порядок и поля, которые читает страница."""
+
+    def test_companies_sorted_by_published_tests(self):
+        """Раньше сортировка шла по дате регистрации — пустые карточки лезли наверх."""
+        self.make_test(owner='firma', published=True)
+        self.make_test(owner='firma', published=True)
+        self.make_test(owner='konkurent', published=True)
+        self.make_test(owner='konkurent', published=False)   # черновик не в счёт
+
+        companies = Client().get('/api/v1/companies/').json()['companies']
+        order = [(c['username'], c['tests_count']) for c in companies]
+        self.assertEqual(order[0], ('firma', 2))
+        self.assertEqual(order[1], ('konkurent', 1))
+
+    def test_card_fields_present(self):
+        company = Client().get('/api/v1/companies/').json()['companies'][0]
+        for key in ('username', 'name', 'description', 'industry', 'city',
+                    'tests_count', 'avg_rating', 'profile_url', 'avatar_url'):
+            self.assertIn(key, company)
+
+    def test_catalog_page_opens(self):
+        self.assertEqual(Client().get('/companies/').status_code, 200)
