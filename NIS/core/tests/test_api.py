@@ -479,6 +479,26 @@ class CabinetSidebarTests(BaseCase):
         for match in re.findall(r'(?:href|src)="(/static/[^"]+\.(?:css|js))"', body):
             self.fail(f'ссылка на статику без версии: {match}')
 
+    def test_nothing_in_the_cabinet_forces_a_wide_page(self):
+        """На телефоне ни один блок не должен требовать ширины больше экрана.
+
+        В career.css стоит body { overflow-x: clip }: то, что не влезло,
+        не прокручивается, а молча обрезается — поэтому жёсткие min-width
+        должны либо лежать в контейнере с прокруткой, либо сниматься
+        в мобильном медиазапросе.
+        """
+        css = (Path(settings.BASE_DIR)
+               / 'contests/contests_cabinet/static/contests/contests_cabinet/contests_cabinet.css'
+               ).read_text(encoding='utf-8')
+
+        wide = re.findall(r'min-width: (\d{3,})px', css)
+        self.assertTrue(wide, 'правило с min-width пропало — проверьте тест')
+        # Таблица конкурсов разворачивается в карточки на узком экране
+        mobile = re.search(r'@media \(max-width: 680px\) \{(.*?)\n\}', css, re.S)
+        self.assertIsNotNone(mobile, 'нет мобильного медиазапроса для таблицы')
+        self.assertIn('min-width: 0', mobile.group(1))
+        self.assertIn('.cc-thead { display: none; }', mobile.group(1))
+
     def test_old_duplicate_sidebar_is_gone(self):
         client = self.login('firma')
         for url in self._company_pages():

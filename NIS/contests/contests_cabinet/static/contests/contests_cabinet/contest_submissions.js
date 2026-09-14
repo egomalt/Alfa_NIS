@@ -224,10 +224,10 @@ async function decide(id, status) {
 }
 
 function initFilters() {
-  document.querySelectorAll('.cs-filter-btn').forEach(btn => {
+  document.querySelectorAll('.cr-chip').forEach(btn => {
     btn.addEventListener('click', () => {
       activeFilter = btn.dataset.f;
-      document.querySelectorAll('.cs-filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.cr-chip').forEach(b => b.classList.toggle('active', b === btn));
       renderList();
     });
   });
@@ -247,7 +247,7 @@ async function loadContest() {
     chip.textContent = sm.label;
     chip.hidden = false;
     if (c.deadline) {
-      document.getElementById('cs-deadline-text').textContent = 'Дедлайн ' + new Date(c.deadline).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+      document.getElementById('cs-deadline-text').textContent = 'Дедлайн ' + new Date(c.deadline).toLocaleDateString('ru-RU');
     }
   } catch (_) {}
 }

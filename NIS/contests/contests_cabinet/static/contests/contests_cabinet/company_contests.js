@@ -25,7 +25,9 @@ let activeFilter = 'all';
 function formatDeadline(dt) {
   if (!dt) return '—';
   const d = new Date(dt);
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  // Дедлайн — в коротком ДД.ММ.ГГГГ: локаль ru-RU так форматирует по умолчанию,
+  // а «30 июля 2026 г.» в таблице и заголовке занимало полстроки
+  return d.toLocaleDateString('ru-RU');
 }
 
 function isUrgent(dt, status) {
@@ -80,7 +82,7 @@ function renderTable() {
         <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-2);">${c.participants_count || 0}</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-2);">${c.submissions_count || 0}</div>
         <div><span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:${m.bg};color:${m.color};">${m.label}</span></div>
-        <div style="display:flex;gap:6px;" onclick="event.stopPropagation()">
+        <div class="cc-actions" onclick="event.stopPropagation()">
           <button class="cc-icon-btn" title="Решения" onclick="location.href='/cabinet/company/contests/${c.id}/submissions/'">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           </button>
@@ -119,10 +121,10 @@ async function deleteContest(id, e) {
 }
 
 function initFilters() {
-  document.querySelectorAll('.cc-filter-btn').forEach(btn => {
+  document.querySelectorAll('.cr-chip').forEach(btn => {
     btn.addEventListener('click', () => {
       activeFilter = btn.dataset.f;
-      document.querySelectorAll('.cc-filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.cr-chip').forEach(b => b.classList.toggle('active', b === btn));
       renderTable();
     });
   });

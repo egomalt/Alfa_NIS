@@ -46,14 +46,13 @@
   </div>
 </div>
 
-<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-  <button class="cs-filter-btn active" data-f="all">Все</button>
-  <button class="cs-filter-btn" data-f="pending">На проверке</button>
-  <button class="cs-filter-btn" data-f="accepted">Приняты</button>
-  <button class="cs-filter-btn" data-f="rejected">Отклонены</button>
-  <button class="cs-filter-btn" data-f="liked">Понравившиеся ♥</button>
-  <span class="cs-filter-count" id="cs-filter-count"
-        style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-left:auto;"></span>
+<div class="cr-filters">
+  <button class="cr-chip active" data-f="all">Все</button>
+  <button class="cr-chip" data-f="pending">На проверке</button>
+  <button class="cr-chip" data-f="accepted">Приняты</button>
+  <button class="cr-chip" data-f="rejected">Отклонены</button>
+  <button class="cr-chip" data-f="liked">Понравившиеся ♥</button>
+  <span class="cr-filter-count" id="cs-filter-count"></span>
 </div>
 
 <div id="cs-sub-list"></div>
