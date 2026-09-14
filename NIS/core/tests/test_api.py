@@ -499,6 +499,24 @@ class CabinetSidebarTests(BaseCase):
         self.assertIn('min-width: 0', mobile.group(1))
         self.assertIn('.cc-thead { display: none; }', mobile.group(1))
 
+    def test_lists_use_the_same_card(self):
+        """Списки тестов и конкурсов должны выглядеть одинаково.
+
+        Раньше у каждого была своя карточка со своими фоном и отступами,
+        и на телефоне они расходились.
+        """
+        body = self.login('firma').get('/cabinet/company/tests/').content.decode()
+        self.assertIn('class="list-card"', body)
+        self.assertIn('class="list-card-header"', body)
+
+        script = (Path(settings.BASE_DIR)
+                  / 'contests/contests_cabinet/static/contests/contests_cabinet/company_contests.js'
+                  ).read_text(encoding='utf-8')
+        self.assertIn('class="list-card"', script)
+        self.assertIn('class="list-card-header"', script)
+        # Прокрутка живёт внутри карточки, иначе строки распирают страницу
+        self.assertIn('class="cc-scroll"', script)
+
     def test_old_duplicate_sidebar_is_gone(self):
         client = self.login('firma')
         for url in self._company_pages():

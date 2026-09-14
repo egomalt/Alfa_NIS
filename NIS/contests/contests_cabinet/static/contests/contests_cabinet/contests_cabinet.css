@@ -14,10 +14,10 @@
    здесь лежали две их копии, отличавшиеся от остального сайта формой. */
 
 
-/* Таблица не сжимается ниже min-width — вместо обрезки даём прокрутку.
-   Было overflow: hidden, и правый край (колонка действий) пропадал
-   безвозвратно: body в career.css стоит с overflow-x: clip. */
-.cc-table { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow-x: auto; }
+/* Рамку, фон и скругление даёт общая .list-card из career.css — та же,
+   что у списка тестов. Здесь только прокрутка: строки не сжимаются ниже
+   min-width, а обрезать их нельзя (body стоит с overflow-x: clip). */
+.cc-scroll { overflow-x: auto; }
 .cc-thead, .cc-trow { display: grid; grid-template-columns: minmax(150px, 1.4fr) 100px 84px 84px 96px 108px; gap: 10px; min-width: 640px; }
 .cc-thead { padding: 11px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
 .cc-thead span { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
@@ -101,7 +101,7 @@
    а её min-width: 640px — единственное, что может распереть страницу.
    В карточном виде ширины хватает любой, и переполнение невозможно. */
 @media (max-width: 680px) {
-  .cc-table { overflow-x: visible; }
+  .cc-scroll { overflow-x: visible; }
   .cc-thead { display: none; }
   .cc-trow {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1231,42 +1231,11 @@ input, textarea, select {
 .tests-header h1 { font-size: 1.3rem; font-weight: 800; margin: 0 0 4px; letter-spacing: -.01em; }
 .tests-header p { font-size: 13.5px; color: var(--muted); margin: 0; }
 
-/* Ряд карточек над таблицей тестов — единственное место применения */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  padding: 20px 28px;
-  margin-bottom: 24px;
-}
-.stat-box {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 18px 20px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--surface);
-}
-.stat-box strong {
-  font-size: 1.6rem;
-  font-weight: 800;
-  letter-spacing: -.02em;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--text);
-}
-.stat-box span { font-size: 13px; color: var(--muted); }
-
-.tests-table-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.tests-table-header { padding: 20px 24px 18px; }
-.tests-table-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
-/* Карточка со списком: таблица прижимается к её краям, поэтому свои
-   отступы у карточки нулевые, а ячейки отступают сами */
-.tests-card { padding: 0; overflow: hidden; margin: 0; }
+/* Карточка со списком: таблица прижата к её краям, поэтому у самой карточки
+   отступов нет, а отступают ячейки. Одна и та же для тестов и конкурсов. */
+.list-card { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; }
+.list-card-header { padding: 20px 24px 18px; display: flex; align-items: center; justify-content: space-between; }
+.list-card-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
 .muted-note { font-size: 12.5px; color: var(--muted); }
 
 .table-wrapper { overflow-x: auto; }
@@ -1914,15 +1883,9 @@ h1, h2, h3, h4,
 @media (max-width: 1000px) {
   .cr-catalog-layout { grid-template-columns: 1fr; }
   .cr-steps-grid, .cr-tests-grid { grid-template-columns: repeat(2, 1fr); }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 620px) {
   .cr-steps-grid, .cr-tests-grid { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-}
-/* Четыре карточки в два столбца на телефоне ещё держатся, в 430px — уже нет */
-@media (max-width: 430px) {
-  .stats-grid { grid-template-columns: 1fr; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
