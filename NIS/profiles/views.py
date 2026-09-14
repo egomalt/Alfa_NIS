@@ -40,6 +40,18 @@ def company_contests_view(request, username):
 
 
 @ensure_csrf_cookie
+def company_tests_view(request, username):
+    """Все опубликованные тесты компании — публичный аналог списка конкурсов."""
+    try:
+        company = Company.objects.get(username=username)
+    except Company.DoesNotExist:
+        raise Http404
+    if not company.is_verified:
+        raise Http404
+    return render(request, 'profiles/company_tests.html', {'username': username})
+
+
+@ensure_csrf_cookie
 def user_articles_view(request, username):
     if not Account.objects.filter(username=username, role=ROLE_USER).exists():
         raise Http404

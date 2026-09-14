@@ -122,6 +122,19 @@ class LeakTests(BaseCase):
         self.assertEqual(self.login('konkurent').get(f'/api/v1/tests/{draft.id}/view/?preview=1').status_code, 404)
         self.assertEqual(self.login('firma').get(f'/api/v1/tests/{draft.id}/view/?preview=1').status_code, 200)
 
+    def test_company_tests_endpoint_hides_drafts(self):
+        """Эндпоинт открыт всем и раньше отдавал названия чужих черновиков."""
+        self.make_test(owner='firma', published=True, title='Открытый тест')
+        self.make_test(owner='firma', published=False, title='СЕКРЕТНЫЙ ЧЕРНОВИК')
+
+        url = '/api/v1/companies/firma/tests/'
+        for client in (Client(), self.login('konkurent')):
+            titles = [t['title'] for t in client.get(url).json()['tests']]
+            self.assertEqual(titles, ['Открытый тест'])
+
+        owner_titles = [t['title'] for t in self.login('firma').get(url).json()['tests']]
+        self.assertCountEqual(owner_titles, ['Открытый тест', 'СЕКРЕТНЫЙ ЧЕРНОВИК'])
+
     def test_hidden_code_test_cases_stay_on_server(self):
         """Страница прохождения получает язык и примеры, но не скрытые тесты."""
         test = self.make_test(owner='firma', with_quiz=False)
