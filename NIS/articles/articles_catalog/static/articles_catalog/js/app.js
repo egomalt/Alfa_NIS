@@ -53,7 +53,7 @@
 
     const cover = COVERS[top.cover_index % COVERS.length];
     document.getElementById('featured-cover-bg').style.cssText = `position:absolute;inset:0;background:${cover};`;
-    document.getElementById('featured-badge-text').textContent = (top.views || 0) + ' просмотров · Топ недели';
+    document.getElementById('featured-badge-text').textContent = (top.views || 0) + ' просмотров · Свежее';
     document.getElementById('featured-tags').innerHTML = (top.tags || []).map(t => `<span class="featured-tag">${esc(t)}</span>`).join('');
     document.getElementById('featured-title').textContent = top.title || 'Без названия';
     document.getElementById('featured-excerpt').textContent = top.excerpt || '';

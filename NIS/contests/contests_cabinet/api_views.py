@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import transaction
+from django.db.models import Count
 from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -43,7 +44,12 @@ def _attachment_to_dict(attachment):
     }
 
 
-def _contest_to_dict(c, full=False):
+def _contest_to_dict(c, full=False, submissions_count=None):
+    """Карточка конкурса.
+
+    submissions_count интерфейс читает в трёх местах, а сервер его не отдавал —
+    везде показывался ноль. Считаем одним запросом на список, а не в цикле.
+    """
     d = {
         'id': c.id,
         'title': c.title,
@@ -57,6 +63,9 @@ def _contest_to_dict(c, full=False):
         'participants_count': c.participants_count,
         'created_at': c.created_at.isoformat(),
         'company_username': c.company_username,
+        'submissions_count': (
+            submissions_count if submissions_count is not None else c.submissions.count()
+        ),
     }
     if full:
         d['case_text'] = c.case_text
@@ -81,6 +90,7 @@ def _candidate_cards(usernames):
         profile = profiles.get(username)
         cards[username] = {
             'email': emails.get(username) or '',
+            'phone': (profile.phone if profile else None) or '',
             'skills': (profile.skills if profile else None) or [],
             'bio': (profile.bio if profile else None) or '',
         }
@@ -97,6 +107,7 @@ def _sub_to_dict(s, cards=None):
         'candidate_username': s.candidate_username,
         'candidate_name': s.candidate_name,
         'candidate_email': email,
+        'candidate_phone': card['phone'],
         'candidate_skills': skills,
         'candidate_bio': bio,
         'file_url': s.file.url if s.file else None,
@@ -117,14 +128,23 @@ def _sub_to_dict(s, cards=None):
 def api_company_contests(request):
     account = request.account
     qs = Contest.objects.filter(company_username=account.username)
+
+    # Пять счётчиков одним запросом вместо пяти отдельных COUNT(*)
+    by_status = dict(qs.values_list('status').annotate(n=Count('id')))
     stats = {
-        'total': qs.count(),
-        'active': qs.filter(status='active').count(),
-        'review': qs.filter(status='review').count(),
-        'finished': qs.filter(status='finished').count(),
-        'draft': qs.filter(status='draft').count(),
+        'total': sum(by_status.values()),
+        'active': by_status.get(Contest.STATUS_ACTIVE, 0),
+        'review': by_status.get(Contest.STATUS_REVIEW, 0),
+        'finished': by_status.get(Contest.STATUS_FINISHED, 0),
+        'draft': by_status.get(Contest.STATUS_DRAFT, 0),
     }
-    return JsonResponse({'ok': True, 'contests': [_contest_to_dict(c) for c in qs], 'stats': stats})
+
+    contests = qs.annotate(subs=Count('submissions'))
+    return JsonResponse({
+        'ok': True,
+        'contests': [_contest_to_dict(c, submissions_count=c.subs) for c in contests],
+        'stats': stats,
+    })
 
 
 @require_http_methods(['POST'])

@@ -43,6 +43,7 @@ def api_candidate_update(request, username):
     name = (body.get('name') or '').strip()
     email = (body.get('email') or '').strip()
     bio = body.get('bio', '')
+    phone = body.get('phone', None)
     skills_raw = body.get('skills', None)
 
     changed_fields = []
@@ -61,9 +62,11 @@ def api_candidate_update(request, username):
 
     profile, _ = UserProfile.objects.get_or_create(username=username)
     profile.bio = bio
+    if phone is not None:
+        profile.phone = str(phone).strip()[:32]
     if skills_raw is not None:
         profile.skills = [s.strip() for s in skills_raw if isinstance(s, str) and s.strip()][:20]
-    profile.save(update_fields=['bio', 'skills'])
+    profile.save(update_fields=['bio', 'phone', 'skills'])
 
     return JsonResponse({'ok': True, 'candidate': _serialize_candidate(account, profile, include_private=True)})
 
@@ -105,4 +108,5 @@ def _serialize_candidate(account, profile, include_private=False):
     }
     if include_private:
         data['email'] = account.email
+        data['phone'] = profile.phone if profile else ''
     return data

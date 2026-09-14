@@ -37,7 +37,7 @@
 <body>
 <div style="display:flex;flex-direction:column;min-height:100vh;">
 
-  {% include 'partials/navbar.html' with chip_id='company-user-chip' logout_id='company-logout-btn' %}
+  {% include 'partials/navbar.html' with chip_id='company-user-chip' show_logout=1 %}
 
   <div class="cc-layout">
     {% include 'contests/contests_cabinet/_sidebar.html' with active='tests' username=owner_username %}

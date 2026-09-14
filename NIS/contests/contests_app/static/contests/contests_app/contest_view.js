@@ -323,6 +323,7 @@ function closeContactModal() { document.getElementById('cv-contact-modal').class
 async function saveContact() {
   const emailInput = document.getElementById('cv-contact-email');
   const email = emailInput.value.trim();
+  const phone = document.getElementById('cv-contact-phone')?.value.trim() || '';
   if (!email) { emailInput.style.borderColor = 'var(--brand)'; return; }
   const errEl = document.getElementById('cv-contact-error');
   if (errEl) errEl.textContent = '';
@@ -331,7 +332,7 @@ async function saveContact() {
     // пользователь видел «сохранено», но email не сохранялся.
     await apiFetch(`/api/v1/candidates/${me.username}/update/`, {
       method: 'PATCH',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, phone }),
     });
   } catch (err) {
     if (errEl) errEl.textContent = err.message || 'Не удалось сохранить email.';

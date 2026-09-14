@@ -156,3 +156,65 @@ class SmokeTests(BaseCase):
                     '/django-admin/admin_reports/report/', '/django-admin/users/userprofile/']:
             with self.subTest(url=url):
                 self.assertEqual(client.get(url).status_code, 200)
+
+
+class ContactDetailsTests(BaseCase):
+    """Телефон кандидата: раньше поле было в интерфейсе, но сервер его не знал."""
+
+    def test_phone_is_saved_and_returned_to_owner(self):
+        client = self.login('kandidat')
+        response = client.patch('/api/v1/candidates/kandidat/update/',
+                                json.dumps({'name': 'К', 'phone': '+7 900 000-00-00'}), 'application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['candidate']['phone'], '+7 900 000-00-00')
+
+    def test_phone_is_private(self):
+        self.login('kandidat').patch('/api/v1/candidates/kandidat/update/',
+                                     json.dumps({'name': 'К', 'phone': '+79000000000'}), 'application/json')
+        self.assertNotIn('+79000000000', Client().get('/api/v1/candidates/kandidat/').content.decode())
+
+    def test_company_sees_contacts_of_its_participants(self):
+        self.login('kandidat').patch('/api/v1/candidates/kandidat/update/',
+                                     json.dumps({'name': 'К', 'phone': '+79000000000'}), 'application/json')
+        contest = self.make_contest(submission_type='text')
+        self.login('kandidat').post(f'/api/v1/contests/{contest.id}/submit/', {'text': 'решение'})
+
+        data = self.login('firma').get(f'/api/v1/contests/{contest.id}/submissions/').json()
+        self.assertEqual(data['submissions'][0]['candidate_phone'], '+79000000000')
+
+
+class ContestCountersTests(BaseCase):
+    """«Решений прислано» всегда показывалось нулём — сервер не отдавал поле."""
+
+    def test_submissions_count_is_returned(self):
+        contest = self.make_contest(submission_type='text')
+        self.login('kandidat').post(f'/api/v1/contests/{contest.id}/submit/', {'text': 'решение'})
+
+        public = Client().get(f'/api/v1/contests/{contest.id}/').json()['contest']
+        self.assertEqual(public['submissions_count'], 1)
+
+        cabinet = self.login('firma').get('/api/v1/contests/company/').json()
+        target = next(c for c in cabinet['contests'] if c['id'] == contest.id)
+        self.assertEqual(target['submissions_count'], 1)
+
+    def test_company_contest_list_stats_are_correct(self):
+        self.make_contest(status='draft')
+        self.make_contest(status='active')
+        self.make_contest(status='finished')
+        stats = self.login('firma').get('/api/v1/contests/company/').json()['stats']
+        self.assertEqual(stats['total'], 3)
+        self.assertEqual(stats['draft'], 1)
+        self.assertEqual(stats['active'], 1)
+        self.assertEqual(stats['finished'], 1)
+
+
+class AdminSearchTests(BaseCase):
+    """Поиск в админке раньше искал только по имени, хотя показывается логин."""
+
+    def test_search_by_username_and_name(self):
+        client = self.login('moder')
+        by_login = client.get('/api/v1/admin/users/?q=kandidat').json()['users']
+        self.assertTrue(any(u['username'] == 'kandidat' for u in by_login))
+
+        by_name = client.get('/api/v1/admin/users/?q=Фирма').json()['users']
+        self.assertTrue(any(u['username'] == 'firma' for u in by_name))
