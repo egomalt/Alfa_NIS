@@ -277,3 +277,30 @@ class TestsCatalogTests(BaseCase):
         for url in ['/tests/', '/tests/?cat=backend', '/tests/?level=junior', '/tests/?q=тест']:
             with self.subTest(url=url):
                 self.assertEqual(Client().get(url).status_code, 200)
+
+
+class ContestsCatalogTests(BaseCase):
+    """Каталог конкурсов: поля карточки и что в него попадает."""
+
+    def test_card_fields_present(self):
+        self.make_contest(owner='firma', status='active', prize='100 000 ₽', category='backend')
+        contest = Client().get('/api/v1/contests/catalog/').json()['contests'][0]
+        for key in ('id', 'title', 'excerpt', 'status', 'deadline', 'prize',
+                    'category', 'participants_count', 'company_name'):
+            self.assertIn(key, contest)
+
+    def test_drafts_are_not_in_catalog(self):
+        self.make_contest(owner='firma', status='active', title='Открытый')
+        self.make_contest(owner='firma', status='draft', title='Черновик')
+        titles = [c['title'] for c in Client().get('/api/v1/contests/catalog/').json()['contests']]
+        self.assertIn('Открытый', titles)
+        self.assertNotIn('Черновик', titles)
+
+    def test_finished_contests_are_shown(self):
+        """Завершённые остаются в каталоге — их можно посмотреть, но не участвовать."""
+        self.make_contest(owner='firma', status='finished', title='Завершённый')
+        titles = [c['title'] for c in Client().get('/api/v1/contests/catalog/').json()['contests']]
+        self.assertIn('Завершённый', titles)
+
+    def test_catalog_page_opens(self):
+        self.assertEqual(Client().get('/contests/').status_code, 200)

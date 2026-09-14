@@ -261,6 +261,120 @@ main { max-width: 1160px; margin: 0 auto; padding: 44px 32px 100px; }
 .te-start:hover { background: var(--brand); border-color: transparent; color: var(--on-brand); }
 .te-start svg { flex-shrink: 0; }
 
+/* ── Карточки конкурсов ────────────────────────────────────────────── */
+
+/* У конкурса есть то, чего нет больше нигде на сайте, — срок. Поэтому полоса
+   слева показывает не тип задания, а срочность: чем меньше времени осталось,
+   тем тревожнее цвет. Просматривая колонку, сразу видно, что скоро закроется. */
+.cn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 44px; }
+@media (max-width: 900px) { .cn-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 580px) { .cn-grid { grid-template-columns: 1fr; } }
+
+.cn-card {
+  padding: 20px;
+  border-left: 3px solid var(--line-2);
+  cursor: default;
+}
+.cn-card[data-urgency="calm"]   { border-left-color: var(--green-text); }
+.cn-card[data-urgency="soon"]   { border-left-color: var(--amber-text); }
+.cn-card[data-urgency="urgent"] { border-left-color: var(--red-text); }
+.cn-card[data-urgency="closed"] { border-left-color: var(--line-2); }
+
+.cn-head { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+.cn-company-av {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cn-company {
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cn-status {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.cn-status-active   { background: var(--green-soft);  color: var(--green-text); }
+.cn-status-review   { background: var(--amber-soft);  color: var(--amber-text); }
+.cn-status-finished { background: var(--surface-2);   color: var(--muted); }
+
+/* Приз — главная приманка конкурса, поэтому отдельной выделенной строкой */
+.cn-prize {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  background: var(--amber-soft);
+  color: var(--amber-text);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.cn-prize svg { flex-shrink: 0; }
+
+.cn-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  margin-bottom: 14px;
+  border-top: 1px solid var(--line);
+}
+.cn-deadline { display: flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--muted); }
+.cn-deadline svg { flex-shrink: 0; color: var(--faint); }
+.cn-deadline.urgent { color: var(--red-text); font-weight: 700; }
+.cn-deadline.urgent svg { color: var(--red-text); }
+.cn-cat {
+  margin-left: auto;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cn-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.cn-start:hover { background: var(--brand); border-color: transparent; color: var(--on-brand); }
+.cn-start svg { flex-shrink: 0; }
+
 /* ── Адаптив ───────────────────────────────────────────────────────── */
 
 /* Сетки карточек перестраиваются выше, рядом со своими блоками:
