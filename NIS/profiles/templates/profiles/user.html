@@ -21,7 +21,9 @@
     .pu-cover svg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .5; }
     .pu-hero-card { border: 1px solid var(--line); border-radius: 20px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 22px; }
     .pu-hero-body { padding: 0 30px 26px; }
-    .pu-hero-av { width: 92px; height: 92px; border-radius: 22px; background: var(--brand-soft); color: var(--brand-text); font-weight: 800; font-size: 36px; display: flex; align-items: center; justify-content: center; border: 4px solid var(--surface); margin-top: -46px; margin-bottom: 14px; overflow: hidden; flex-shrink: 0; }
+    /* Как и на профиле компании: без position баннер (.pu-cover позиционирован)
+       рисуется поверх аватарки и срезает ей верх. */
+    .pu-hero-av { position: relative; z-index: 1; width: 92px; height: 92px; border-radius: 22px; background: var(--brand-soft); color: var(--brand-text); font-weight: 800; font-size: 36px; display: flex; align-items: center; justify-content: center; border: 4px solid var(--surface); margin-top: -50px; margin-bottom: 14px; overflow: hidden; flex-shrink: 0; }
     .pu-hero-av img { width: 100%; height: 100%; object-fit: cover; }
     .pu-hero-name { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px; }
     .pu-hero-meta { font-size: 14px; color: var(--muted); }
@@ -32,7 +34,9 @@
     .pu-stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 22px; }
     .pu-stat-card { display: flex; flex-direction: column; gap: 5px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
     .pu-stat-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
-    .pu-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; }
+    /* Длинные метки («Статей опубликовано») переносятся на две строки —
+       значения прижимаем к низу, иначе они стоят на разной высоте */
+    .pu-stat-value { margin-top: auto; font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; }
 
     .pu-section { border: 1px solid var(--line); border-radius: 18px; background: var(--surface); padding: 24px 26px; margin-bottom: 20px; }
     .pu-section-title { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
@@ -75,7 +79,8 @@
   </div>
 </main>
 
-<script src="{% static 'profiles/user.js' %}?v=20260722-1"></script>
+<script src="{% static 'js/plural.js' %}?v=20260914-1"></script>
+<script src="{% static 'profiles/user.js' %}?v=20260914-2"></script>
 <meta name="csrf-token" content="{{ csrf_token }}">
 <script>
   window.ALFA_MOD_TARGET = { type: 'user', username: "{{ username|escapejs }}" };
