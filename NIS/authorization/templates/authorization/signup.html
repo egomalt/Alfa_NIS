@@ -19,7 +19,7 @@
     };
   </script>
   <script src="{% static 'main/theme.js' %}" defer></script>
-  <script type="module" src="{% static 'authorization/app.js' %}?v=20260613-1"></script>
+  <script type="module" src="{% static 'authorization/app.js' %}?v=20260914-1"></script>
 </head>
 <body>
 <div class="cr-auth-page">
@@ -40,7 +40,7 @@
       <button type="button" class="cr-role-btn" data-role="company">Компания</button>
     </div>
 
-    <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
+    <div id="auth-flash" class="app-alert app-alert-inline" role="alert" hidden></div>
 
     <form id="signup-form" method="post" action="/api/v1/auth/signup/" data-api-form="register">
       {% csrf_token %}
@@ -49,38 +49,38 @@
       <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px;">
         <div data-field="name" id="field-name">
           <div class="cr-auth-field-label" id="label-name">Отображаемое имя</div>
-          <input id="register-name" name="name" type="text" placeholder="Например, Иван Иванов"
+          <input id="register-name" aria-describedby="err-name" name="name" type="text" placeholder="Например, Иван Иванов"
             class="cr-auth-input" required>
-          <ul class="errorlist" hidden></ul>
+          <ul class="errorlist" id="err-name" hidden></ul>
         </div>
 
         <div data-field="username">
           <div class="cr-auth-field-label">Имя пользователя</div>
-          <input id="register-username" name="username" type="text" placeholder="Например, ivan-ivanov"
+          <input id="register-username" aria-describedby="err-username" name="username" type="text" placeholder="Например, ivan-ivanov"
             class="cr-auth-input" pattern="[a-z0-9_-]+" autocapitalize="off" autocomplete="off"
             spellcheck="false" required>
-          <ul class="errorlist" hidden></ul>
+          <ul class="errorlist" id="err-username" hidden></ul>
         </div>
 
         <div data-field="email">
           <div class="cr-auth-field-label" id="email-label">Email</div>
-          <input id="register-email" name="email" type="email" placeholder="ivan@example.com"
+          <input id="register-email" aria-describedby="err-email" name="email" type="email" placeholder="ivan@example.com"
             class="cr-auth-input" required>
-          <ul class="errorlist" hidden></ul>
+          <ul class="errorlist" id="err-email" hidden></ul>
         </div>
 
         <div data-field="password">
           <div class="cr-auth-field-label">Пароль</div>
-          <input id="register-password" name="password" type="password" placeholder="Минимум 8 символов"
+          <input id="register-password" aria-describedby="err-password" name="password" type="password" placeholder="Минимум 8 символов"
             class="cr-auth-input" required autocomplete="new-password">
-          <ul class="errorlist" hidden></ul>
+          <ul class="errorlist" id="err-password" hidden></ul>
         </div>
 
         <div data-field="password_confirm">
           <div class="cr-auth-field-label">Повторите пароль</div>
-          <input id="register-password-confirm" name="password_confirm" type="password" placeholder="••••••••"
+          <input id="register-password-confirm" aria-describedby="err-password_confirm" name="password_confirm" type="password" placeholder="••••••••"
             class="cr-auth-input" required autocomplete="new-password">
-          <ul class="errorlist" hidden></ul>
+          <ul class="errorlist" id="err-password_confirm" hidden></ul>
         </div>
       </div>
 

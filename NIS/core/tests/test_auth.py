@@ -30,6 +30,12 @@ class RegistrationTests(BaseCase):
         self.assertTrue(all(any(c.isalpha() and c.lower() in 'абвгдежзийклмнопрстуфхцчшщъыьэюя'
                                 for c in e['message']) for e in errors))
 
+    def test_taken_username_message_is_human_readable(self):
+        """Django собирал сообщение из английских имён: «Account с таким Username…»."""
+        message = self._signup('kandidat', PASSWORD).json()['errors']['username'][0]['message']
+        self.assertEqual(message, 'Это имя пользователя уже занято.')
+        self.assertNotIn('Account', message)
+
     def test_candidate_signup_creates_profile_and_logs_in(self):
         response = self._signup('ivan-test', PASSWORD)
         self.assertEqual(response.status_code, 201)
@@ -78,6 +84,18 @@ class LoginTests(BaseCase):
         self.assertEqual(wrong.status_code, ghost.status_code)
         self.assertEqual(wrong.json(), ghost.json())
 
+    def test_invalid_credentials_are_form_level_not_field_level(self):
+        """Иначе страница показывала бы и баннер, и текст под полем одновременно."""
+        payload = Client().post('/api/v1/auth/signin/',
+                                {'username': 'kandidat', 'password': 'x'}).json()
+        self.assertNotIn('errors', payload)
+        self.assertEqual(payload['message'], 'Неверное имя пользователя или пароль.')
+
+    def test_empty_form_reports_each_field(self):
+        payload = Client().post('/api/v1/auth/signin/', {}).json()
+        self.assertNotIn('message', payload)
+        self.assertEqual(set(payload['errors']), {'username', 'password'})
+
     def test_successful_login_and_logout(self):
         client = self.login('kandidat')
         self.assertIsNotNone(client.get('/api/v1/auth/me/').json()['account'])
@@ -109,9 +127,11 @@ class BanTests(BaseCase):
             status=STATUS_BANNED, ban_until=None, ban_reason='спам')
         response = Client().post('/api/v1/auth/signin/', {'username': 'kandidat', 'password': PASSWORD})
         self.assertEqual(response.status_code, 403)
-        message = response.json()['errors']['username'][0]['message']
-        self.assertIn('заблокирован', message.lower())
-        self.assertIn('спам', message)
+        # Блокировка — состояние аккаунта, а не ошибка поля: приходит как message
+        payload = response.json()
+        self.assertNotIn('errors', payload)
+        self.assertIn('заблокирован', payload['message'].lower())
+        self.assertIn('спам', payload['message'])
 
     def test_expired_ban_lifts_itself(self):
         Account.objects.filter(username='kandidat').update(

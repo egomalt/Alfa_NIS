@@ -99,20 +99,14 @@ def api_login(request):
     user = authenticate(request, username=account.username if account else username, password=password)
 
     if user is None:
+        # Ошибки уровня формы отдаём как message, а не привязываем к полю: это
+        # не «поле заполнено неверно», а состояние аккаунта или пары логин-пароль.
         if account is not None and account.is_banned and account.check_password(password):
-            return JsonResponse(
-                {'ok': False, 'errors': {'username': [{'message': _ban_message(account), 'code': 'banned'}]}},
-                status=403,
-            )
+            return JsonResponse({'ok': False, 'message': _ban_message(account), 'code': 'banned'}, status=403)
         # Один и тот же ответ на «нет такого аккаунта» и «неверный пароль»,
         # иначе по коду ответа можно перебором узнать, какие логины существуют.
         return JsonResponse(
-            {
-                'ok': False,
-                'errors': {
-                    'username': [{'message': 'Неверное имя пользователя или пароль.', 'code': 'invalid_credentials'}]
-                },
-            },
+            {'ok': False, 'message': 'Неверное имя пользователя или пароль.', 'code': 'invalid_credentials'},
             status=401,
         )
 

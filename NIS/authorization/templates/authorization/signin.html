@@ -19,7 +19,7 @@
     };
   </script>
   <script src="{% static 'main/theme.js' %}" defer></script>
-  <script type="module" src="{% static 'authorization/app.js' %}?v=20260613-1"></script>
+  <script type="module" src="{% static 'authorization/app.js' %}?v=20260914-1"></script>
 </head>
 <body>
 <div class="cr-auth-page">
@@ -35,23 +35,23 @@
     <h1 style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px;">Добро пожаловать</h1>
     <p style="font-size:14px;color:var(--muted);margin:0 0 28px;">Войдите в свой аккаунт</p>
 
-    <div id="auth-flash" class="app-alert app-alert-inline" hidden></div>
+    <div id="auth-flash" class="app-alert app-alert-inline" role="alert" hidden></div>
 
     <form id="signin-form" method="post" action="/api/v1/auth/signin/" data-api-form="login">
       {% csrf_token %}
       <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:24px;">
         <div data-field="username">
           <div class="cr-auth-field-label">Имя пользователя</div>
-          <input id="login-username" name="username" type="text" placeholder="ivan-sokolov"
+          <input id="login-username" aria-describedby="err-username" name="username" type="text" placeholder="ivan-sokolov"
             class="cr-auth-input" required autocapitalize="off" autocomplete="username">
-          <ul class="errorlist" hidden></ul>
+          <ul class="errorlist" id="err-username" hidden></ul>
         </div>
 
         <div data-field="password">
           <div class="cr-auth-field-label">Пароль</div>
-          <input id="login-password" name="password" type="password" placeholder="••••••••"
+          <input id="login-password" aria-describedby="err-password" name="password" type="password" placeholder="••••••••"
             class="cr-auth-input" required autocomplete="current-password">
-          <ul class="errorlist" hidden></ul>
+          <ul class="errorlist" id="err-password" hidden></ul>
         </div>
       </div>
       <button type="submit" class="cr-auth-submit">Войти</button>
