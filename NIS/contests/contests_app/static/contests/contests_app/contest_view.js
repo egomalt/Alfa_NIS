@@ -38,27 +38,27 @@ function renderHero(c) {
   const sm = statusMeta[c.status] || statusMeta.draft;
   document.getElementById('cv-page-title').textContent = `${c.title || 'Конкурс'} — Career`;
   document.getElementById('cv-hero-inner').innerHTML = `
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:18px;">
-      <div>
-        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
-          <span style="width:26px;height:26px;border-radius:7px;background:var(--brand-soft);color:var(--brand-text);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">${(c.company_name || c.company_username || '?').charAt(0).toUpperCase()}</span>
-          <span style="font-size:13.5px;font-weight:600;color:var(--text-2);">${c.company_name || c.company_username || ''}</span>
-          <span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:${sm.bg};color:${sm.color};">${sm.label}</span>
+    <div class="cv-hero-top">
+      <div class="cv-hero-main">
+        <div class="cv-hero-company">
+          <span class="cv-hero-av">${(c.company_name || c.company_username || '?').charAt(0).toUpperCase()}</span>
+          <span class="cv-hero-comp">${c.company_name || c.company_username || ''}</span>
+          <span class="cv-hero-status" style="background:${sm.bg};color:${sm.color};">${sm.label}</span>
         </div>
-        <h1 style="font-size:30px;font-weight:800;letter-spacing:-.025em;line-height:1.2;margin-bottom:10px;">${c.title || ''}</h1>
-        <p style="font-size:15px;color:var(--muted);line-height:1.6;max-width:680px;margin-bottom:20px;">${c.excerpt || ''}</p>
-        <div style="display:flex;gap:7px;">
-          ${c.category ? `<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:7px;background:var(--surface-2);color:var(--text-2);">${c.category}</span>` : ''}
-          ${c.level ? `<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:7px;background:var(--surface-2);color:var(--text-2);">${c.level}</span>` : ''}
+        <h1 class="cv-hero-title">${c.title || ''}</h1>
+        <p class="cv-hero-excerpt">${c.excerpt || ''}</p>
+        <div class="cv-hero-tags">
+          ${c.category ? `<span class="cv-hero-tag">${c.category}</span>` : ''}
+          ${c.level ? `<span class="cv-hero-tag">${c.level}</span>` : ''}
         </div>
       </div>
-      <button type="button" class="cr-report-btn" data-report-type="contest" data-report-id="${c.id}"
+      <button type="button" class="cr-report-btn cv-hero-report" data-report-type="contest" data-report-id="${c.id}"
               data-report-author="${c.company_username || ''}" data-report-title="${(c.title || '').replace(/"/g, '&quot;')}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
         Пожаловаться
       </button>
     </div>
-    <div style="display:flex;gap:4px;max-width:1160px;">
+    <div class="cv-tabs">
       <button class="cv-tab-btn active" data-p="case">Описание кейса</button>
       <button class="cv-tab-btn" data-p="rules">Правила</button>
       <button class="cv-tab-btn" data-p="submit">Отправить решение</button>
@@ -74,15 +74,15 @@ function renderAttachments(c) {
   document.getElementById('cv-attach-list').innerHTML = c.attachments.map(a => `
     <div class="cv-attach-file-row">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span style="flex:1;font-size:13.5px;font-weight:600;">${a.name}</span>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--faint);">${a.size_display || ''}</span>
+      <span class="cv-attach-name">${a.name}</span>
+      <span class="cv-attach-size">${a.size_display || ''}</span>
       <a class="cv-btn-dl" href="${a.url}" download>Скачать</a>
     </div>`).join('');
 }
 
 function renderCase(c) {
-  const el = document.getElementById('cv-case-content');
-  el.innerHTML = `<div class="cv-doc">${(c.case_text || '').replace(/\n/g, '<br>')}</div>`;
+  // Сам контейнер уже .cv-doc — второй такой же обёртки не нужно
+  document.getElementById('cv-case-content').innerHTML = (c.case_text || '').replace(/\n/g, '<br>');
 }
 
 function renderRules(c) {
@@ -159,7 +159,7 @@ function renderSubmitArea() {
         <div style="font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:3px;">Добавьте контактные данные</div>
         <div style="font-size:12.5px;color:var(--text-2);line-height:1.5;">Для участия в конкурсе в профиле должен быть указан email.</div>
       </div>
-      <button data-open-contact style="height:32px;padding:0 13px;border:none;border-radius:8px;background:var(--brand);color:var(--on-brand);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto;font-family:inherit;">Добавить</button>
+      <button class="cv-banner-btn" data-open-contact>Добавить</button>
     </div>`;
 
   if (mySubmissions.length >= MAX_ATTEMPTS) {
