@@ -43,13 +43,16 @@
       : '';
 
     var metaParts = [];
-    if (company.industry) metaParts.push(company.industry);
-    if (company.city) metaParts.push(company.city);
+    // Отрасль и город приходят от компании и попадают прямо в разметку —
+    // раньше они вставлялись без экранирования
+    if (company.industry) metaParts.push(esc(company.industry));
+    if (company.city) metaParts.push(esc(company.city));
     var ratingStr = company.avg_rating ? '★ ' + company.avg_rating : '';
     if (ratingStr) metaParts.push('<span class="pc-rating-inline">' + esc(ratingStr) + '</span>');
     if (company.created_at) {
-      var yr = new Date(company.created_at).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-      metaParts.push('на платформе с ' + yr);
+      // toLocaleDateString даёт «июль 2026 г.» — после «с» нужен родительный падеж
+      var since = AlfaPlural.monthYearOf(company.created_at);
+      if (since) metaParts.push('на платформе с ' + since);
     }
 
     var tags = company.directions || [];
@@ -68,7 +71,7 @@
           var meta = [c.category, dl].filter(Boolean).join(' · ');
           return '<a class="pc-row" href="/contests/' + esc(c.id) + '/">'
             + '<div class="pc-row-main"><div class="pc-row-title">' + esc(c.title) + '</div><div class="pc-row-meta">' + esc(meta) + '</div></div>'
-            + '<span class="pc-mono">' + (c.participants_count || 0) + ' участников</span>'
+            + '<span class="pc-mono">' + AlfaPlural.participants(c.participants_count) + '</span>'
             + statusPill(c.status)
             + '</a>';
         }).join('')
@@ -83,7 +86,7 @@
       ? publishedTests.slice(0, 3).map(function (t) {
           var sub = t.submissions || 0;
           return '<a class="pc-row" href="' + esc(t.url) + '">'
-            + '<div class="pc-row-main"><div class="pc-row-title">' + esc(t.title) + '</div><div class="pc-row-meta">' + sub + ' прохождений</div></div>'
+            + '<div class="pc-row-main"><div class="pc-row-title">' + esc(t.title) + '</div><div class="pc-row-meta">' + AlfaPlural.attempts(sub) + '</div></div>'
             + '</a>';
         }).join('')
       : '<div class="pc-empty">Тестов пока нет.</div>';
@@ -108,7 +111,7 @@
         + '<div class="pc-rating-hero">'
         + '<div><div class="pc-rating-score">' + score + '</div>'
         + '<div class="pc-rating-stars">' + starsHtml + '</div>'
-        + '<div class="pc-rating-count">' + company.rating_count + ' оценок от кандидатов</div></div>'
+        + '<div class="pc-rating-count">' + AlfaPlural.ratings(company.rating_count) + ' от кандидатов</div></div>'
         + '<div class="pc-rating-dist">' + distHtml + '</div>'
         + '</div></div>';
     }

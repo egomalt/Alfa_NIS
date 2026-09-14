@@ -63,7 +63,7 @@
           return '<a class="pu-article-row" href="/articles/' + esc(a.id) + '/">'
             + '<div class="pu-article-cover" style="background:' + covBg + ';"></div>'
             + '<div><div class="pu-article-title">' + esc(a.title) + '</div>'
-            + '<div class="pu-article-meta">' + dateStr + (dateStr && a.views ? ' · ' : '') + (a.views || 0) + ' просм. · ' + (a.likes || 0) + ' лайков</div></div>'
+            + '<div class="pu-article-meta">' + dateStr + (dateStr && a.views ? ' · ' : '') + (a.views || 0) + ' просм. · ' + AlfaPlural.likes(a.likes) + '</div></div>'
             + '</a>';
         }).join('')
       : '<div class="pu-empty">Публикаций пока нет.</div>';
@@ -101,7 +101,7 @@
     if (totalArticles > 0) {
       badgesHtml += '<div class="pu-badge-card">'
         + '<span class="pu-badge-medal" style="background:var(--green-soft);color:var(--green-text);">✍</span>'
-        + '<div><div class="pu-badge-title">' + totalArticles + ' ' + (totalArticles === 1 ? 'статья' : totalArticles < 5 ? 'статьи' : 'статей') + '</div><div class="pu-badge-sub">опубликовано</div></div>'
+        + '<div><div class="pu-badge-title">' + AlfaPlural.articles(totalArticles) + '</div><div class="pu-badge-sub">опубликовано</div></div>'
         + '</div>';
     }
     var achievementsSection = badgesHtml

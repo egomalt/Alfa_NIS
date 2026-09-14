@@ -49,7 +49,7 @@
       var meta = [c.category, dl].filter(Boolean).join(' · ');
       return '<a class="cc-card" href="/contests/' + esc(c.id) + '/">'
         + '<div class="cc-card-main"><div class="cc-card-title">' + esc(c.title) + '</div><div class="cc-card-meta">' + esc(meta) + '</div></div>'
-        + '<span class="cc-mono">' + (c.participants_count || 0) + ' участников</span>'
+        + '<span class="cc-mono">' + AlfaPlural.participants(c.participants_count) + '</span>'
         + statusPill(c.status)
         + '</a>';
     }).join('');

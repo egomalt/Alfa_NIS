@@ -131,6 +131,35 @@ class ArticleAuthorLinkTests(BaseCase):
         self.assertNotIn('href="/udalyonnyy/"', self._page('udalyonnyy'))
 
 
+class ProfilePageTests(BaseCase):
+    """Публичные профили: страница собирается на клиенте, проверяем обвязку."""
+
+    def test_profile_pages_load_plural_helper(self):
+        """Счётчики на профилях склоняются общим js/plural.js."""
+        for url in (f'/{self.candidate.username}/', '/firma/'):
+            with self.subTest(url=url):
+                body = Client().get(url).content.decode()
+                self.assertIn('js/plural.js', body)
+
+    def test_avatar_is_drawn_over_the_cover(self):
+        """Баннер позиционирован, аватарка — нет: без position он её перекрывал."""
+        for url, prefix in ((f'/{self.candidate.username}/', 'pu'), ('/firma/', 'pc')):
+            with self.subTest(url=url):
+                css = Client().get(url).content.decode()
+                rule = re.search(rf'\.{prefix}-hero-av \{{([^}}]*)\}}', css)
+                self.assertIsNotNone(rule, f'нет правила .{prefix}-hero-av')
+                self.assertIn('position: relative', rule.group(1))
+
+    def test_stat_values_are_bottom_aligned(self):
+        """Метка в две строки сдвигала число вниз относительно соседних плашек."""
+        for url, prefix in ((f'/{self.candidate.username}/', 'pu'), ('/firma/', 'pc')):
+            with self.subTest(url=url):
+                css = Client().get(url).content.decode()
+                rule = re.search(rf'\.{prefix}-stat-value \{{([^}}]*)\}}', css)
+                self.assertIsNotNone(rule, f'нет правила .{prefix}-stat-value')
+                self.assertIn('margin-top: auto', rule.group(1))
+
+
 class ConstructorTests(BaseCase):
     """Конструкторы не должны обещать больше, чем умеет сервер."""
 
