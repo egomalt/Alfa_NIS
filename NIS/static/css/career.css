@@ -2187,6 +2187,32 @@ h1, h2, h3, h4,
 .cr-modal-btn-primary:hover { background: var(--brand-strong); }
 .cr-modal-btn-primary:disabled { background: var(--surface-2); color: var(--faint); cursor: not-allowed; }
 
+/* ── Переключатель темы на страницах входа ────────────────────────── */
+
+/* Закреплён в правом верхнем углу: слева вверху логотип, справа — кнопка,
+   страница уравновешена, а место под карточкой освобождается для формы.
+   Раньше кнопка висела отдельной строкой под формой и тянула внимание на себя. */
+.cr-theme-float {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  box-shadow: var(--shadow);
+}
+.cr-theme-float svg { flex-shrink: 0; }
+
+/* На узком экране оставляем только иконку — подпись съедала бы полширины */
+@media (max-width: 560px) {
+  .cr-theme-float {
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+  .cr-theme-float [data-theme-label] { display: none; }
+}
+
 /* ── Ошибки и уведомления в формах ────────────────────────────────── */
 
 /* Поле с ошибкой: рамка и лёгкая заливка, чтобы проблему было видно
