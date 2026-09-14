@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from authorization.models import Account, ROLE_COMPANY, ROLE_USER
+from companies.models import Company
 
 
 @ensure_csrf_cookie
@@ -13,7 +14,6 @@ def profile_view(request, username):
         raise Http404
 
     if account.role == ROLE_COMPANY:
-        from companies.models import Company
         try:
             company = Company.objects.get(username=username)
         except Company.DoesNotExist:
@@ -30,7 +30,6 @@ def profile_view(request, username):
 
 @ensure_csrf_cookie
 def company_contests_view(request, username):
-    from companies.models import Company
     try:
         company = Company.objects.get(username=username)
     except Company.DoesNotExist:

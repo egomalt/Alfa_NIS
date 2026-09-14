@@ -8,10 +8,12 @@ ROLE_COMPANY = 'company'
 ROLE_MODERATOR = 'moderator'
 
 ROLE_CHOICES = [
-    (ROLE_USER, 'Пользователь'),
+    (ROLE_USER, 'Кандидат'),
     (ROLE_COMPANY, 'Компания'),
     (ROLE_MODERATOR, 'Модератор'),
 ]
+# Подписи ролей для интерфейса и отчётов — берём отсюда, а не дублируем по файлам
+ROLE_LABELS = dict(ROLE_CHOICES)
 
 STATUS_ACTIVE = 'active'
 STATUS_WARNED = 'warned'

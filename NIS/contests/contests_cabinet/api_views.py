@@ -6,13 +6,21 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_http_methods
 
-from authorization.models import ROLE_COMPANY, ROLE_USER
+from authorization.models import Account, ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
+from companies.models import Company
 from core.auth import api_login_required
 from core.pagination import paginate
 from core.uploads import UploadError, human_size, validate_attachment
 from core.utils import load_json_body
+from users.models import UserProfile
 from .models import Contest, ContestAttachment, ContestSubmission
+
+MAX_ATTACHMENTS = 10
+CATALOG_PER_PAGE = 100
+MAX_SUBMISSION_ATTEMPTS = 1   # столько же показывает страница конкурса
+MAX_TEXT_LENGTH = 20000
+MAX_COMMENT_LENGTH = 2000
 
 
 def _parse_deadline(raw_value):
@@ -23,12 +31,6 @@ def _parse_deadline(raw_value):
         return parse_datetime(raw_value)
     except ValueError:
         return None
-
-MAX_ATTACHMENTS = 10
-CATALOG_PER_PAGE = 100
-MAX_SUBMISSION_ATTEMPTS = 1   # столько же показывает страница конкурса
-MAX_TEXT_LENGTH = 20000
-MAX_COMMENT_LENGTH = 2000
 
 
 def _attachment_to_dict(attachment):
@@ -69,9 +71,6 @@ def _candidate_cards(usernames):
 
     Раньше _sub_to_dict ходил в базу дважды на каждую заявку: 50 работ — 101 запрос.
     """
-    from authorization.models import Account
-    from users.models import UserProfile
-
     usernames = list({u for u in usernames if u})
     emails = dict(Account.objects.filter(username__in=usernames).values_list('username', 'email'))
     profiles = {
@@ -152,7 +151,6 @@ def api_contest_detail(request, contest_id):
         return JsonResponse({'ok': False, 'message': 'Конкурс не найден'}, status=404)
 
     if request.method == 'GET':
-        from companies.models import Company
         # Черновик виден только владельцу: иначе перебором id читаются условия
         # ещё не стартовавших конкурсов
         if c.status == 'draft':
@@ -341,7 +339,6 @@ def api_contests_catalog(request):
     qs = qs.order_by('-created_at')
     contests, page_meta = paginate(request, qs, CATALOG_PER_PAGE)
 
-    from companies.models import Company
     company_names = {
         co.username: co.name or co.username
         for co in Company.objects.filter(username__in=[c.company_username for c in contests])
@@ -475,7 +472,6 @@ def api_user_public_contests(request, username):
 
 @require_http_methods(['GET'])
 def api_company_public_contests(request, username):
-    from contests.contests_cabinet.models import Contest
     qs = Contest.objects.filter(
         company_username=username,
         status__in=[Contest.STATUS_ACTIVE, Contest.STATUS_FINISHED, Contest.STATUS_REVIEW],

@@ -5,7 +5,7 @@ from companies.models import CompanyRating
 from contests.contests_cabinet.models import Contest
 from tests.constructor.models import Test
 
-from .pdf import ReportBuilder
+from .pdf import ReportBuilder, fmt_date
 
 CONTEST_STATUS = {
     Contest.STATUS_DRAFT: 'Черновик',
@@ -17,10 +17,6 @@ TEST_STATUS = {
     Test.STATUS_DRAFT: 'Черновик',
     Test.STATUS_PUBLISHED: 'Опубликован',
 }
-
-
-def _date(dt):
-    return dt.strftime('%d.%m.%Y') if dt else '—'
 
 
 def build_company_pdf(company):
@@ -50,7 +46,7 @@ def build_company_pdf(company):
             c.category or '—',
             CONTEST_STATUS.get(c.status, c.status),
             c.participants_count or 0,
-            _date(c.deadline),
+            fmt_date(c.deadline),
         ] for c in contests]
         r.table(['Название', 'Категория', 'Статус', 'Участники', 'Дедлайн'], rows,
                 col_ratios=[3.2, 1.8, 1.4, 1.1, 1.3])

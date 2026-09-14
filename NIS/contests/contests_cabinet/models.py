@@ -28,6 +28,10 @@ class Contest(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        indexes = [
+            models.Index(fields=['status'], name='contest_status_idx'),
+            models.Index(fields=['company_username', 'status'], name='contest_company_status_idx'),
+        ]
         app_label = 'contests_cabinet'
         db_table = 'contests'
         ordering = ['-created_at']

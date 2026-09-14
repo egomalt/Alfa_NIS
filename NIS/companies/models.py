@@ -76,3 +76,16 @@ class CompanyRating(models.Model):
 
     def __str__(self):
         return f'{self.user_username} → {self.company.username}: {self.rating}'
+
+
+def ensure_company(account):
+    """Карточка компании для аккаунта, создаётся при первом обращении.
+
+    Раньше этот get_or_create был скопирован в четыре места — кабинет, раздел
+    тестов, экспорт и регистрацию.
+    """
+    company, _ = Company.objects.get_or_create(
+        username=account.username,
+        defaults={'name': account.name, 'contact_email': account.email},
+    )
+    return company

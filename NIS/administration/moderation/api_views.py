@@ -9,14 +9,13 @@ from core.auth import moderator_required
 from core.pagination import paginate
 from core.utils import load_json_body
 from authorization.models import (
-    Account, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER,
+    Account, ROLE_LABELS, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER,
     STATUS_ACTIVE, STATUS_BANNED, STATUS_WARNED,
 )
 
 # Списки модерации могут вырасти, поэтому выдача постраничная.
 CATALOG_PER_PAGE = 100
 
-ROLE_LABELS = {ROLE_USER: 'Кандидат', ROLE_COMPANY: 'Компания', ROLE_MODERATOR: 'Модератор'}
 
 
 def serialize_account(account):

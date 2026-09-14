@@ -6,18 +6,11 @@ from django.views.decorators.http import require_http_methods
 
 from articles.constructor.models import Article, ArticleVote
 from authorization.views import get_current_account
+from articles.serializers import cover_gradient
 from core.auth import api_login_required
 from core.utils import load_json_body
 from users.models import UserProfile
 
-COVERS = [
-    'linear-gradient(135deg,#1e3a5f 0%,#2d6a9f 100%)',
-    'linear-gradient(135deg,#D62839 0%,#7a1020 100%)',
-    'linear-gradient(135deg,#134e5e 0%,#1a7a6e 100%)',
-    'linear-gradient(135deg,#3d1f6e 0%,#6b3fa0 100%)',
-    'linear-gradient(135deg,#2d3a1a 0%,#4a7a2d 100%)',
-    'linear-gradient(135deg,#5c3d00 0%,#b07000 100%)',
-]
 
 AV_COLORS = [
     ('#FCE7E8', '#C81E2D'),
@@ -65,7 +58,7 @@ def article_read(request, article_id):
         wanted = set(article.tags)
         for a in candidates:
             if set(a.tags or []) & wanted:
-                related.append({'article': a, 'cover_gradient': COVERS[a.cover_index % len(COVERS)]})
+                related.append({'article': a, 'cover_gradient': cover_gradient(a.cover_index)})
                 if len(related) >= 3:
                     break
 
@@ -83,7 +76,7 @@ def article_read(request, article_id):
 
     context = {
         'article': article,
-        'cover_gradient': COVERS[article.cover_index % len(COVERS)],
+        'cover_gradient': cover_gradient(article.cover_index),
         'vote_score': article.likes,
         'user_vote': user_vote,
         'related': related,

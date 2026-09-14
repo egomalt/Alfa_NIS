@@ -4,6 +4,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 
 from tests.constructor.models import Test
+from authorization.models import Account
 from core.pagination import paginate
 
 # Каталоги фильтруются на стороне браузера, поэтому страница крупная:
@@ -18,7 +19,6 @@ def tests_catalog_shell(request):
 
 @require_GET
 def api_tests_catalog(request):
-    from authorization.models import Account
     owner_names = {a.username: a.name for a in Account.objects.all()}
     tests_qs = Test.objects.filter(status=Test.STATUS_PUBLISHED).prefetch_related('pages').order_by('-created_at')
     tests, page_meta = paginate(request, tests_qs, CATALOG_PER_PAGE)

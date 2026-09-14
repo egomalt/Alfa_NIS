@@ -1,6 +1,6 @@
 """Вьюхи экспорта статистики в PDF (с проверкой доступа)."""
 from authorization.models import ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER
-from companies.models import Company
+from companies.models import ensure_company
 from core.auth import page_login_required
 
 from .company import build_company_pdf, company_filename
@@ -12,10 +12,7 @@ from .user import build_user_pdf, user_filename
 @page_login_required(ROLE_COMPANY)
 def export_company_pdf(request):
     account = request.account
-    company, _ = Company.objects.get_or_create(
-        username=account.username,
-        defaults={'name': account.name, 'contact_email': account.email},
-    )
+    company = ensure_company(account)
     return pdf_response(company_filename(company), build_company_pdf(company))
 
 

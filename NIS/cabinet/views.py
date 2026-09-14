@@ -3,6 +3,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from core.auth import page_login_required
+from companies.models import ensure_company
 
 
 @page_login_required()
@@ -22,12 +23,8 @@ _COMPANY_TEMPLATES = {
 
 
 def _company_cabinet_page(request, page):
-    from companies.models import Company
     account = request.account
-    Company.objects.get_or_create(
-        username=account.username,
-        defaults={'name': account.name, 'contact_email': account.email},
-    )
+    ensure_company(account)
     return render(request, _COMPANY_TEMPLATES[page], {'username': account.username, 'page': page})
 
 

@@ -9,6 +9,7 @@ from core.auth import api_login_required, page_login_required
 from core.utils import load_json_body
 from tests import code_results
 
+from .executor import LANGUAGES, run_in_docker
 from .models import Test, TestAnswer, TestPage
 
 # Тесты заводят и кандидаты, и компании — у каждой роли свой раздел «Мои тесты».
@@ -231,8 +232,6 @@ def api_code_run(request, page_id):
         return JsonResponse({'ok': False, 'message': 'Код не может быть пустым.'}, status=400)
     if len(code) > MAX_CODE_LENGTH:
         return JsonResponse({'ok': False, 'message': 'Код слишком длинный.'}, status=400)
-
-    from .executor import LANGUAGES, run_in_docker
 
     if language not in LANGUAGES:
         return JsonResponse({'ok': False, 'message': f'Неподдерживаемый язык: {language}'}, status=400)
