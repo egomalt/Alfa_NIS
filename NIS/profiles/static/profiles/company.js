@@ -127,11 +127,12 @@
       +     (tagsHtml ? '<div class="pc-tag-row">' + tagsHtml + '</div>' : '')
       +   '</div>'
       + '</div>'
+      // Плашки рейтинга здесь нет: оценка и так стоит рядом с названием,
+      // а разбор по звёздам — отдельным разделом внизу страницы
       + '<div class="pc-stats-row">'
       +   '<div class="pc-stat-card"><div class="pc-stat-label">Активных конкурсов</div><div class="pc-stat-value">' + activeContests.length + '</div></div>'
       +   '<div class="pc-stat-card"><div class="pc-stat-label">Тестов</div><div class="pc-stat-value">' + publishedTests.length + '</div></div>'
       +   '<div class="pc-stat-card"><div class="pc-stat-label">Участников привлечено</div><div class="pc-stat-value">' + totalParticipants + '</div></div>'
-      +   '<div class="pc-stat-card"><div class="pc-stat-label">Рейтинг</div><div class="pc-stat-value">' + (company.avg_rating ? company.avg_rating + ' ★' : '—') + '</div></div>'
       + '</div>'
       + '<div class="pc-section">'
       +   '<div class="pc-section-head"><div class="pc-section-title">Активные конкурсы</div>' + allContestsLink + '</div>'
