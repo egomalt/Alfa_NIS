@@ -89,7 +89,7 @@ function renderList() {
           <span class="cs-cand-av">${initial}</span>
           <div>
             <div style="font-size:14.5px;font-weight:700;">${s.candidate_name || s.candidate_username} ${s.winner ? '<span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--amber-soft);color:var(--amber-text);">🏆 Победитель</span>' : ''}</div>
-            <div style="font-size:12.5px;color:var(--muted);">${s.candidate_level || ''} · ${s.submitted_at || ''} · Попытка ${s.attempt || 1}</div>
+            <div style="font-size:12.5px;color:var(--muted);">${s.submitted_at || ''} · Попытка ${s.attempt || 1}</div>
           </div>
           <button class="cs-btn-like ${s.liked ? 'liked' : ''}" data-action="like" data-id="${s.id}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="${s.liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
@@ -214,6 +214,11 @@ function showContactPopup(btn, s) {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
       <a href="mailto:${s.candidate_email}" style="font-size:13px;color:var(--text);text-decoration:none;">${s.candidate_email}</a>
     </div>` : '<div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Email не указан</div>'}
+    ${s.candidate_phone ? `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+      <a href="tel:${s.candidate_phone}" style="font-size:13px;color:var(--text);text-decoration:none;">${s.candidate_phone}</a>
+    </div>` : ''}
     ${s.candidate_bio ? `<div style="font-size:12.5px;color:var(--text-2);line-height:1.5;margin-bottom:8px;">${s.candidate_bio}</div>` : ''}
     ${skillsHtml}
   `;

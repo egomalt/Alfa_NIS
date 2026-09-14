@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.http import JsonResponse
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
@@ -45,7 +46,8 @@ def api_users(request):
     elif flt in (ROLE_USER, ROLE_COMPANY, ROLE_MODERATOR):
         qs = qs.filter(role=flt)
     if q:
-        qs = qs.filter(name__icontains=q)
+        # Ищем и по имени, и по логину: в списке показывается именно логин
+        qs = qs.filter(Q(name__icontains=q) | Q(username__icontains=q))
 
     qs = qs.order_by('-created_at')
     users, page_meta = paginate(request, qs, CATALOG_PER_PAGE)

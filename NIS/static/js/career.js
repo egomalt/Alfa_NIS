@@ -38,6 +38,38 @@
   // Auto-mount for all elements with data-user-chip attribute
   document.querySelectorAll('[data-user-chip]').forEach(el => mountUserChip(el.id));
 
+  /* ── Выход из аккаунта ───────────────────────────────────────────── */
+  function csrfToken() {
+    const cookie = document.cookie.split(';').map(c => c.trim())
+      .find(c => c.startsWith('csrftoken='));
+    if (cookie) return decodeURIComponent(cookie.slice('csrftoken='.length));
+    return document.querySelector('meta[name="csrf-token"]')?.content || '';
+  }
+
+  const logoutButtons = document.querySelectorAll('[data-logout-btn]');
+  if (logoutButtons.length) {
+    fetch('/api/v1/auth/me/')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok || !data.account) return;
+        logoutButtons.forEach(btn => { btn.hidden = false; });
+      })
+      .catch(() => {});
+
+    logoutButtons.forEach(btn => btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        await fetch('/api/v1/auth/signout/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrfToken() },
+          credentials: 'same-origin',
+        });
+      } finally {
+        window.location.assign('/');
+      }
+    }));
+  }
+
   /* ── Бургер верхнего навбара ─────────────────────────────────────── */
   document.querySelectorAll('[data-nav-burger]').forEach(btn => {
     const bar = btn.closest('.cr-navbar');

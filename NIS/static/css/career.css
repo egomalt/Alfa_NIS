@@ -2187,6 +2187,17 @@ h1, h2, h3, h4,
 .cr-modal-btn-primary:hover { background: var(--brand-strong); }
 .cr-modal-btn-primary:disabled { background: var(--surface-2); color: var(--faint); cursor: not-allowed; }
 
+/* ── Кнопка «Выйти» в навбаре ─────────────────────────────────────── */
+.cr-logout-btn {
+  height: 34px;
+  padding: 0 13px;
+  margin-left: 4px;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: color .12s, border-color .12s;
+}
+.cr-logout-btn:hover { color: var(--red-text); border-color: var(--red-text); }
+
 /* ── Поле поиска в панели фильтров ────────────────────────────────── */
 .cr-filter-search {
   width: 230px;

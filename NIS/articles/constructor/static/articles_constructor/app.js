@@ -114,8 +114,38 @@ document.addEventListener('selectionchange', () => {
 });
 
 function fmt(cmd) {
+    // Команды 'code' в execCommand не существует — оборачиваем выделение сами
+    if (cmd === 'code') { wrapInlineCode(); return; }
     document.execCommand(cmd, false, null);
     document.getElementById('body-editor').focus();
+}
+
+function wrapInlineCode() {
+    const selection = window.getSelection();
+    const editor = document.getElementById('body-editor');
+    if (!selection.rangeCount || selection.isCollapsed) { editor.focus(); return; }
+
+    const range = selection.getRangeAt(0);
+    // Повторное нажатие снимает оформление
+    const existing = range.commonAncestorContainer.parentElement?.closest('code');
+    if (existing && editor.contains(existing)) {
+        const text = document.createTextNode(existing.textContent);
+        existing.replaceWith(text);
+        editor.focus();
+        return;
+    }
+
+    const code = document.createElement('code');
+    code.textContent = range.toString();
+    range.deleteContents();
+    range.insertNode(code);
+
+    // Ставим курсор после вставленного фрагмента
+    range.setStartAfter(code);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    editor.focus();
 }
 
 function fmtBlock(tag) {

@@ -63,13 +63,6 @@
 
   /* ---------- logout ---------- */
 
-  async function logout() {
-    await fetch('/api/v1/auth/signout/', { method: 'POST', headers: { 'X-CSRFToken': CSRF() } });
-    window.location.assign('/');
-  }
-  document.getElementById('ud-logout-btn')?.addEventListener('click', logout);
-  document.getElementById('logout-btn')?.addEventListener('click', logout);
-
   /* ---------- avatar ---------- */
 
   async function uploadAvatar(file) {
@@ -528,10 +521,12 @@
     if (!c) return;
     const nameEl = document.getElementById('ud-s-name');
     const emailEl = document.getElementById('ud-s-email');
+    const phoneEl = document.getElementById('ud-s-phone');
     const bioEl = document.getElementById('ud-s-bio');
     const skillsEl = document.getElementById('ud-s-skills');
     if (nameEl) nameEl.value = c.name || '';
     if (emailEl) emailEl.value = c.email || '';
+    if (phoneEl) phoneEl.value = c.phone || '';
     if (bioEl) bioEl.value = c.bio || '';
     if (skillsEl) skillsEl.value = (c.skills || []).join(', ');
   }
@@ -543,6 +538,7 @@
     const flashEl = document.getElementById('ud-settings-flash');
     const name = document.getElementById('ud-s-name')?.value.trim();
     const email = document.getElementById('ud-s-email')?.value.trim();
+    const phone = document.getElementById('ud-s-phone')?.value.trim();
     const bio = document.getElementById('ud-s-bio')?.value.trim();
     const skillsStr = document.getElementById('ud-s-skills')?.value || '';
     const skills = skillsStr.split(',').map(s => s.trim()).filter(Boolean);
@@ -557,7 +553,7 @@
     try {
       const data = await apiFetch(`/api/v1/candidates/${username}/update/`, {
         method: 'PATCH',
-        body: JSON.stringify({ name, email: email || '', bio: bio || '', skills }),
+        body: JSON.stringify({ name, email: email || '', phone: phone || '', bio: bio || '', skills }),
       });
       state.candidate = data.candidate;
       if (btn) { btn.disabled = false; btn.textContent = '✓ Сохранено'; }
