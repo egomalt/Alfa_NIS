@@ -1304,8 +1304,13 @@ input, textarea, select {
   cursor: pointer;
   text-decoration: none;
   transition: border-color .15s, color .15s;
-  margin-left: 4px;
+  flex-shrink: 0;
 }
+/* Ячейка действий: кнопки стояли впритык к правому краю таблицы.
+   Флексом делаем внутреннюю обёртку — display:flex на самой ячейке
+   выбил бы её из табличной раскладки и разъехалась бы строка. */
+.tests-table td:last-child { padding-right: 18px; }
+.action-row { display: flex; gap: 6px; justify-content: flex-end; }
 .action-icon-btn:hover { border-color: var(--line-2); color: var(--text); }
 .action-icon-btn.danger:hover { border-color: var(--red-text); color: var(--red-text); }
 

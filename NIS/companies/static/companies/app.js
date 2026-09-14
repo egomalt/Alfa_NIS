@@ -65,7 +65,9 @@
 
     function buildActions(test, companyUsername) {
         const cell = document.createElement('td');
-        cell.style.whiteSpace = 'nowrap';
+        // Кнопки стояли впритык к правому краю таблицы — отступ и зазор в CSS
+        const row = document.createElement('div');
+        row.className = 'action-row';
 
         // Статистика есть только у опубликованного теста — черновик никто не проходил
         const statsLink = document.createElement('a');
@@ -88,9 +90,10 @@
         deleteButton.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
         deleteButton.addEventListener('click', () => deleteTest(test.id, companyUsername));
 
-        cell.appendChild(statsLink);
-        cell.appendChild(editLink);
-        cell.appendChild(deleteButton);
+        row.appendChild(statsLink);
+        row.appendChild(editLink);
+        row.appendChild(deleteButton);
+        cell.appendChild(row);
         return cell;
     }
 

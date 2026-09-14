@@ -11,7 +11,8 @@
 
   function fmtDate(iso) {
     if (!iso) return '';
-    try { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }); }
+    // Дедлайн — короткий ДД.ММ.ГГГГ (формат локали ru-RU по умолчанию)
+    try { return new Date(iso).toLocaleDateString('ru-RU'); }
     catch (e) { return ''; }
   }
 

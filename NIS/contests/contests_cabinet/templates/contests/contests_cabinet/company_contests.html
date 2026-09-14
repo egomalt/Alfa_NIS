@@ -27,14 +27,13 @@
 
 <div class="cp-stats-row" id="cc-stats-row"></div>
 
-<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-  <button class="cc-filter-btn active" data-f="all" id="ccf-all">Все</button>
-  <button class="cc-filter-btn" data-f="active" id="ccf-active">Активные</button>
-  <button class="cc-filter-btn" data-f="review" id="ccf-review">На проверке</button>
-  <button class="cc-filter-btn" data-f="finished" id="ccf-finished">Завершённые</button>
-  <button class="cc-filter-btn" data-f="draft" id="ccf-draft">Черновики</button>
-  <span class="cc-filter-count" id="cc-filter-count"
-        style="font-size:12px;color:var(--muted);margin-left:auto;font-family:'JetBrains Mono',monospace;"></span>
+<div class="cr-filters">
+  <button class="cr-chip active" data-f="all" id="ccf-all">Все</button>
+  <button class="cr-chip" data-f="active" id="ccf-active">Активные</button>
+  <button class="cr-chip" data-f="review" id="ccf-review">На проверке</button>
+  <button class="cr-chip" data-f="finished" id="ccf-finished">Завершённые</button>
+  <button class="cr-chip" data-f="draft" id="ccf-draft">Черновики</button>
+  <span class="cr-filter-count" id="cc-filter-count"></span>
 </div>
 
 <div id="cc-table-wrap"></div>
