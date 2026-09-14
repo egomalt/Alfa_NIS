@@ -174,6 +174,15 @@
         if (btn) btn.disabled = !state.testId;
     }
 
+    function syncStatsBtn() {
+        // Статистика появляется только у опубликованного теста:
+        // у черновика нет ни одного прохождения по определению
+        const btn = document.getElementById('cst-stats-btn');
+        if (!btn) return;
+        btn.hidden = !state.testId || !state.published;
+        if (state.testId) btn.href = `/constructor/${state.testId}/stats/`;
+    }
+
     function syncBackLink() {
         // Кабинет зависит от роли: раньше компанию уводило в кабинет кандидата,
         // откуда её разворачивало на страницу регистрации
@@ -508,6 +517,7 @@
                 setStatus('Опубликован', 'ok');
                 syncSaveBtn();
                 syncPublishBtn();
+                syncStatsBtn();
             } catch (e) {
                 setStatus(e.message || 'Не удалось опубликовать', 'error');
             }
@@ -669,6 +679,7 @@
         renderEditor();
         syncPublishBtn();
         syncPreviewBtn();
+        syncStatsBtn();
     }
 
     // Тест живёт в памяти страницы до нажатия «Сохранить»

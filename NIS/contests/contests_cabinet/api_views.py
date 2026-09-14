@@ -11,6 +11,8 @@ from authorization.models import Account, ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
 from companies.models import Company
 from core.auth import api_login_required
+
+from . import statistics
 from core.pagination import paginate
 from core.uploads import UploadError, human_size, validate_attachment
 from core.utils import load_json_body
@@ -299,6 +301,17 @@ def api_contest_submissions(request, contest_id):
     subs = list(c.submissions.all())
     cards = _candidate_cards(s.candidate_username for s in subs)
     return JsonResponse({'ok': True, 'submissions': [_sub_to_dict(s, cards) for s in subs]})
+
+
+@require_http_methods(['GET'])
+@api_login_required(ROLE_COMPANY)
+def api_contest_statistics(request, contest_id):
+    """Воронка и подача решений по дням — только владельцу конкурса."""
+    try:
+        contest = Contest.objects.get(id=contest_id, company_username=request.account.username)
+    except Contest.DoesNotExist:
+        return JsonResponse({'ok': False, 'message': 'Не найден'}, status=404)
+    return JsonResponse({'ok': True, **statistics.collect(contest)})
 
 
 @require_http_methods(['PATCH'])

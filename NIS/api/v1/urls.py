@@ -50,6 +50,7 @@ urlpatterns = [
     path('companies/<slug:username>/profile/',      company_views.api_company_profile),
     path('companies/<slug:username>/verification/', company_views.api_company_verification),
     path('companies/<slug:username>/tests/',        company_views.api_company_tests),
+    path('companies/<slug:username>/statistics/',   company_views.api_company_statistics),
     path('companies/<slug:username>/rate/',         company_views.api_company_rate),
     path('companies/<slug:username>/contests/',     contest_views.api_company_public_contests),
 
@@ -59,6 +60,7 @@ urlpatterns = [
     path('tests/catalog/',                      tests_catalog_views.api_tests_catalog),
     path('tests/<int:test_id>/',                constructor_views.api_test_detail),
     path('tests/<int:test_id>/publish/',        constructor_views.api_test_publish),
+    path('tests/<int:test_id>/statistics/',     constructor_views.api_test_statistics),
     path('tests/pages/<int:page_id>/run/',      constructor_views.api_code_run),
 
     # Tests — taking (view & submit)
@@ -78,6 +80,7 @@ urlpatterns = [
     path('contests/<int:contest_id>/submissions/<int:sub_id>/',       contest_views.api_submission_update),
     path('contests/<int:contest_id>/submissions/<int:sub_id>/like/',  contest_views.api_submission_like),
     path('contests/<int:contest_id>/submissions/<int:sub_id>/winner/', contest_views.api_submission_winner),
+    path('contests/<int:contest_id>/statistics/',                     contest_views.api_contest_statistics),
     # Contests — public / candidate
     path('contests/<int:contest_id>/submit/',                         contest_views.api_contest_submit),
     path('contests/<int:contest_id>/my-submissions/',                 contest_views.api_my_submissions),

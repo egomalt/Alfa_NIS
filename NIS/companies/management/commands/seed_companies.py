@@ -111,8 +111,7 @@ class Command(BaseCommand):
                 description='Демонстрационный тест для наполнения каталога.',
                 status=Test.STATUS_PUBLISHED,
                 stats={'level': random.choice(['junior', 'middle', 'senior']),
-                       'category': random.choice(['frontend', 'backend', 'devops', 'analytics']),
-                       'submissions': random.randint(0, 120)},
+                       'category': random.choice(['frontend', 'backend', 'devops', 'analytics'])},
             )
             page = TestPage.objects.create(test=test, order=0, type=TestPage.TYPE_QUIZ,
                                            title='Пример вопроса')

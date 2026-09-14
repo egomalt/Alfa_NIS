@@ -339,25 +339,88 @@
     });
   }
 
-  // ---- Tab switching ----
   // ---- Stats tab ----
-  function pillStyle(status) {
-    if (status === 'active') return 'background:var(--green-soft);color:var(--green-text);';
-    if (status === 'review') return 'background:var(--amber-soft);color:var(--amber-text);';
-    return 'background:var(--surface-2);color:var(--muted);';
+
+  /* Активность по неделям. Высота столбика — доля от самой активной недели;
+     считать от абсолютных значений нельзя, масштаб у компаний разный. */
+  function renderActivity(weekly) {
+    var chart = el('cp-activity-chart');
+    if (!chart) return;
+
+    var peak = weekly.reduce(function (m, w) {
+      return Math.max(m, w.submissions || 0, w.attempts || 0);
+    }, 0);
+
+    if (!peak) {
+      chart.innerHTML = '<div class="cp-chart-empty">За последние 12 недель активности не было</div>';
+      return;
+    }
+
+    chart.innerHTML = weekly.map(function (w) {
+      var date = new Date(w.week + 'T00:00:00');
+      var label = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+      var bar = function (value, cls, title) {
+        return '<div class="cp-chart-bar ' + cls + '" style="height:' + (value / peak * 100) + '%"'
+          + ' title="' + title + ': ' + value + '"></div>';
+      };
+      return '<div class="cp-chart-col">'
+        + '<div class="cp-chart-bars">'
+        +   bar(w.submissions || 0, 'subs', 'Решения')
+        +   bar(w.attempts || 0, 'att', 'Прохождения')
+        + '</div>'
+        + '<div class="cp-chart-label">' + esc(label) + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function renderSkills(skills) {
+    var section = el('cp-skills-section');
+    var wrap = el('cp-skills');
+    if (!section || !wrap) return;
+
+    if (!skills.length) {
+      section.style.display = 'none';
+      return;
+    }
+    section.style.display = '';
+    wrap.innerHTML = skills.map(function (s) {
+      return '<span class="cp-skill">' + esc(s.name)
+        + '<span class="cp-skill-count">' + s.count + '</span></span>';
+    }).join('');
+  }
+
+  function renderTotals(totals) {
+    var pairs = [
+      ['cpst2-contests', totals.contests],
+      ['cpst2-tests', totals.published_tests],
+      ['cpst2-participants', totals.participants],
+      ['cpst2-submissions', totals.submissions],
+      ['cpst2-winners', totals.winners],
+      ['cpst2-pending', totals.pending_submissions],
+      ['cpst2-attempts', totals.test_attempts],
+    ];
+    pairs.forEach(function (pair) {
+      var node = el(pair[0]);
+      if (node) node.textContent = pair[1];
+    });
+    var rating = el('cpst2-rating');
+    if (rating) rating.textContent = totals.avg_rating ? totals.avg_rating.toFixed(1) + ' ★' : '—';
   }
 
   function renderStatsTab() {
     var c = state.company || {};
-    var contests = state.contests || [];
-    var tests = state.tests || [];
-    var publishedTests = tests.filter(function (t) { return t.status === 'published'; });
-    var totalParticipants = contests.reduce(function (s, x) { return s + (x.participants_count || 0); }, 0);
 
-    el('cpst2-contests').textContent = contests.length;
-    el('cpst2-tests').textContent = publishedTests.length;
-    el('cpst2-participants').textContent = totalParticipants;
-    el('cpst2-rating').textContent = c.avg_rating ? c.avg_rating.toFixed(1) + ' ★' : '—';
+    // Сводку считает сервер: числа должны совпадать с PDF-отчётом
+    apiFetch('/api/v1/companies/' + username + '/statistics/')
+      .then(function (data) {
+        renderTotals(data.totals || {});
+        renderActivity(data.weekly || []);
+        renderSkills(data.skills || []);
+      })
+      .catch(function () {
+        var chart = el('cp-activity-chart');
+        if (chart) chart.innerHTML = '<div class="cp-chart-empty">Не удалось загрузить статистику</div>';
+      });
 
     // Рейтинг + распределение
     var section = el('cp-stats-rating-section');
@@ -376,30 +439,6 @@
       section.style.display = 'none';
     }
 
-    // Конкурсы
-    var CS = { draft: 'Черновик', active: 'Активен', review: 'На проверке', finished: 'Завершён' };
-    var cel = el('cp-stats-contests');
-    cel.innerHTML = contests.length
-      ? contests.map(function (x) {
-          var d = x.deadline ? new Date(x.deadline).toLocaleDateString('ru-RU') : '—';
-          var meta = [x.category, 'дедлайн ' + d].filter(Boolean).join(' · ');
-          return '<div class="cp-srow"><div class="cp-srow-main"><div class="cp-srow-title">' + esc(x.title)
-            + '</div><div class="cp-srow-meta">' + esc(meta) + '</div></div>'
-            + '<span class="cp-srow-val">' + (x.participants_count || 0) + ' уч.</span>'
-            + '<span class="cp-srow-pill" style="' + pillStyle(x.status) + '">' + (CS[x.status] || x.status) + '</span></div>';
-        }).join('')
-      : '<div class="cp-empty-note">Конкурсы ещё не создавались.</div>';
-
-    // Тесты
-    var TS = { draft: 'Черновик', published: 'Опубликован' };
-    var tel = el('cp-stats-tests');
-    tel.innerHTML = tests.length
-      ? tests.map(function (t) {
-          return '<div class="cp-srow"><div class="cp-srow-main"><div class="cp-srow-title">' + esc(t.title)
-            + '</div><div class="cp-srow-meta">' + (TS[t.status] || t.status) + '</div></div>'
-            + '<span class="cp-srow-val">' + (t.submissions || 0) + ' прох.</span></div>';
-        }).join('')
-      : '<div class="cp-empty-note">Тесты ещё не создавались.</div>';
   }
 
   // ---- Settings form ----
