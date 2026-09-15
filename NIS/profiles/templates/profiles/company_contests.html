@@ -44,6 +44,18 @@
     .cc-empty { padding: 60px; text-align: center; border: 2px dashed var(--line-2); border-radius: 16px; }
     .cc-empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
     .cc-empty-sub { font-size: 14px; color: var(--muted); }
+
+    /* Единственный медиазапрос страницы. Без него название конкурса делило
+       строку со счётчиком участников и меткой статуса — оба с nowrap, —
+       и на телефоне переносилось по одной букве. */
+    @media (max-width: 680px) {
+      main { padding: 24px 18px 64px; }
+      .cc-page-title { font-size: 20px; }
+      .cc-card { flex-wrap: wrap; gap: 10px; padding: 16px; }
+      .cc-card-main { flex-basis: 100%; }
+      .cc-filter-count { flex-basis: 100%; margin-left: 0; }
+      .cc-empty { padding: 40px 20px; }
+    }
   </style>
 </head>
 <body>
