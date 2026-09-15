@@ -1,13 +1,14 @@
 """Пагинация, число запросов к базе и дымовой обход всех адресов."""
 import json
 import re
+import tempfile
 from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
-from django.test import Client, SimpleTestCase
+from django.test import Client, SimpleTestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
@@ -664,6 +665,77 @@ class TemplateCommentTests(SimpleTestCase):
 
         self.assertEqual(broken, [], 'многострочный {# #} выводится на страницу, нужен {% comment %}: '
                                      + ', '.join(broken))
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class CompanySettingsTests(BaseCase):
+    """Настройки компании: частичное сохранение, направления и логотип."""
+
+    URL = '/api/v1/companies/firma/profile/'
+
+    def firma(self):
+        return Company.objects.get(username='firma')
+
+    def test_untouched_fields_survive_a_partial_save(self):
+        """Форма связывалась целиком, и смена логотипа стирала адрес."""
+        Company.objects.filter(username='firma').update(address='Ленина, 1', city='Москва')
+
+        response = self.login('firma').post(self.URL, {'name': 'Фирма и Ко'})
+        self.assertEqual(response.status_code, 200)
+
+        company = self.firma()
+        self.assertEqual(company.name, 'Фирма и Ко')
+        self.assertEqual(company.address, 'Ленина, 1')
+        self.assertEqual(company.city, 'Москва')
+
+    def test_directions_are_saved_as_a_list(self):
+        response = self.login('firma').post(self.URL, {'directions': ['Backend', 'Аналитика']})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['company']['directions'], ['Backend', 'Аналитика'])
+        self.assertEqual(self.firma().directions, ['Backend', 'Аналитика'])
+
+    def test_directions_drop_duplicates_and_respect_the_limit(self):
+        """Потолок в четыре направления сняли, но не до бесконечности."""
+        values = ['Backend', 'backend', '  Backend  '] + [f'Направление {i}' for i in range(15)]
+        self.login('firma').post(self.URL, {'directions': values})
+
+        saved = self.firma().directions
+        self.assertEqual(len(saved), 10)
+        self.assertEqual(saved[0], 'Backend')
+        self.assertEqual(len([d for d in saved if d.lower() == 'backend']), 1)
+
+    def test_empty_value_clears_directions(self):
+        """Клиент шлёт пустое значение, чтобы отличить «очистить» от «не трогать»."""
+        Company.objects.filter(username='firma').update(directions=['Backend'])
+        self.login('firma').post(self.URL, {'directions': ''})
+        self.assertEqual(self.firma().directions, [])
+
+    def test_directions_are_left_alone_when_not_sent(self):
+        Company.objects.filter(username='firma').update(directions=['Backend'])
+        self.login('firma').post(self.URL, {'name': 'Фирма'})
+        self.assertEqual(self.firma().directions, ['Backend'])
+
+    def test_logo_can_be_uploaded_and_removed(self):
+        client = self.login('firma')
+        logo = SimpleUploadedFile('logo.png', b'x' * 100, content_type='image/png')
+        response = client.post(self.URL, {'avatar': logo})
+        self.assertTrue(response.json()['company']['avatar_url'])
+        self.assertTrue(self.firma().avatar)
+
+        response = client.post(self.URL, {'remove_avatar': '1'})
+        self.assertEqual(response.json()['company']['avatar_url'], '')
+        self.assertFalse(self.firma().avatar)
+
+    def test_another_company_cannot_edit(self):
+        self.assertEqual(self.login('konkurent').post(self.URL, {'name': 'Чужое'}).status_code, 403)
+        self.assertEqual(self.firma().name, 'Фирма')
+
+    def test_settings_page_has_the_directions_editor(self):
+        """Вместо четырёх полей ввода — список меток с добавлением."""
+        page = self.login('firma').get('/cabinet/company/settings/').content.decode()
+        self.assertIn('cp-dir-chips', page)
+        self.assertIn('cp-logo-preview', page)
+        self.assertNotIn('cp-f-dir1', page)
 
 
 class UploadValidationTests(BaseCase):

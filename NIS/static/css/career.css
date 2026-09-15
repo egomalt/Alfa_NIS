@@ -1136,17 +1136,6 @@ input, textarea, select {
 
 .about-text { font-size: 14px; line-height: 1.65; color: var(--text-2); margin: 0; }
 
-.directions-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-.direction-chip {
-  padding: 5px 13px;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  background: var(--surface-2);
-  color: var(--text-2);
-}
-
 .info-list { display: flex; flex-direction: column; gap: 10px; }
 .info-list > div {
   display: flex;
@@ -1396,7 +1385,6 @@ input, textarea, select {
 /* Form grids in modal */
 .form-grid { display: grid; gap: 16px; margin-bottom: 16px; }
 .form-grid.two-col { grid-template-columns: 1fr 1fr; }
-.directions-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 
 /* Form fields (auth + modal) */
 .field { margin-bottom: 16px; }

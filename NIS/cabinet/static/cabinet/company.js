@@ -305,6 +305,23 @@
       });
   }
 
+  // ---- Профиль компании: одна точка отправки ----
+  /* Форма на сервере частичная: что не прислали — то не меняется. Раньше она
+     связывалась целиком, поэтому смена аватара тащила с собой копии всех
+     остальных полей, а забытый в этом списке адрес компании затирался. */
+  function sendProfile(formData, onDone) {
+    return apiFetchForm('/api/v1/companies/' + username + '/profile/', formData)
+      .then(function (data) {
+        if (!data.company) return data;
+        state.company = data.company;
+        renderSidebar(data.company);
+        renderHero(data.company);
+        renderLogoBox(data.company);
+        if (onDone) onDone(data.company);
+        return data;
+      });
+  }
+
   // ---- Avatar upload ----
   function initAvatarUpload() {
     var heroAv = el('cp-hero-av');
@@ -313,32 +330,11 @@
     heroAv.addEventListener('click', function () { avatarInput.click(); });
     avatarInput.addEventListener('change', function () {
       var file = avatarInput.files[0];
-      if (!file || !state.company) return;
-      var c = state.company;
+      if (!file) return;
       var fd = new FormData();
       fd.append('avatar', file);
-      fd.append('username', c.username || username);
-      fd.append('name', c.name || '');
-      fd.append('contact_email', c.contact_email || '');
-      fd.append('description', c.description || '');
-      fd.append('phone', c.phone || '');
-      fd.append('website', c.website || '');
-      fd.append('city', c.city || '');
-      fd.append('industry', c.industry || '');
-      fd.append('company_size', c.company_size || '');
-      fd.append('direction_1', c.direction_1 || '');
-      fd.append('direction_2', c.direction_2 || '');
-      fd.append('direction_3', c.direction_3 || '');
-      fd.append('direction_4', c.direction_4 || '');
-      apiFetchForm('/api/v1/companies/' + username + '/profile/', fd)
-        .then(function (data) {
-          if (data.company) {
-            state.company = data.company;
-            renderSidebar(data.company);
-            renderHero(data.company);
-          }
-        })
-        .catch(function () {});
+      sendProfile(fd).catch(function () {});
+      avatarInput.value = '';
     });
   }
 
@@ -445,21 +441,69 @@
   }
 
   // ---- Settings form ----
+  // Столько же направлений принимает сервер (companies/forms.py)
+  var MAX_DIRECTIONS = 10;
+  var directions = [];
+
+  var TEXT_FIELDS = [
+    ['cp-f-name', 'name'],
+    ['cp-f-desc', 'description'],
+    ['cp-f-email', 'contact_email'],
+    ['cp-f-phone', 'phone'],
+    ['cp-f-website', 'website'],
+    ['cp-f-city', 'city'],
+    ['cp-f-address', 'address'],
+    ['cp-f-industry', 'industry'],
+    ['cp-f-size', 'company_size'],
+  ];
+
+  function renderLogoBox(company) {
+    var preview = el('cp-logo-preview');
+    if (!preview) return;
+    if (company.avatar_url) {
+      preview.innerHTML = '<img src="' + esc(company.avatar_url) + '" alt="Логотип компании">';
+    } else {
+      preview.textContent = (company.name || company.username || '?').charAt(0).toUpperCase();
+    }
+    el('cp-logo-remove').hidden = !company.avatar_url;
+  }
+
+  function renderDirections() {
+    var box = el('cp-dir-chips');
+    if (!box) return;
+    box.innerHTML = directions.map(function (name, index) {
+      return '<span class="cp-chip-tag">' + esc(name)
+        + '<button type="button" class="cp-chip-x" data-index="' + index
+        + '" title="Убрать" aria-label="Убрать направление ' + esc(name) + '">×</button></span>';
+    }).join('');
+
+    var full = directions.length >= MAX_DIRECTIONS;
+    el('cp-dir-input').disabled = full;
+    el('cp-dir-add').disabled = full;
+    el('cp-dir-count').textContent = full
+      ? '— больше ' + MAX_DIRECTIONS + ' не поместится'
+      : '— ' + directions.length + ' из ' + MAX_DIRECTIONS;
+  }
+
+  function addDirections(raw) {
+    // Строку из другого места обычно вставляют целиком, через запятую
+    raw.split(',').forEach(function (part) {
+      var name = part.trim().replace(/\s+/g, ' ').slice(0, 60);
+      if (!name || directions.length >= MAX_DIRECTIONS) return;
+      var exists = directions.some(function (d) { return d.toLowerCase() === name.toLowerCase(); });
+      if (!exists) directions.push(name);
+    });
+    el('cp-dir-input').value = '';
+    renderDirections();
+  }
+
   function fillSettingsForm() {
     var c = state.company;
     if (!c) return;
-    el('cp-f-name').value = c.name || '';
-    el('cp-f-industry').value = c.industry || '';
-    el('cp-f-city').value = c.city || '';
-    el('cp-f-email').value = c.contact_email || '';
-    el('cp-f-phone').value = c.phone || '';
-    el('cp-f-website').value = c.website || '';
-    el('cp-f-size').value = c.company_size || '';
-    el('cp-f-desc').value = c.description || '';
-    el('cp-f-dir1').value = c.direction_1 || '';
-    el('cp-f-dir2').value = c.direction_2 || '';
-    el('cp-f-dir3').value = c.direction_3 || '';
-    el('cp-f-dir4').value = c.direction_4 || '';
+    TEXT_FIELDS.forEach(function (pair) { el(pair[0]).value = c[pair[1]] || ''; });
+    directions = (c.directions || []).slice();
+    renderDirections();
+    renderLogoBox(c);
     el('cp-settings-flash').innerHTML = '';
   }
 
@@ -473,35 +517,68 @@
     btn.textContent = 'Сохранение…';
 
     var fd = new FormData();
-    fd.append('username', username);
-    fd.append('name', el('cp-f-name').value);
-    fd.append('industry', el('cp-f-industry').value);
-    fd.append('city', el('cp-f-city').value);
-    fd.append('contact_email', el('cp-f-email').value);
-    fd.append('phone', el('cp-f-phone').value);
-    fd.append('website', el('cp-f-website').value);
-    fd.append('company_size', el('cp-f-size').value);
-    fd.append('description', el('cp-f-desc').value);
-    fd.append('direction_1', el('cp-f-dir1').value);
-    fd.append('direction_2', el('cp-f-dir2').value);
-    fd.append('direction_3', el('cp-f-dir3').value);
-    fd.append('direction_4', el('cp-f-dir4').value);
+    TEXT_FIELDS.forEach(function (pair) { fd.append(pair[1], el(pair[0]).value); });
+    // Пустое значение обязательно: по наличию ключа сервер понимает, что
+    // направления вообще присылали, и что пустой список — это очистка
+    if (!directions.length) fd.append('directions', '');
+    directions.forEach(function (name) { fd.append('directions', name); });
 
-    apiFetchForm('/api/v1/companies/' + username + '/profile/', fd)
-      .then(function (data) {
-        state.company = data.company;
-        renderSidebar(data.company);
-        renderHero(data.company);
-        if (data.company.is_verified) renderProfileContent(data.company);
-        btn.disabled = false;
-        btn.textContent = 'Сохранить';
-        flashSettings('Сохранено!', 'success');
-      })
-      .catch(function (err) {
-        flashSettings(err.message, 'error');
+    // Незакоммиченный ввод не должен пропадать при сохранении
+    var pending = el('cp-dir-input').value.trim();
+    if (pending && directions.length < MAX_DIRECTIONS) fd.append('directions', pending);
+
+    sendProfile(fd, function (company) {
+      directions = (company.directions || []).slice();
+      renderDirections();
+      el('cp-dir-input').value = '';
+      if (company.is_verified) renderProfileContent(company);
+      flashSettings('Сохранено', 'success');
+    })
+      .catch(function (err) { flashSettings(err.message, 'error'); })
+      .then(function () {
         btn.disabled = false;
         btn.textContent = 'Сохранить';
       });
+  }
+
+  function initLogoButtons() {
+    var input = el('cp-logo-input');
+    if (!input) return;
+    el('cp-logo-pick').addEventListener('click', function () { input.click(); });
+    input.addEventListener('change', function () {
+      var file = input.files[0];
+      if (!file) return;
+      var fd = new FormData();
+      fd.append('avatar', file);
+      sendProfile(fd, function () { flashSettings('Логотип обновлён', 'success'); })
+        .catch(function (err) { flashSettings(err.message, 'error'); });
+      input.value = '';
+    });
+    el('cp-logo-remove').addEventListener('click', function () {
+      if (!confirm('Удалить логотип компании?')) return;
+      var fd = new FormData();
+      fd.append('remove_avatar', '1');
+      sendProfile(fd, function () { flashSettings('Логотип удалён', 'success'); })
+        .catch(function (err) { flashSettings(err.message, 'error'); });
+    });
+  }
+
+  function initDirectionsEditor() {
+    var input = el('cp-dir-input');
+    if (!input) return;
+    el('cp-dir-add').addEventListener('click', function () { addDirections(input.value); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ',') return;
+      // Enter внутри формы иначе отправляет её, запятая — попадает в текст
+      e.preventDefault();
+      addDirections(input.value);
+    });
+    el('cp-dir-chips').addEventListener('click', function (e) {
+      var btn = e.target.closest('.cp-chip-x');
+      if (!btn) return;
+      directions.splice(Number(btn.dataset.index), 1);
+      renderDirections();
+    });
   }
 
   function initSettingsButtons() {
@@ -509,6 +586,8 @@
     var cancelBtn = el('cp-cancel-settings-btn');
     if (saveBtn) saveBtn.addEventListener('click', saveProfile);
     if (cancelBtn) cancelBtn.addEventListener('click', function () { fillSettingsForm(); });
+    initLogoButtons();
+    initDirectionsEditor();
   }
 
   // ---- Logout ----
