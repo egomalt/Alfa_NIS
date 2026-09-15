@@ -29,13 +29,6 @@
     try { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); }
     catch { return ''; }
   }
-  function pluralPages(n) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m100 >= 11 && m100 <= 19) return `${n} страниц`;
-    if (m10 === 1) return `${n} страница`;
-    if (m10 >= 2 && m10 <= 4) return `${n} страницы`;
-    return `${n} страниц`;
-  }
   function fmtNum(n) {
     if (n >= 1000) return (n / 1000).toFixed(1).replace('.0', '') + ' тыс.';
     return String(n);
@@ -165,62 +158,89 @@
 
   let testsFilter = 'all';
 
+  const TEST_STATUS_LABEL = { draft: 'Черновик', published: 'Опубликован' };
+
+  const ICON_STATS = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-4"/></svg>';
+  const ICON_EDIT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+  const ICON_DELETE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+
+  function formatDateCell(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }); }
+    catch { return '—'; }
+  }
+
+  function testRowHtml(test) {
+    // Черновик по публичному адресу отдаёт 404 — владельцу открываем предпросмотр
+    const viewUrl = test.status === 'published'
+      ? esc(test.url)
+      : esc(test.url) + '?preview=1';
+    // Статистика есть только у опубликованного: черновик никто не проходил
+    const statsBtn = test.status === 'published'
+      ? `<a class="action-icon-btn" href="${esc(test.edit_url)}stats/" title="Как проходят тест">${ICON_STATS}</a>`
+      : '';
+    return `<tr>
+      <td><a href="${viewUrl}" target="_blank" rel="noopener">${esc(test.title || 'Без названия')}</a></td>
+      <td data-label="Статус"><span class="status-pill ${esc(test.status)}">${esc(TEST_STATUS_LABEL[test.status] || test.status)}</span></td>
+      <td data-label="Страниц">${test.page_count || 0}</td>
+      <td data-label="Прохождений">${test.submissions || 0}</td>
+      <td data-label="Создан">${esc(formatDateCell(test.created_at))}</td>
+      <td><div class="action-row">
+        ${statsBtn}
+        <a class="action-icon-btn" href="${esc(test.edit_url)}" title="Редактировать">${ICON_EDIT}</a>
+        <button type="button" class="action-icon-btn danger" data-delete-test="${test.id}" title="Удалить">${ICON_DELETE}</button>
+      </div></td>
+    </tr>`;
+  }
+
   function renderTestsTab() {
-    if (!document.getElementById('ud-tests-list')) return;
+    const body = document.getElementById('ud-tests-body');
+    if (!body) return;
+
     const tests = state.tests;
-    const total = tests.length;
-    const published = tests.filter(t => t.status === 'published').length;
-    const drafts = tests.filter(t => t.status === 'draft').length;
     const subs = tests.reduce((s, t) => s + (t.submissions || 0), 0);
-
-    set('tstat-total', total);
-    set('tstat-published', published);
+    // Плашки считают по всем тестам: это сводка, а не срез под фильтром
+    set('tstat-total', tests.length);
+    set('tstat-published', tests.filter(t => t.status === 'published').length);
     set('tstat-subs', subs);
-    set('tstat-drafts', drafts);
+    set('tstat-drafts', tests.filter(t => t.status === 'draft').length);
 
-    const listEl = document.getElementById('ud-tests-list');
-    if (!listEl) return;
+    const shown = testsFilter === 'all' ? tests : tests.filter(t => t.status === testsFilter);
+    set('ud-tests-count', tests.length ? `${shown.length} из ${tests.length}` : '');
 
-    const STATUS_BG = { draft: 'var(--amber-soft)', published: 'var(--green-soft)' };
-    const STATUS_CO = { draft: 'var(--amber-text)', published: 'var(--green-text)' };
-    const STATUS_LB = { draft: 'Черновик', published: 'Опубликован' };
+    const wrapper = document.getElementById('ud-tests-wrapper');
+    const empty = document.getElementById('tests-empty');
 
-    const filtered = testsFilter === 'all' ? tests : tests.filter(t => t.status === testsFilter);
-
-    if (!filtered.length) {
-      listEl.innerHTML = `<div class="ud-empty"><div class="ud-empty-title">${testsFilter === 'all' ? 'Нет тестов' : 'Нет тестов в этой категории'}</div><div class="ud-empty-sub">Создайте первый тест, нажав кнопку выше.</div></div>`;
+    if (!shown.length) {
+      body.innerHTML = '';
+      wrapper.hidden = true;
+      empty.hidden = false;
+      // Пусто из-за фильтра и пусто вообще — разные сообщения
+      set('tests-empty-title', tests.length ? 'Тестов не найдено' : 'Тестов пока нет');
+      set('tests-empty-sub', tests.length
+        ? 'Под выбранный фильтр ничего не подходит'
+        : 'Соберите первый тест — его смогут пройти все желающие');
+      document.getElementById('tests-empty-create').hidden = Boolean(tests.length);
       return;
     }
 
-    listEl.innerHTML = filtered.map(t => `
-      <a class="ud-list-row" href="${esc(t.edit_url || '#')}">
-        <div class="ud-list-main">
-          <div class="ud-list-title">${esc(t.title || 'Без названия')}</div>
-          <div class="ud-list-meta">${esc(pluralPages(t.page_count || 0))} · создан ${esc(formatDateShort(t.created_at))}</div>
-        </div>
-        <span class="ud-status-pill" style="background:${STATUS_BG[t.status]||'var(--surface-2)'};color:${STATUS_CO[t.status]||'var(--muted)'};">${STATUS_LB[t.status] || t.status}</span>
-        <div class="ud-row-actions" onclick="event.stopPropagation()">
-          <button class="ud-icon-btn" data-delete-test="${t.id}" title="Удалить">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-          </button>
-        </div>
-      </a>`).join('');
-
-    listEl.querySelectorAll('[data-delete-test]').forEach(btn => {
-      btn.addEventListener('click', async e => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!confirm('Удалить тест? Это действие нельзя отменить.')) return;
-        try {
-          await apiFetch(`/api/v1/tests/${btn.dataset.deleteTest}/`, { method: 'DELETE' });
-          state.tests = state.tests.filter(t => String(t.id) !== btn.dataset.deleteTest);
-          renderTestsTab();
-          renderProfileTab();
-          renderStatsTab();
-        } catch (e) { alert(e.message); }
-      });
-    });
+    body.innerHTML = shown.map(testRowHtml).join('');
+    wrapper.hidden = false;
+    empty.hidden = true;
   }
+
+  document.getElementById('ud-tests-body')?.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-delete-test]');
+    if (!btn) return;
+    if (!confirm('Удалить тест? Это действие нельзя отменить.')) return;
+    try {
+      await apiFetch(`/api/v1/tests/${btn.dataset.deleteTest}/`, { method: 'DELETE' });
+      state.tests = state.tests.filter(t => String(t.id) !== btn.dataset.deleteTest);
+      renderTestsTab();
+      renderProfileTab();
+      renderStatsTab();
+    } catch (err) { alert(err.message); }
+  });
 
   document.getElementById('panel-tests')?.addEventListener('click', e => {
     const fbtn = e.target.closest('[data-tests-filter]');
