@@ -12,7 +12,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from django.http import HttpResponse
 from reportlab.platypus import (
-    BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer, Table, TableStyle,
+    BaseDocTemplate, Flowable, Frame, KeepTogether, PageTemplate, Paragraph, Spacer,
+    Table, TableStyle,
 )
 
 # ── Шрифты с кириллицей ──────────────────────────────────────────────────
@@ -42,6 +43,10 @@ LINE = colors.HexColor('#E2E7F0')
 LINE_2 = colors.HexColor('#D2D9E6')
 SURFACE_2 = colors.HexColor('#EDF0F6')
 WHITE = colors.white
+# Второй цвет графиков. На странице кабинета тем же янтарным нарисованы
+# прохождения тестов рядом с решениями конкурсов
+AMBER = colors.HexColor('#B7770C')
+GREEN = colors.HexColor('#15935A')
 
 PAGE_W, PAGE_H = A4
 MARGIN = 18 * mm
@@ -50,8 +55,9 @@ CONTENT_W = PAGE_W - 2 * MARGIN
 
 def _styles():
     return {
+        # keepWithNext: заголовок раздела не должен оставаться один внизу страницы
         'section': ParagraphStyle('section', fontName=FONT_BOLD, fontSize=13, textColor=TEXT,
-                                  spaceBefore=6, spaceAfter=8, leading=16),
+                                  spaceBefore=6, spaceAfter=8, leading=16, keepWithNext=1),
         'note': ParagraphStyle('note', fontName=FONT, fontSize=9.5, textColor=MUTED, leading=14),
         'kpi_value': ParagraphStyle('kpi_value', fontName=FONT_BOLD, fontSize=17, textColor=TEXT, leading=20),
         'kpi_label': ParagraphStyle('kpi_label', fontName=FONT, fontSize=8, textColor=MUTED, leading=11, spaceBefore=2),
@@ -60,8 +66,190 @@ def _styles():
     }
 
 
+CELL_PADDING = 16
+
+
+def fit_column_widths(headers, widths):
+    """Раздвигает узкие колонки, чтобы заголовок не рвался посреди слова.
+
+    Заголовки печатаются капсом, и «УЧАСТНИКИ» в колонке под число из одной
+    цифры переносилось как «УЧАСТН ИКИ». Недостающие пункты забираем у колонок,
+    где запас есть, — пропорционально запасу.
+    """
+    minimums = [
+        max((pdfmetrics.stringWidth(word, FONT_BOLD, 8)
+             for word in str(h).upper().split()), default=0) + CELL_PADDING
+        for h in headers
+    ]
+    deficit = sum(max(m - w, 0) for m, w in zip(minimums, widths))
+    if not deficit:
+        return widths
+
+    slack = [max(w - m, 0) for w, m in zip(widths, minimums)]
+    total_slack = sum(slack)
+    if total_slack < deficit:
+        # Ужимать некуда: в такой таблице колонок больше, чем помещается
+        return widths
+    return [
+        max(w, m) - (s / total_slack * deficit if s else 0)
+        for w, m, s in zip(widths, minimums, slack)
+    ]
+
+
+def plural(number, forms):
+    """Русское склонение: plural(2, ('отзыв', 'отзыва', 'отзывов')) → 'отзыва'."""
+    number = abs(int(number))
+    if number % 10 == 1 and number % 100 != 11:
+        return forms[0]
+    if 2 <= number % 10 <= 4 and not 12 <= number % 100 <= 14:
+        return forms[1]
+    return forms[2]
+
+
+# ── Графики ──────────────────────────────────────────────────────────────
+# Рисуем на канве вручную, а не через reportlab.graphics: нужны ровно две
+# формы, а Drawing тянет свою систему координат, свою легенду и свои оси.
+# У Flowable координаты идут от левого нижнего угла отведённой области.
+
+
+class ColumnChart(Flowable):
+    """Столбики с общей шкалой. series: [(название, цвет, [значения])]."""
+
+    LEGEND_H = 12
+    PEAK_H = 9
+    LABEL_H = 11
+
+    def __init__(self, labels, series, width=CONTENT_W, height=46 * mm):
+        Flowable.__init__(self)
+        self.labels = list(labels)
+        self.series = list(series)
+        self.width = width
+        self.height = height
+
+    def wrap(self, *args):
+        return self.width, self.height
+
+    def _label_step(self, group_w):
+        """Через сколько столбиков подписывать ось, чтобы подписи не слиплись."""
+        widest = max((pdfmetrics.stringWidth(str(t), FONT, 6.5) for t in self.labels), default=0)
+        step = 1
+        while step < len(self.labels) and (widest + 5) > group_w * step:
+            step += 1
+        return step
+
+    def draw(self):
+        canvas = self.canv
+        count = len(self.labels)
+        if not count:
+            return
+
+        legend_h = self.LEGEND_H if len(self.series) > 1 else 0
+        plot_top = self.height - legend_h - self.PEAK_H
+        base = self.LABEL_H
+        plot_h = max(plot_top - base, 1)
+        peak = max((max(values) if values else 0 for _, _, values in self.series), default=0)
+
+        # Легенда
+        if legend_h:
+            x = 0
+            canvas.setFont(FONT, 8)
+            for name, color, _ in self.series:
+                canvas.setFillColor(color)
+                canvas.circle(x + 3, self.height - 5, 3, stroke=0, fill=1)
+                canvas.setFillColor(MUTED)
+                canvas.drawString(x + 9, self.height - 7.5, name)
+                x += 9 + pdfmetrics.stringWidth(name, FONT, 8) + 16
+
+        # Верхняя граница шкалы с подписью максимума
+        canvas.setStrokeColor(LINE)
+        canvas.setLineWidth(0.5)
+        canvas.line(0, plot_top, self.width, plot_top)
+        canvas.setFillColor(FAINT)
+        canvas.setFont(FONT, 6.5)
+        canvas.drawString(0, plot_top + 2.5, str(peak))
+
+        # Ось
+        canvas.setStrokeColor(LINE_2)
+        canvas.setLineWidth(0.6)
+        canvas.line(0, base, self.width, base)
+
+        group_w = self.width / count
+        inner = group_w * 0.72
+        bar_w = min(inner / len(self.series), 12)
+        step = self._label_step(group_w)
+
+        for i, label in enumerate(self.labels):
+            left = i * group_w + (group_w - bar_w * len(self.series)) / 2
+            for s, (_, color, values) in enumerate(self.series):
+                value = values[i] if i < len(values) else 0
+                if peak <= 0 or value <= 0:
+                    continue
+                # Единица не должна быть неотличима от нуля
+                h = max(value / peak * plot_h, 1.2)
+                x = left + s * bar_w
+                canvas.setFillColor(color)
+                if h >= 4:
+                    canvas.roundRect(x, base, bar_w - 1.5, h, 1.8, stroke=0, fill=1)
+                else:
+                    canvas.rect(x, base, bar_w - 1.5, h, stroke=0, fill=1)
+
+            if i % step == 0:
+                canvas.setFillColor(FAINT)
+                canvas.setFont(FONT, 6.5)
+                canvas.drawCentredString(i * group_w + group_w / 2, base - 8, str(label))
+
+
+class BarList(Flowable):
+    """Горизонтальные полосы: подпись — дорожка — значение.
+
+    rows: [(подпись, значение-текст, доля 0..1)] или то же с четвёртым
+    элементом-цветом, если строки нужно раскрасить по-разному.
+    """
+
+    ROW_H = 15
+
+    def __init__(self, rows, width=CONTENT_W, label_w=110, value_w=54, color=BRAND):
+        Flowable.__init__(self)
+        self.rows = list(rows)
+        self.width = width
+        self.label_w = label_w
+        self.value_w = value_w
+        self.color = color
+        self.height = self.ROW_H * max(len(self.rows), 1)
+
+    def wrap(self, *args):
+        return self.width, self.height
+
+    def draw(self):
+        canvas = self.canv
+        track_x = self.label_w + 8
+        track_w = max(self.width - track_x - self.value_w - 8, 10)
+
+        for i, row in enumerate(self.rows):
+            label, value, share = row[0], row[1], row[2]
+            color = row[3] if len(row) > 3 else self.color
+            top = self.height - i * self.ROW_H
+            text_y = top - 11
+            track_y = top - 11.5
+
+            canvas.setFillColor(TEXT_2)
+            canvas.setFont(FONT, 8.5)
+            canvas.drawString(0, text_y, str(label))
+
+            canvas.setFillColor(SURFACE_2)
+            canvas.roundRect(track_x, track_y, track_w, 7, 3.5, stroke=0, fill=1)
+            filled = max(min(share, 1), 0) * track_w
+            if filled > 0:
+                canvas.setFillColor(color)
+                canvas.roundRect(track_x, track_y, max(filled, 3), 7, 3.5, stroke=0, fill=1)
+
+            canvas.setFillColor(TEXT)
+            canvas.setFont(FONT_BOLD, 8.5)
+            canvas.drawRightString(self.width, text_y, str(value))
+
+
 class ReportBuilder:
-    """Собирает PDF-отчёт из блоков: KPI, секции, таблицы, заметки."""
+    """Собирает PDF-отчёт из блоков: KPI, секции, таблицы, графики, заметки."""
 
     def __init__(self, title, subtitle=''):
         _ensure_fonts()
@@ -120,6 +308,7 @@ class ReportBuilder:
             widths = [CONTENT_W * (x / total) for x in col_ratios]
         else:
             widths = [CONTENT_W / len(headers)] * len(headers)
+        widths = fit_column_widths(headers, widths)
 
         t = Table(data, colWidths=widths, repeatRows=1)
         style = [
@@ -138,6 +327,30 @@ class ReportBuilder:
         t.setStyle(TableStyle(style))
         self.story.append(t)
         self.spacer(10)
+
+    def _keep(self, title, note, flowable):
+        """Заголовок, пояснение и сам график — одним неразрывным блоком.
+
+        Без этого длинный отчёт оставлял заголовок «Рейтинг компании» внизу
+        страницы, а полосы уезжали на следующую.
+        """
+        group = []
+        if title:
+            group.append(Paragraph(title, self.styles['section']))
+        if note:
+            group.append(Paragraph(note, self.styles['note']))
+            group.append(Spacer(1, 6))
+        group.append(flowable)
+        self.story.append(KeepTogether(group))
+        self.spacer(10)
+
+    def columns(self, labels, series, title=None, note=None, height=46 * mm):
+        """Столбиковая диаграмма. series: [(название, цвет, [значения])]."""
+        self._keep(title, note, ColumnChart(labels, series, height=height))
+
+    def bars(self, rows, title=None, note=None, label_w=110, color=BRAND):
+        """Горизонтальные полосы: [(подпись, значение, доля 0..1)]."""
+        self._keep(title, note, BarList(rows, label_w=label_w, color=color))
 
     def empty_note(self, text):
         self.note(text)

@@ -13,7 +13,11 @@ from django.utils import timezone
 
 from articles.constructor.models import Article
 from authorization.models import Account, ROLE_USER
+from companies import statistics
+from companies.models import Company, CompanyRating
 from contests.contests_cabinet.models import ContestSubmission
+from exports.company import build_company_pdf, contest_rows, test_rows
+from exports.pdf import fit_column_widths, plural
 from tests.constructor.models import TestAttempt, TestPage
 from users.models import UserProfile
 
@@ -240,6 +244,100 @@ class CompanyStatisticsTests(BaseCase):
         response = client.get('/export/company/statistics.pdf')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
+
+
+class CompanyReportTests(BaseCase):
+    """PDF-отчёт компании: графики, таблицы и устойчивость к пустым данным."""
+
+    def firma(self):
+        return Company.objects.get(username='firma')
+
+    def test_report_builds_for_a_company_without_any_data(self):
+        """Пустая компания: в графиках max() по пустому набору и деление на ноль."""
+        self.assertTrue(build_company_pdf(self.firma()).startswith(b'%PDF'))
+
+    def test_report_builds_with_every_block_filled(self):
+        """Все блоки сразу: график активности, навыки, рейтинг, обе таблицы."""
+        contest = self.make_contest(owner='firma')
+        ContestSubmission.objects.create(contest=contest, candidate_username='kandidat')
+        UserProfile.objects.create(username='kandidat', skills=['Python', 'SQL'])
+        test = self.make_test(owner='firma')
+        TestAttempt.objects.create(test=test, candidate_username='kandidat',
+                                   finished_at=timezone.now(), score=8, max_score=10)
+        CompanyRating.objects.create(company=self.firma(), user_username='kandidat', rating=4)
+
+        self.assertTrue(build_company_pdf(self.firma()).startswith(b'%PDF'))
+
+    def test_rating_distribution_is_counted_once(self):
+        """Карточка компании и отчёт берут распределение оценок из одного места."""
+        company = self.firma()
+        CompanyRating.objects.create(company=company, user_username='kandidat', rating=5)
+        CompanyRating.objects.create(company=company, user_username='drugoy', rating=3)
+
+        from_page = Client().get('/api/v1/companies/firma/').json()['company']['rating_dist']
+        from_report = statistics.collect(company)['rating_dist']
+        self.assertEqual({int(star): pct for star, pct in from_page.items()}, from_report)
+        self.assertEqual(from_report, {5: 50, 3: 50})
+
+    def test_test_row_carries_attempts_and_average(self):
+        """Две агрегации по одной связи: строки не должны множиться."""
+        test = self.make_test(owner='firma')
+        for score in (4, 8):
+            TestAttempt.objects.create(test=test, candidate_username='kandidat',
+                                       finished_at=timezone.now(), score=score, max_score=10)
+        TestAttempt.objects.create(test=test, candidate_username='drugoy')  # не закончил
+
+        row = test_rows('firma')[0]
+        self.assertEqual(row.finished_attempts, 2)
+        self.assertEqual(round(row.avg_percent), 60)
+
+    def test_contest_row_counts_submissions(self):
+        contest = self.make_contest(owner='firma')
+        ContestSubmission.objects.create(contest=contest, candidate_username='kandidat')
+        ContestSubmission.objects.create(contest=contest, candidate_username='drugoy')
+        self.make_contest(owner='firma', title='Без решений')
+
+        totals = {c.title: c.submission_total for c in contest_rows('firma')}
+        self.assertEqual(totals, {'Конкурс': 2, 'Без решений': 0})
+
+    def test_tables_keep_only_the_top_rows(self):
+        """Отчёт — сводка: полные списки конкурсов и тестов в нём не нужны."""
+        for i in range(7):
+            contest = self.make_contest(owner='firma', title=f'Конкурс {i}')
+            for n in range(i):
+                ContestSubmission.objects.create(contest=contest, candidate_username=f'u{n}')
+        for i in range(12):
+            test = self.make_test(owner='firma', title=f'Тест {i}')
+            for _ in range(i):
+                TestAttempt.objects.create(test=test, candidate_username='kandidat',
+                                           finished_at=timezone.now(), score=1, max_score=1)
+
+        contests = contest_rows('firma')
+        tests = test_rows('firma')
+        self.assertEqual([c.title for c in contests],
+                         ['Конкурс 6', 'Конкурс 5', 'Конкурс 4', 'Конкурс 3', 'Конкурс 2'])
+        self.assertEqual(len(tests), 10)
+        self.assertEqual(tests[0].title, 'Тест 11')
+
+
+class ReportBuilderTests(SimpleTestCase):
+    """Мелочи построителя отчётов, которые видно только на готовой странице."""
+
+    def test_narrow_column_grows_to_fit_its_header(self):
+        """«УЧАСТНИКИ» над колонкой в одну цифру переносилось как «УЧАСТН ИКИ»."""
+        widths = fit_column_widths(['Название', 'Участники'], [400, 20])
+        self.assertGreater(widths[1], 40)
+        self.assertAlmostEqual(sum(widths), 420, places=6)
+
+    def test_wide_enough_columns_are_left_alone(self):
+        widths = fit_column_widths(['Да', 'Нет'], [200, 200])
+        self.assertEqual(widths, [200, 200])
+
+    def test_plural_picks_the_russian_form(self):
+        forms = ('отзыв', 'отзыва', 'отзывов')
+        picked = [plural(n, forms) for n in (1, 2, 5, 11, 21, 104)]
+        self.assertEqual(picked, ['отзыв', 'отзыва', 'отзывов',
+                                  'отзывов', 'отзыв', 'отзыва'])
 
 
 class ContestStatisticsTests(BaseCase):

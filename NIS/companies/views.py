@@ -41,14 +41,10 @@ def company_tests_page(request):
 
 
 def _company_rating(company):
-    agg = company.ratings.aggregate(avg=Avg('rating'), cnt=Count('id'))
-    avg = agg['avg']
-    total = agg['cnt'] or 0
-    dist = {}
-    if total:
-        for row in company.ratings.values('rating').annotate(c=Count('id')):
-            dist[row['rating']] = round(row['c'] / total * 100)
-    return round(avg, 1) if avg is not None else None, total, dist
+    """Оценка компании для карточки. Считает statistics.rating() — там же,
+    откуда её берёт PDF-отчёт."""
+    stars = statistics.rating(company)
+    return stars['avg'], stars['count'], stars['dist']
 
 
 def _serialize_company(company, include_private=False):

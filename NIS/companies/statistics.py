@@ -94,6 +94,25 @@ def _skills(username):
     return [{'name': name, 'count': count} for name, count in counter.most_common(TOP_SKILLS)]
 
 
+def rating(company):
+    """Средняя оценка, число отзывов и распределение по звёздам в процентах.
+
+    Живёт здесь, а не во вьюхе, потому что то же распределение печатает
+    PDF-отчёт: считать его в двух местах — верный способ разойтись.
+    """
+    agg = company.ratings.aggregate(avg=Avg('rating'), count=Count('id'))
+    total = agg['count'] or 0
+    dist = {}
+    if total:
+        for row in company.ratings.values('rating').annotate(n=Count('id')):
+            dist[row['rating']] = round(row['n'] / total * 100)
+    return {
+        'avg': round(agg['avg'], 1) if agg['avg'] is not None else None,
+        'count': total,
+        'dist': dist,
+    }
+
+
 def collect(company):
     """Все числа для кабинета и отчёта одним набором."""
     username = company.username
@@ -114,8 +133,7 @@ def collect(company):
     )
     finished_attempts = TestAttempt.objects.filter(
         test__owner_username=username, finished_at__isnull=False).count()
-    rating = CompanyRating.objects.filter(company=company).aggregate(
-        avg=Avg('rating'), count=Count('id'))
+    stars = rating(company)
 
     return {
         'totals': {
@@ -128,9 +146,10 @@ def collect(company):
             'winners': submissions['winners'],
             'pending_submissions': submissions['pending'],
             'test_attempts': finished_attempts,
-            'avg_rating': round(rating['avg'], 1) if rating['avg'] is not None else None,
-            'rating_count': rating['count'],
+            'avg_rating': stars['avg'],
+            'rating_count': stars['count'],
         },
+        'rating_dist': stars['dist'],
         'weekly': _weekly(username),
         'skills': _skills(username),
     }
