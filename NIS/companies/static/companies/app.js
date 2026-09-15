@@ -103,7 +103,9 @@
 
         const titleCell = document.createElement('td');
         const titleLink = document.createElement('a');
-        titleLink.href = test.url;
+        // Черновик по публичному адресу отдаёт 404 даже владельцу —
+        // ему открываем предпросмотр
+        titleLink.href = test.status === 'published' ? test.url : `${test.url}?preview=1`;
         titleLink.textContent = test.title || '—';
         titleLink.target = '_blank';
         titleCell.appendChild(titleLink);

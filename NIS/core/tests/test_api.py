@@ -528,6 +528,48 @@ class ConstructorTests(BaseCase):
         self.assertIn('id="status-msg"', article_page)
 
 
+class UserTestsSectionTests(BaseCase):
+    """«Мои тесты» кандидата собраны из тех же блоков, что раздел компании."""
+
+    URL = '/cabinet/user/tests/'
+
+    def test_page_uses_the_shared_list_components(self):
+        body = self.login('kandidat').get(self.URL).content.decode()
+        for marker in ('list-card', 'tests-table', 'cr-chip', 'ud-tests-body'):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, body)
+        # Свой список строками и своя квадратная копия чипов больше не нужны
+        self.assertNotIn('ud-tests-list', body)
+        self.assertNotIn('ud-filter-btn', body)
+
+    def test_rows_offer_statistics_for_published_tests(self):
+        """Ссылки «Как проходят тест» в кабинете кандидата не было вовсе."""
+        script = Path(settings.BASE_DIR) / 'cabinet/static/cabinet/user.js'
+        source = script.read_text(encoding='utf-8')
+        self.assertIn("stats/", source)
+        self.assertIn('action-icon-btn', source)
+
+    def test_candidate_opens_statistics_of_own_test(self):
+        test = self.make_test(owner='kandidat')
+        response = self.login('kandidat').get(f'/constructor/{test.id}/stats/')
+        self.assertEqual(response.status_code, 200)
+        # Кабинет кандидата, а не компании: базовый шаблон выбирается по роли
+        self.assertIn('ud-sidebar', response.content.decode())
+
+    def test_draft_title_links_to_preview(self):
+        """Публичный адрес черновика отдаёт 404 даже владельцу."""
+        test = self.make_test(owner='kandidat', published=False)
+        self.assertEqual(Client().get(f'/tests/{test.id}/').status_code, 404)
+        client = self.login('kandidat')
+        self.assertEqual(client.get(f'/tests/{test.id}/').status_code, 404)
+        self.assertEqual(client.get(f'/tests/{test.id}/?preview=1').status_code, 200)
+
+        for path in ('cabinet/static/cabinet/user.js', 'companies/static/companies/app.js'):
+            with self.subTest(path=path):
+                source = (Path(settings.BASE_DIR) / path).read_text(encoding='utf-8')
+                self.assertIn('?preview=1', source)
+
+
 class CabinetSidebarTests(BaseCase):
     """Боковая панель кабинета должна быть одна и та же на всех страницах.
 
