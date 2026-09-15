@@ -75,6 +75,13 @@
       .pc-stats-row .pc-stat-card:last-child { grid-column: 1 / -1; }
       .pc-rating-hero { flex-direction: column; align-items: stretch; gap: 16px; }
     }
+    @media (max-width: 560px) {
+      /* Счётчик участников и метка статуса стоят с nowrap и занимают
+         почти всю строку. Названию конкурса оставалось меньше десяти
+         пикселей, и оно переносилось по одной букве в строку. */
+      .pc-row { flex-wrap: wrap; row-gap: 10px; }
+      .pc-row-main { flex-basis: 100%; }
+    }
     @media (max-width: 460px) { .pc-stats-row { grid-template-columns: 1fr; } }
   </style>
 </head>

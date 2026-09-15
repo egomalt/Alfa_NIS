@@ -158,6 +158,20 @@ class ProfilePageTests(BaseCase):
                 self.assertIsNotNone(rule, f'нет правила .{prefix}-hero-av')
                 self.assertIn('position: relative', rule.group(1))
 
+    def test_list_rows_wrap_on_a_phone(self):
+        """Название стояло в строке с двумя nowrap-соседями и на телефоне
+        ужималось до нуля: буква на строку. Лечится переносом строки."""
+        pages = (
+            ('/firma/', '.pc-row-main'),
+            ('/firma/contests/', '.cc-card-main'),
+            ('/firma/tests/', '.ct-card-main'),
+        )
+        for url, selector in pages:
+            with self.subTest(url=url):
+                css = Client().get(url).content.decode()
+                rule = re.search(rf'{re.escape(selector)} \{{[^}}]*flex-basis:\s*100%', css)
+                self.assertIsNotNone(rule, f'{selector} не занимает всю строку на узком экране')
+
     def test_company_tests_page_is_reachable_from_profile(self):
         """Раздел «Тесты компании» показывает три штуки — нужна ссылка на полный список."""
         self.make_test(owner='firma', published=True)
