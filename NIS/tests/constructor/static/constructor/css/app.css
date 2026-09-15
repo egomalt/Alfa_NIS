@@ -21,6 +21,11 @@
   --red-text: #FF8A92;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* Атрибут hidden должен побеждать классы с display. Без этого правила
+   .btn { display: inline-flex } перебивал его, и кнопка «Статистика»,
+   которую скрывает syncStatsBtn(), висела в шапке даже у черновика —
+   вела на «#» и занимала лишние 115px ширины. */
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body { font-family: 'Onest', system-ui, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
 input, textarea, select, button { font-family: inherit; }
@@ -172,13 +177,25 @@ textarea { resize: vertical; }
   .tab-btn { flex-shrink: 0; }
 }
 
+/* Шапка на телефоне. Раньше .actions оставались одной нерезиновой строкой:
+   у них flex-shrink: 0, поэтому четыре кнопки (~400px) не сжимались под экран
+   и распирали страницу вбок. Теперь действия занимают отдельную строку
+   сеткой 2×2, а в первой остаются «Назад», название и тема. */
 @media (max-width: 760px) {
-  .topbar { height: auto; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
-  .meta-area { order: 3; flex-basis: 100%; }
-  .test-name { width: 100%; }
-  .actions { margin-left: auto; }
+  .topbar { height: auto; flex-wrap: wrap; gap: 8px 10px; padding: 10px 14px; }
   .divider-v { display: none; }
-  .logo-text { display: none; }
+  /* Логотип ведёт туда же, куда «Назад» — на узком экране это лишняя ширина */
+  .logo { display: none; }
+
+  /* Название и статус сохранения делят первую строку с «Назад» и темой */
+  .meta-area { flex: 1 1 140px; flex-wrap: wrap; row-gap: 2px; }
+  .test-name { flex: 1 1 100px; width: auto; }
+  /* Сообщения бывают длинными («Не удалось разобрать JSON: …»), а строка
+     состояния стоит с nowrap — на телефоне отдаём ей отдельную строку */
+  .save-status { flex-basis: 100%; white-space: normal; }
+
+  .actions { order: 3; flex-basis: 100%; flex-shrink: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .actions .btn, .actions .btn-save, .actions .btn-publish { justify-content: center; text-align: center; }
 
   .editor-content { padding: 18px 14px 52px; }
   /* Ввод и ожидаемый вывод в две колонки по 1fr не читаются на телефоне */
@@ -188,7 +205,10 @@ textarea { resize: vertical; }
 }
 
 @media (max-width: 460px) {
-  .actions { flex-wrap: wrap; }
-  .actions .btn, .actions .btn-save, .actions .btn-publish { flex: 1 1 auto; justify-content: center; }
   .toggle-btn { height: 30px; padding: 0 11px; font-size: 12.5px; }
+  /* Название теста — на всю ширину: делить строку с «Назад» и темой ему
+     остаётся меньше 150px, а это уже не поле ввода, а щель */
+  .meta-area { order: 2; flex-basis: 100%; }
+  /* Строка с «Назад» опустела — тема прижимается к правому краю */
+  .btn-theme { margin-left: auto; }
 }
