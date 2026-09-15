@@ -43,10 +43,10 @@ class Company(models.Model):
         blank=True,
         validators=[FileExtensionValidator(['pdf'])],
     )
-    direction_1 = models.CharField(max_length=120, blank=True)
-    direction_2 = models.CharField(max_length=120, blank=True)
-    direction_3 = models.CharField(max_length=120, blank=True)
-    direction_4 = models.CharField(max_length=120, blank=True)
+    # Раньше направлений было ровно четыре — четыре отдельных поля и четыре
+    # поля ввода в настройках. Список снимает потолок и хранится так же,
+    # как навыки в профиле кандидата.
+    directions = models.JSONField(default=list, blank=True)
     verification_status = models.CharField(max_length=20, choices=VERIF_CHOICES, default=VERIF_NONE, db_index=True)
     verification_reason = models.TextField(blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)

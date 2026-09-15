@@ -15,7 +15,7 @@ from tests import attempts
 from tests.constructor.models import Test
 
 from . import statistics
-from .forms import CompanyProfileForm, CompanyVerificationForm
+from .forms import clean_directions, CompanyProfileForm, CompanyVerificationForm
 from .models import Company, CompanyRating, ensure_company
 
 # Каталоги фильтруются на стороне браузера, поэтому страница крупная:
@@ -64,11 +64,7 @@ def _serialize_company(company, include_private=False):
         'company_size': company.company_size,
         'industry': company.industry,
         'avatar_url': company.avatar.url if company.avatar else '',
-        'direction_1': company.direction_1,
-        'direction_2': company.direction_2,
-        'direction_3': company.direction_3,
-        'direction_4': company.direction_4,
-        'directions': [d for d in [company.direction_1, company.direction_2, company.direction_3, company.direction_4] if d],
+        'directions': list(company.directions or []),
         'created_at': company.created_at.isoformat(),
         'updated_at': company.updated_at.isoformat(),
         'is_verified': company.is_verified,
@@ -146,16 +142,38 @@ def api_company_detail(request, username):
     })
 
 
+def _profile_form_data(request, company):
+    """POST, дополненный текущими значениями для непереданных полей.
+
+    Форма связывается целиком, и пропущенное поле означало «очистить»:
+    загрузка аватара слала лишь часть полей и молча стирала адрес компании.
+    Теперь запрос может менять только то, что в нём есть.
+    """
+    data = request.POST.copy()
+    for name in CompanyProfileForm.Meta.fields:
+        if name in ('avatar', 'registration_document') or name in data:
+            continue
+        data[name] = getattr(company, name) or ''
+    return data
+
+
 @require_http_methods(['POST'])
 @api_login_required(ROLE_COMPANY)
 def api_company_profile(request, username):
     company = get_object_or_404(Company, username=username)
     if request.account.username != username:
         return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
-    form = CompanyProfileForm(request.POST, request.FILES, instance=company)
+    form = CompanyProfileForm(_profile_form_data(request, company), request.FILES, instance=company)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
-    company = form.save()
+
+    company = form.save(commit=False)
+    if 'directions' in request.POST:
+        company.directions = clean_directions(request.POST.getlist('directions'))
+    # Снять логотип можно только явной командой и только если не загружают новый
+    if request.POST.get('remove_avatar') == '1' and 'avatar' not in request.FILES:
+        company.avatar.delete(save=False)
+    company.save()
     return JsonResponse({'ok': True, 'company': _serialize_company(company, include_private=True)})
 
 

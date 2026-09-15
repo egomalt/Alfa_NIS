@@ -6,6 +6,30 @@ from core.utils import validate_username
 from .models import Company
 
 
+MAX_DIRECTIONS = 10
+DIRECTION_MAX_LEN = 60
+
+
+def clean_directions(values):
+    """Направления работы из формы: чистим, режем дубли и ограничиваем число.
+
+    Повторы отсекаем без учёта регистра, но сохраняем написание как ввели:
+    «Backend» и «backend» — одно направление, а не два.
+    """
+    result = []
+    seen = set()
+    for value in values:
+        name = ' '.join(str(value).split())[:DIRECTION_MAX_LEN]
+        key = name.casefold()
+        if not name or key in seen:
+            continue
+        seen.add(key)
+        result.append(name)
+        if len(result) == MAX_DIRECTIONS:
+            break
+    return result
+
+
 class PDFValidationMixin:
     def clean_registration_document(self):
         document = self.cleaned_data.get('registration_document')
@@ -17,10 +41,12 @@ class PDFValidationMixin:
 class CompanyProfileForm(PDFValidationMixin, forms.ModelForm):
     class Meta:
         model = Company
+        # directions в форме нет намеренно: JSONField отрендерился бы текстовым
+        # полем с JSON внутри. Список приходит отдельными значениями формы и
+        # разбирается clean_directions() во вьюхе.
         fields = [
             'username', 'name', 'description', 'contact_email', 'phone', 'website',
             'address', 'city', 'company_size', 'industry', 'avatar', 'registration_document',
-            'direction_1', 'direction_2', 'direction_3', 'direction_4',
         ]
 
     def clean_username(self):
