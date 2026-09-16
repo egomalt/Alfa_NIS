@@ -879,6 +879,62 @@ class TemplateCommentTests(SimpleTestCase):
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class CandidateSettingsTests(BaseCase):
+    """Настройки кандидата: те же блоки, что у компании."""
+
+    URL = '/api/v1/candidates/kandidat/update/'
+
+    def patch(self, client, payload):
+        return client.patch(self.URL, json.dumps(payload), 'application/json')
+
+    def profile(self):
+        return UserProfile.objects.get(username='kandidat')
+
+    def test_untouched_fields_survive_a_partial_save(self):
+        """Удаление фото не должно заодно стирать «О себе»."""
+        UserProfile.objects.create(username='kandidat', bio='Про меня', skills=['Python'])
+        client = self.login('kandidat')
+
+        response = self.patch(client, {'name': 'Новое имя'})
+        self.assertEqual(response.status_code, 200)
+
+        profile = self.profile()
+        self.assertEqual(profile.bio, 'Про меня')
+        self.assertEqual(profile.skills, ['Python'])
+        self.assertEqual(Account.objects.get(username='kandidat').name, 'Новое имя')
+
+    def test_skills_are_capped(self):
+        from users.views import MAX_SKILLS
+
+        self.patch(self.login('kandidat'), {'skills': [f'Навык {i}' for i in range(40)]})
+        self.assertEqual(len(self.profile().skills), MAX_SKILLS)
+
+    def test_photo_can_be_uploaded_and_removed(self):
+        client = self.login('kandidat')
+        photo = SimpleUploadedFile('me.png', b'x' * 100, content_type='image/png')
+        response = client.post('/api/v1/candidates/kandidat/avatar/', {'avatar': photo})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.profile().avatar)
+
+        response = self.patch(client, {'remove_avatar': True})
+        # У кандидата пустое фото сериализуется как null, у компании — как ''
+        self.assertFalse(response.json()['candidate']['avatar'])
+        self.assertFalse(self.profile().avatar)
+
+    def test_another_candidate_cannot_edit(self):
+        self.assertEqual(self.patch(self.login('drugoy'), {'name': 'Чужое'}).status_code, 403)
+
+    def test_page_has_the_skills_editor(self):
+        """Вместо строки через запятую — метки, и фото меняется здесь же."""
+        page = self.login('kandidat').get('/cabinet/user/settings/').content.decode()
+        self.assertIn('ud-skill-chips', page)
+        self.assertIn('ud-avatar-preview', page)
+        # Общие компоненты, а не копии стилей кабинета компании
+        self.assertIn('class="chips"', page)
+        self.assertIn('class="pic-row"', page)
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
 class CompanySettingsTests(BaseCase):
     """Настройки компании: частичное сохранение, направления и логотип."""
 

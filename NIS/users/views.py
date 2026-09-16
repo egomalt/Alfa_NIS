@@ -10,6 +10,9 @@ from core.utils import load_json_body
 from core.uploads import UploadError, validate_image
 from .models import UserProfile
 
+# Столько же навыков показывает редактор в настройках кабинета
+MAX_SKILLS = 20
+
 
 @require_GET
 def api_candidate_detail(request, username):
@@ -61,12 +64,23 @@ def api_candidate_update(request, username):
         account.save(update_fields=changed_fields)
 
     profile, _ = UserProfile.objects.get_or_create(username=username)
-    profile.bio = bio
+    # Меняем только присланное: запрос на удаление фото не должен заодно
+    # стирать «О себе» просто потому, что это поле в него не положили
+    updated = []
+    if 'bio' in body:
+        profile.bio = bio
+        updated.append('bio')
     if phone is not None:
         profile.phone = str(phone).strip()[:32]
+        updated.append('phone')
     if skills_raw is not None:
-        profile.skills = [s.strip() for s in skills_raw if isinstance(s, str) and s.strip()][:20]
-    profile.save(update_fields=['bio', 'phone', 'skills'])
+        profile.skills = [s.strip() for s in skills_raw if isinstance(s, str) and s.strip()][:MAX_SKILLS]
+        updated.append('skills')
+    if body.get('remove_avatar'):
+        profile.avatar.delete(save=False)
+        updated.append('avatar')
+    if updated:
+        profile.save(update_fields=updated)
 
     return JsonResponse({'ok': True, 'candidate': _serialize_candidate(account, profile, include_private=True)})
 

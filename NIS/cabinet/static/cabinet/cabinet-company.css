@@ -82,33 +82,11 @@
 .cp-form-input:focus, .cp-form-textarea:focus { border-color: var(--brand); }
 .cp-form-textarea { height: auto; padding: 11px 13px; resize: vertical; min-height: 90px; }
 .cp-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-.cp-form-hint { font-size: 12px; color: var(--faint); line-height: 1.5; }
-.cp-label-note { font-weight: 400; color: var(--muted); }
+/* Подсказки, загрузка картинки и редактор меток — общие компоненты
+   .form-hint / .pic-* / .chips из career.css: те же блоки нужны
+   в настройках кандидата, и копия здесь разошлась бы с ними. */
 .cp-btn-secondary.danger:hover { border-color: var(--red-text); color: var(--red-text); }
 
-/* ── Настройки: логотип ─────────────────────────────────────────────── */
-
-.cp-logo-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; }
-.cp-logo-preview { display: flex; align-items: center; justify-content: center; width: 84px; height: 84px; border-radius: 20px; background: var(--brand-soft); color: var(--brand-text); font-size: 32px; font-weight: 700; flex-shrink: 0; overflow: hidden; }
-.cp-logo-preview img { width: 100%; height: 100%; object-fit: cover; }
-/* Подсказка и кнопки занимают остаток строки, но не распирают её:
-   без min-width: 0 длинная строка подсказки не переносится */
-.cp-logo-side { display: flex; flex-direction: column; gap: 12px; flex: 1 1 220px; min-width: 0; }
-.cp-logo-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-
-/* ── Настройки: направления работы ──────────────────────────────────── */
-
-/* Раньше направлений было ровно четыре — четыре поля ввода в сетке.
-   Теперь это список меток: добавить можно любое число до потолка в 10. */
-.cp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.cp-chips:empty { display: none; }
-.cp-chip-tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 7px 6px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); font-size: 13px; }
-.cp-chip-x { display: flex; align-items: center; justify-content: center; width: 19px; height: 19px; border: none; border-radius: 50%; background: transparent; color: var(--faint); font-size: 16px; line-height: 1; cursor: pointer; font-family: inherit; padding: 0; transition: background .12s, color .12s; }
-.cp-chip-x:hover { background: var(--red-soft); color: var(--red-text); }
-.cp-chip-add { display: flex; gap: 8px; }
-.cp-chip-add .cp-form-input { flex: 1; min-width: 0; }
-.cp-chip-add .cp-btn-secondary { height: 42px; flex-shrink: 0; }
-.cp-chip-add .cp-form-input:disabled { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
 .cp-flash { padding: 10px 14px; border-radius: 9px; font-size: 13.5px; margin-bottom: 12px; }
 .cp-flash.error { background: var(--red-soft); color: var(--red-text); }
 .cp-flash.success { background: var(--green-soft); color: var(--green-text); }
@@ -155,9 +133,6 @@
   /* Кнопки в строку не влезают; «Сохранить» должна быть сверху */
   .cp-form-actions { flex-direction: column-reverse; }
   .cp-form-actions button { width: 100%; justify-content: center; }
-  .cp-logo-preview { width: 64px; height: 64px; border-radius: 16px; font-size: 26px; }
-  /* Поле и «Добавить» рядом оставляют полю меньше половины строки */
-  .cp-chip-add { flex-direction: column; align-items: stretch; }
 }
 /* Значение набрано моноширинным шрифтом в 24px — в двух колонках на 400px
    оно уже не помещается рядом с подписью */

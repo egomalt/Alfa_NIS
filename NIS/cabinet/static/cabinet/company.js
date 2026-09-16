@@ -458,7 +458,7 @@
   ];
 
   function renderLogoBox(company) {
-    var preview = el('cp-logo-preview');
+    var preview = el('pic-preview');
     if (!preview) return;
     if (company.avatar_url) {
       preview.innerHTML = '<img src="' + esc(company.avatar_url) + '" alt="Логотип компании">';
@@ -472,8 +472,8 @@
     var box = el('cp-dir-chips');
     if (!box) return;
     box.innerHTML = directions.map(function (name, index) {
-      return '<span class="cp-chip-tag">' + esc(name)
-        + '<button type="button" class="cp-chip-x" data-index="' + index
+      return '<span class="chip-tag">' + esc(name)
+        + '<button type="button" class="chip-x" data-index="' + index
         + '" title="Убрать" aria-label="Убрать направление ' + esc(name) + '">×</button></span>';
     }).join('');
 
@@ -574,7 +574,7 @@
       addDirections(input.value);
     });
     el('cp-dir-chips').addEventListener('click', function (e) {
-      var btn = e.target.closest('.cp-chip-x');
+      var btn = e.target.closest('.chip-x');
       if (!btn) return;
       directions.splice(Number(btn.dataset.index), 1);
       renderDirections();

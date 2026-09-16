@@ -2,42 +2,85 @@
 
 {% block title %}Настройки — Alfa Career{% endblock %}
 
+{% comment %}
+  Собрано так же, как настройки компании: блоки по смыслу, фото меняется
+  здесь же, навыки стали метками. Раньше это была одна плашка с пятью полями
+  подряд, фото можно было сменить только кликом по аватарке в профиле,
+  а навыки вводились строкой через запятую.
+{% endcomment %}
+
 {% block panel %}
 <div class="ud-tab-panel" id="panel-settings">
   <div class="ud-page-header">
     <div>
       <div class="ud-page-title">Настройки</div>
-      <div class="ud-page-sub">Личная информация и контакты</div>
+      <div class="ud-page-sub">Так вас видят компании на публичной странице</div>
     </div>
   </div>
+
+  <div id="ud-settings-flash"></div>
+
   <div class="ud-section">
-    <div id="ud-settings-flash" style="margin-bottom:4px;"></div>
+    <div class="ud-section-title">Фото и имя</div>
+    <div class="pic-row">
+      <div class="pic-preview" id="ud-avatar-preview">?</div>
+      <div class="pic-side">
+        <div class="form-hint">PNG, JPG или WebP, до 5 МБ. Лучше квадратная картинка от 200×200 — она обрезается в квадрат.</div>
+        <div class="pic-buttons">
+          <button type="button" class="ud-btn-secondary" id="ud-avatar-pick">Загрузить</button>
+          <button type="button" class="ud-btn-secondary danger" id="ud-avatar-remove" hidden>Удалить</button>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="ud-avatar-input" accept="image/png,image/jpeg,image/webp" hidden>
+
     <div class="ud-form-grid">
       <div class="ud-form-field full">
-        <label class="ud-form-label">Отображаемое имя</label>
+        <label class="ud-form-label" for="ud-s-name">Отображаемое имя</label>
         <input id="ud-s-name" class="ud-form-input" type="text" maxlength="255" placeholder="Ваше имя">
       </div>
       <div class="ud-form-field full">
-        <label class="ud-form-label">Email</label>
+        <label class="ud-form-label" for="ud-s-bio">О себе</label>
+        <textarea id="ud-s-bio" class="ud-form-textarea" maxlength="1000" rows="4" placeholder="Чем занимаетесь, что умеете, что ищете…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="ud-section">
+    <div class="ud-section-title">Контакты</div>
+    <div class="ud-section-note">Их видит компания, к конкурсу которой вы прислали решение</div>
+    <div class="ud-form-grid">
+      <div class="ud-form-field">
+        <label class="ud-form-label" for="ud-s-email">Email</label>
         <input id="ud-s-email" class="ud-form-input" type="email" maxlength="254" placeholder="you@example.com">
       </div>
-      <div class="ud-form-field full">
-        <label class="ud-form-label">Телефон <span style="font-weight:400;color:var(--muted);">— необязательно</span></label>
+      <div class="ud-form-field">
+        <label class="ud-form-label" for="ud-s-phone">Телефон <span class="label-note">— необязательно</span></label>
         <input id="ud-s-phone" class="ud-form-input" type="tel" maxlength="32" placeholder="+7 900 000-00-00">
       </div>
-      <div class="ud-form-field full">
-        <label class="ud-form-label">О себе</label>
-        <textarea id="ud-s-bio" class="ud-form-textarea" maxlength="1000" placeholder="Расскажите о себе…"></textarea>
-      </div>
-      <div class="ud-form-field full">
-        <label class="ud-form-label">Навыки <span style="font-weight:400;color:var(--muted);">(через запятую: React, TypeScript, Go…)</span></label>
-        <input id="ud-s-skills" class="ud-form-input" type="text" maxlength="500" placeholder="React, TypeScript, Git…">
-      </div>
     </div>
-    <div class="ud-form-actions">
-      <button class="ud-btn-primary" id="ud-save-settings-btn">Сохранить</button>
-      <button class="ud-btn-secondary" id="ud-cancel-settings-btn">Отмена</button>
+  </div>
+
+  <div class="ud-section">
+    <div class="ud-section-title">Навыки</div>
+    <div class="ud-section-note">По ним компании собирают портрет участников своих конкурсов</div>
+    <div class="ud-form-field full">
+      <label class="ud-form-label" for="ud-skill-input">
+        Ваши навыки
+        <span class="label-note" id="ud-skill-count"></span>
+      </label>
+      <div class="chips" id="ud-skill-chips"></div>
+      <div class="chip-add">
+        <input id="ud-skill-input" class="ud-form-input" type="text" maxlength="40" placeholder="Python, React, SQL…">
+        <button type="button" class="ud-btn-secondary" id="ud-skill-add">Добавить</button>
+      </div>
+      <div class="form-hint">Enter или запятая добавляют навык. Метки показываются в вашем профиле.</div>
     </div>
+  </div>
+
+  <div class="ud-form-actions">
+    <button class="ud-btn-secondary" id="ud-cancel-settings-btn">Отменить изменения</button>
+    <button class="ud-btn-primary" id="ud-save-settings-btn">Сохранить</button>
   </div>
 </div>
 {% endblock %}

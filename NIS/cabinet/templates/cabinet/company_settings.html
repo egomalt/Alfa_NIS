@@ -21,11 +21,11 @@
 
   <div class="cp-section">
     <div class="cp-section-title">Логотип и название</div>
-    <div class="cp-logo-row">
-      <div class="cp-logo-preview" id="cp-logo-preview">?</div>
-      <div class="cp-logo-side">
-        <div class="cp-form-hint">PNG, JPG или WebP. Лучше квадратная картинка от 200×200 — она обрезается в квадрат.</div>
-        <div class="cp-logo-buttons">
+    <div class="pic-row">
+      <div class="pic-preview" id="cp-logo-preview">?</div>
+      <div class="pic-side">
+        <div class="form-hint">PNG, JPG или WebP. Лучше квадратная картинка от 200×200 — она обрезается в квадрат.</div>
+        <div class="pic-buttons">
           <button type="button" class="cp-btn-secondary" id="cp-logo-pick">Загрузить</button>
           <button type="button" class="cp-btn-secondary danger" id="cp-logo-remove" hidden>Удалить</button>
         </div>
@@ -69,7 +69,7 @@
         а неполная форма его ещё и затирала при каждом сохранении.
       {% endcomment %}
       <div class="cp-form-field full">
-        <label class="cp-form-label" for="cp-f-address">Адрес <span class="cp-label-note">— необязательно</span></label>
+        <label class="cp-form-label" for="cp-f-address">Адрес <span class="label-note">— необязательно</span></label>
         <input id="cp-f-address" class="cp-form-input" type="text" maxlength="255" placeholder="улица, дом, офис">
       </div>
     </div>
@@ -89,14 +89,14 @@
       <div class="cp-form-field full">
         <label class="cp-form-label" for="cp-dir-input">
           Направления работы
-          <span class="cp-label-note" id="cp-dir-count"></span>
+          <span class="label-note" id="cp-dir-count"></span>
         </label>
-        <div class="cp-chips" id="cp-dir-chips"></div>
-        <div class="cp-chip-add">
+        <div class="chips" id="cp-dir-chips"></div>
+        <div class="chip-add">
           <input id="cp-dir-input" class="cp-form-input" type="text" maxlength="60" placeholder="Backend, аналитика, мобильная разработка…">
           <button type="button" class="cp-btn-secondary" id="cp-dir-add">Добавить</button>
         </div>
-        <div class="cp-form-hint">Enter или запятая добавляют направление. Они показываются метками на публичной странице.</div>
+        <div class="form-hint">Enter или запятая добавляют направление. Они показываются метками на публичной странице.</div>
       </div>
     </div>
   </div>

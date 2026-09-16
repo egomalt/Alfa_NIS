@@ -792,61 +792,165 @@
     return `${n} ${eventWord(n)}`;
   }
 
-  function renderSettingsTab() {
-    if (!document.getElementById('ud-s-name')) return;
-    const c = state.candidate;
-    if (!c) return;
-    const nameEl = document.getElementById('ud-s-name');
-    const emailEl = document.getElementById('ud-s-email');
-    const phoneEl = document.getElementById('ud-s-phone');
-    const bioEl = document.getElementById('ud-s-bio');
-    const skillsEl = document.getElementById('ud-s-skills');
-    if (nameEl) nameEl.value = c.name || '';
-    if (emailEl) emailEl.value = c.email || '';
-    if (phoneEl) phoneEl.value = c.phone || '';
-    if (bioEl) bioEl.value = c.bio || '';
-    if (skillsEl) skillsEl.value = (c.skills || []).join(', ');
+  /* ---------- настройки ---------- */
+
+  // Столько же навыков принимает сервер (users/views.py)
+  const MAX_SKILLS = 20;
+  let skills = [];
+
+  function flashSettings(message, kind) {
+    const box = document.getElementById('ud-settings-flash');
+    if (box) box.innerHTML = `<div class="ud-flash ${kind}">${esc(message)}</div>`;
   }
 
-  let settingsOriginal = null;
+  function renderAvatarBox(candidate) {
+    const preview = document.getElementById('ud-avatar-preview');
+    if (!preview) return;
+    if (candidate.avatar) {
+      preview.innerHTML = `<img src="${esc(candidate.avatar)}" alt="Фото профиля">`;
+    } else {
+      preview.textContent = initial(candidate.name || candidate.username);
+    }
+    document.getElementById('ud-avatar-remove').hidden = !candidate.avatar;
+  }
+
+  function renderSkills() {
+    const box = document.getElementById('ud-skill-chips');
+    if (!box) return;
+    box.innerHTML = skills.map((name, index) =>
+      `<span class="chip-tag">${esc(name)}`
+      + `<button type="button" class="chip-x" data-index="${index}"`
+      + ` title="Убрать" aria-label="Убрать навык ${esc(name)}">×</button></span>`).join('');
+
+    const full = skills.length >= MAX_SKILLS;
+    document.getElementById('ud-skill-input').disabled = full;
+    document.getElementById('ud-skill-add').disabled = full;
+    set('ud-skill-count', full
+      ? `— больше ${MAX_SKILLS} не поместится`
+      : `— ${skills.length} из ${MAX_SKILLS}`);
+  }
+
+  function addSkills(raw) {
+    // Список навыков обычно вставляют целиком, через запятую
+    raw.split(',').forEach(part => {
+      const name = part.trim().replace(/\s+/g, ' ').slice(0, 40);
+      if (!name || skills.length >= MAX_SKILLS) return;
+      if (!skills.some(s => s.toLowerCase() === name.toLowerCase())) skills.push(name);
+    });
+    document.getElementById('ud-skill-input').value = '';
+    renderSkills();
+  }
+
+  function renderSettingsTab() {
+    if (!document.getElementById('panel-settings')) return;
+    const c = state.candidate;
+    if (!c) return;
+    document.getElementById('ud-s-name').value = c.name || '';
+    document.getElementById('ud-s-email').value = c.email || '';
+    document.getElementById('ud-s-phone').value = c.phone || '';
+    document.getElementById('ud-s-bio').value = c.bio || '';
+    skills = (c.skills || []).slice();
+    renderSkills();
+    renderAvatarBox(c);
+    document.getElementById('ud-settings-flash').innerHTML = '';
+  }
+
+  /** Отправка профиля. Сервер меняет только присланные поля. */
+  async function saveProfile(payload, done) {
+    const data = await apiFetch(`/api/v1/candidates/${username}/update/`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    state.candidate = data.candidate;
+    renderSidebar();
+    renderProfileTab();
+    renderAvatarBox(data.candidate);
+    if (done) done(data.candidate);
+  }
 
   document.getElementById('ud-save-settings-btn')?.addEventListener('click', async () => {
     const btn = document.getElementById('ud-save-settings-btn');
-    const flashEl = document.getElementById('ud-settings-flash');
-    const name = document.getElementById('ud-s-name')?.value.trim();
-    const email = document.getElementById('ud-s-email')?.value.trim();
-    const phone = document.getElementById('ud-s-phone')?.value.trim();
-    const bio = document.getElementById('ud-s-bio')?.value.trim();
-    const skillsStr = document.getElementById('ud-s-skills')?.value || '';
-    const skills = skillsStr.split(',').map(s => s.trim()).filter(Boolean);
-
+    const name = document.getElementById('ud-s-name').value.trim();
     if (!name) {
-      if (flashEl) flashEl.innerHTML = `<div style="padding:10px 14px;border-radius:9px;background:var(--red-soft);color:var(--red-text);font-size:13.5px;margin-bottom:10px;">Имя не может быть пустым.</div>`;
+      flashSettings('Имя не может быть пустым.', 'error');
       return;
     }
-    if (flashEl) flashEl.innerHTML = '';
-    if (btn) { btn.disabled = true; btn.textContent = 'Сохранение…'; }
 
+    // Незакоммиченный ввод не должен пропадать при сохранении
+    const pending = document.getElementById('ud-skill-input').value.trim();
+    if (pending) addSkills(pending);
+
+    btn.disabled = true;
+    btn.textContent = 'Сохранение…';
     try {
-      const data = await apiFetch(`/api/v1/candidates/${username}/update/`, {
-        method: 'PATCH',
-        body: JSON.stringify({ name, email: email || '', phone: phone || '', bio: bio || '', skills }),
+      await saveProfile({
+        name,
+        email: document.getElementById('ud-s-email').value.trim(),
+        phone: document.getElementById('ud-s-phone').value.trim(),
+        bio: document.getElementById('ud-s-bio').value.trim(),
+        skills,
+      }, candidate => {
+        skills = (candidate.skills || []).slice();
+        renderSkills();
+        flashSettings('Сохранено', 'success');
       });
-      state.candidate = data.candidate;
-      if (btn) { btn.disabled = false; btn.textContent = '✓ Сохранено'; }
-      setTimeout(() => { if (btn) btn.textContent = 'Сохранить'; }, 1800);
-      renderSidebar();
-      renderProfileTab();
-      renderStatsTab();
     } catch (e) {
-      if (flashEl) flashEl.innerHTML = `<div style="padding:10px 14px;border-radius:9px;background:var(--red-soft);color:var(--red-text);font-size:13.5px;margin-bottom:10px;">${esc(e.message)}</div>`;
-      if (btn) { btn.disabled = false; btn.textContent = 'Сохранить'; }
+      flashSettings(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Сохранить';
     }
   });
 
-  document.getElementById('ud-cancel-settings-btn')?.addEventListener('click', () => {
-    renderSettingsTab();
-    document.getElementById('ud-settings-flash').innerHTML = '';
+  document.getElementById('ud-cancel-settings-btn')?.addEventListener('click', renderSettingsTab);
+
+  document.getElementById('ud-avatar-pick')?.addEventListener('click', () => {
+    document.getElementById('ud-avatar-input').click();
+  });
+
+  document.getElementById('ud-avatar-input')?.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    const body = new FormData();
+    body.append('avatar', file);
+    try {
+      const data = await apiFetch(`/api/v1/candidates/${username}/avatar/`, { method: 'POST', body });
+      state.candidate = data.candidate;
+      renderSidebar();
+      renderProfileTab();
+      renderAvatarBox(data.candidate);
+      flashSettings('Фото обновлено', 'success');
+    } catch (err) {
+      flashSettings(err.message, 'error');
+    }
+  });
+
+  document.getElementById('ud-avatar-remove')?.addEventListener('click', async () => {
+    if (!confirm('Удалить фото профиля?')) return;
+    try {
+      await saveProfile({ remove_avatar: true }, () => flashSettings('Фото удалено', 'success'));
+    } catch (e) {
+      flashSettings(e.message, 'error');
+    }
+  });
+
+  document.getElementById('ud-skill-add')?.addEventListener('click', () => {
+    addSkills(document.getElementById('ud-skill-input').value);
+  });
+
+  document.getElementById('ud-skill-input')?.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ',') return;
+    // Enter внутри формы иначе отправляет её, запятая — попадает в текст
+    e.preventDefault();
+    addSkills(e.target.value);
+  });
+
+  document.getElementById('ud-skill-chips')?.addEventListener('click', e => {
+    const btn = e.target.closest('.chip-x');
+    if (!btn) return;
+    skills.splice(Number(btn.dataset.index), 1);
+    renderSkills();
   });
 
   /* ---------- create test button ---------- */

@@ -1337,6 +1337,37 @@ input, textarea, select {
   font-size: 14px;
 }
 
+/* ── Настройки: загрузка картинки и редактор меток ────────────────────
+   Одни и те же блоки в обоих кабинетах: логотип компании и фото кандидата,
+   направления работы и навыки. Раньше жили копией в cabinet-company.css. */
+
+.form-hint { font-size: 12px; color: var(--faint); line-height: 1.5; }
+.label-note { font-weight: 400; color: var(--muted); }
+
+.pic-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; }
+.pic-preview { display: flex; align-items: center; justify-content: center; width: 84px; height: 84px; border-radius: 20px; background: var(--brand-soft); color: var(--brand-text); font-size: 32px; font-weight: 700; flex-shrink: 0; overflow: hidden; }
+.pic-preview img { width: 100%; height: 100%; object-fit: cover; }
+/* Подсказка и кнопки занимают остаток строки, но не распирают её:
+   без min-width: 0 длинная строка подсказки не переносится */
+.pic-side { display: flex; flex-direction: column; gap: 12px; flex: 1 1 220px; min-width: 0; }
+.pic-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips:empty { display: none; }
+.chip-tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 7px 6px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); font-size: 13px; }
+.chip-x { display: flex; align-items: center; justify-content: center; width: 19px; height: 19px; border: none; border-radius: 50%; background: transparent; color: var(--faint); font-size: 16px; line-height: 1; cursor: pointer; font-family: inherit; padding: 0; transition: background .12s, color .12s; }
+.chip-x:hover { background: var(--red-soft); color: var(--red-text); }
+.chip-add { display: flex; gap: 8px; }
+.chip-add input { flex: 1; min-width: 0; }
+.chip-add button { height: 42px; flex-shrink: 0; }
+.chip-add input:disabled { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
+
+@media (max-width: 560px) {
+  .pic-preview { width: 64px; height: 64px; border-radius: 16px; font-size: 26px; }
+  /* Поле и «Добавить» рядом оставляют полю меньше половины строки */
+  .chip-add { flex-direction: column; align-items: stretch; }
+}
+
 /* Modal (used by companies/app.js) */
 .modal-overlay {
   position: fixed;

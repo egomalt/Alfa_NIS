@@ -157,11 +157,17 @@
 .ud-form-input:focus, .ud-form-select:focus, .ud-form-textarea:focus { border-color: var(--brand); }
 .ud-form-input:disabled { opacity: .6; cursor: not-allowed; background: var(--surface-2); }
 .ud-form-textarea { height: auto; padding: 12px 14px; resize: vertical; min-height: 90px; }
-.ud-form-actions { margin-top: 20px; display: flex; gap: 10px; }
+/* «Сохранить» справа, как в кабинете компании */
+.ud-form-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end; }
 .ud-btn-primary { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border: none; border-radius: 10px; background: var(--brand); color: var(--on-brand); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; font-family: inherit; }
 .ud-btn-primary:hover { background: var(--brand-strong); }
 .ud-btn-secondary { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 15px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface); color: var(--text); font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all .12s; font-family: inherit; }
 .ud-btn-secondary:hover { border-color: var(--brand); color: var(--brand-text); }
+.ud-btn-secondary.danger:hover { border-color: var(--red-text); color: var(--red-text); }
+.ud-btn-primary:disabled, .ud-btn-secondary:disabled { opacity: .55; cursor: not-allowed; }
+.ud-flash { padding: 10px 14px; border-radius: 9px; font-size: 13.5px; margin-bottom: 14px; }
+.ud-flash.error { background: var(--red-soft); color: var(--red-text); }
+.ud-flash.success { background: var(--green-soft); color: var(--green-text); }
 .ud-btn-create { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border: none; border-radius: 10px; background: var(--brand); color: var(--on-brand); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; font-family: inherit; text-decoration: none; }
 .ud-btn-create:hover { background: var(--brand-strong); }
 /* Мобильный бургер сайдбара и затемнение (по умолчанию скрыты) */
@@ -195,6 +201,12 @@
   .ud-stats-row { grid-template-columns: repeat(2,1fr); }
   .ud-shortcuts { grid-template-columns: 1fr; }
   .ud-main { padding: 20px 16px 60px; }
+  .ud-section { padding: 18px 16px; }
+  /* Две колонки полей на 360px дают поля шириной в одно слово */
+  .ud-form-grid { grid-template-columns: minmax(0, 1fr); }
+  /* Кнопки в строку не влезают; «Сохранить» должна быть сверху */
+  .ud-form-actions { flex-direction: column-reverse; }
+  .ud-form-actions button { width: 100%; justify-content: center; }
   /* 26 колонок в 300px: зазор режем первым, клетки и так уже мелкие */
   .ud-heat-grid, .ud-heat-months { gap: 2px; }
   .ud-heat-weekdays { gap: 2px; }
