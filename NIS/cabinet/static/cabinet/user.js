@@ -9,6 +9,7 @@
     articles: [],
     contestHistory: [],
     myRatings: [],
+    attempts: null,
   };
 
   /* ---------- utils ---------- */
@@ -417,8 +418,55 @@
 
   /* ---------- render stats tab ---------- */
 
+  function fact(label, value) {
+    return `<div><div class="ud-fact-label">${esc(label)}</div>`
+      + `<div class="ud-fact-value">${esc(value)}</div></div>`;
+  }
+
+  function renderAttempts() {
+    const factsEl = document.getElementById('ud-attempts-facts');
+    const recentEl = document.getElementById('ud-attempts-recent');
+    if (!factsEl) return;
+
+    const a = state.attempts;
+    if (!a || !a.started) {
+      factsEl.innerHTML = '';
+      recentEl.innerHTML = `<div class="ud-note">Вы ещё не проходили тесты.
+        <a href="/tests/" style="color:var(--brand-text);">Каталог тестов</a> открыт всем.</div>`;
+      set('ud-attempts-note', 'Здесь появятся ваши результаты');
+      return;
+    }
+
+    set('ud-attempts-note', `Тест считается пройденным от ${a.pass_percent}% верных ответов`);
+    factsEl.innerHTML = fact('Начато', a.started)
+      + fact('Завершено', a.finished)
+      + fact('Средний результат', a.avg_percent === null ? '—' : `${a.avg_percent}%`)
+      + fact('Пройдено', a.pass_rate === null ? '—' : `${a.passed} · ${a.pass_rate}%`);
+
+    if (!a.recent.length) {
+      recentEl.innerHTML = '';
+      return;
+    }
+    // Список последних прохождений: по среднему баллу не видно, растёт
+    // результат или падает, а по нескольким последним — видно
+    recentEl.innerHTML = `<div class="ud-mini-head">Последние прохождения</div>
+      <div class="ud-mini-list">${a.recent.map(r => {
+      const passed = r.percent !== null && r.percent >= a.pass_percent;
+      const pill = r.percent === null
+        ? '<span class="status-pill">—</span>'
+        : `<span class="status-pill ${passed ? 'accepted' : 'rejected'}">${r.percent}%</span>`;
+      return `<div class="ud-mini-row">
+        <a class="ud-mini-title" href="/tests/${r.test_id}/">${esc(r.title || 'Тест')}</a>
+        <span class="ud-mini-date">${esc(formatDateCell(r.finished_at))}</span>
+        ${pill}
+      </div>`;
+    }).join('')}</div>`;
+  }
+
   function renderStatsTab() {
-    if (!document.getElementById('ud-heat-grid')) return;
+    // Сверяемся с корнем панели, а не с внутренним блоком: сетку карты
+    // теперь собирает скрипт, и проверка по ней отключала всю страницу
+    if (!document.getElementById('panel-stats')) return;
     const tests = state.tests;
     const articles = state.articles;
     const history = state.contestHistory;
@@ -429,88 +477,67 @@
       ? Math.floor((Date.now() - new Date(c.created_at)) / 86400000)
       : 0;
     set('sstat-days', daysOnPlatform);
-    set('sstat-tests', tests.length);
+    set('sstat-passed', state.attempts ? state.attempts.passed : 0);
     set('sstat-contests', history.length);
+    set('sstat-articles', articles.filter(a => a.status === 'published').length);
 
-    const avgRating = ratings.length
-      ? (ratings.reduce((s, r) => s + r.rating, 0) / ratings.length).toFixed(1)
-      : '—';
-    set('sstat-avg-rating', avgRating !== '—' ? `${avgRating} ★` : '—');
+    renderAttempts();
+    renderActivity();
 
-    set('ss-c-total', history.length);
-    set('ss-c-wins', history.filter(s => s.winner).length);
-    set('ss-t-total', tests.length);
-    set('ss-t-pub', tests.filter(t => t.status === 'published').length);
-
-    const totalViews = articles.reduce((s, a) => s + (a.views || 0), 0);
-    const totalLikes = articles.reduce((s, a) => s + (a.likes || 0), 0);
-    set('ss-a-pub', articles.filter(a => a.status === 'published').length);
-    set('ss-a-views', fmtNum(totalViews));
-    set('ss-a-likes', totalLikes);
-
-    renderActivityHeatmap();
-
-    // Contest bars
+    // Чем закончились участия в конкурсах
     const contestBarsEl = document.getElementById('ud-contest-bars');
     if (contestBarsEl) {
       if (!history.length) {
-        contestBarsEl.innerHTML = `<div style="font-size:13px;color:var(--muted);">Нет данных</div>`;
+        contestBarsEl.innerHTML = '<div class="ud-note">Вы ещё не участвовали в конкурсах.</div>';
+        set('ud-contests-note', 'Здесь появится разбор ваших участий');
       } else {
-        const wins = history.filter(s => s.winner).length;
-        const accepted = history.filter(s => s.status === 'accepted').length;
-        const pending = history.filter(s => s.status === 'pending').length;
-        const rejected = history.filter(s => s.status === 'rejected').length;
         const total = history.length;
+        set('ud-contests-note', `Всего участий: ${total}`);
         const bars = [
-          { label: 'Победы', pct: Math.round(wins / total * 100), note: wins },
-          { label: 'Принято', pct: Math.round(accepted / total * 100), note: accepted },
-          { label: 'На проверке', pct: Math.round(pending / total * 100), note: pending },
-          { label: 'Отклонено', pct: Math.round(rejected / total * 100), note: rejected },
-        ].filter(b => b.note > 0);
+          { label: 'Победы', n: history.filter(s => s.winner).length },
+          { label: 'Принято', n: history.filter(s => s.status === 'accepted').length },
+          { label: 'На проверке', n: history.filter(s => s.status === 'pending').length },
+          { label: 'Отклонено', n: history.filter(s => s.status === 'rejected').length },
+        ].filter(b => b.n > 0);
         contestBarsEl.innerHTML = bars.map(b => `
           <div class="ud-bar-row">
             <div class="ud-bar-label">${esc(b.label)}</div>
-            <div class="ud-bar-track"><div class="ud-bar-fill" style="width:${b.pct}%"></div></div>
-            <div class="ud-bar-val">${b.note}</div>
+            <div class="ud-bar-track"><div class="ud-bar-fill" style="width:${Math.round(b.n / total * 100)}%"></div></div>
+            <div class="ud-bar-val">${b.n}</div>
           </div>`).join('');
       }
     }
 
-    // Test bars
-    const testBarsEl = document.getElementById('ud-test-bars');
-    if (testBarsEl) {
-      if (!tests.length) {
-        testBarsEl.innerHTML = `<div style="font-size:13px;color:var(--muted);">Нет данных</div>`;
-      } else {
-        const total = tests.length;
-        const published = tests.filter(t => t.status === 'published').length;
-        const drafts = tests.filter(t => t.status === 'draft').length;
-        const bars = [
-          { label: 'Опубликовано', pct: Math.round(published / total * 100), note: published },
-          { label: 'Черновики', pct: Math.round(drafts / total * 100), note: drafts },
-        ].filter(b => b.note > 0);
-        testBarsEl.innerHTML = bars.map(b => `
-          <div class="ud-bar-row">
-            <div class="ud-bar-label">${esc(b.label)}</div>
-            <div class="ud-bar-track"><div class="ud-bar-fill" style="width:${b.pct}%"></div></div>
-            <div class="ud-bar-val">${b.note}</div>
-          </div>`).join('');
-      }
+    // Своё авторство: тесты и статьи в одном блоке — раньше два раздела
+    // повторяли плашки, которые стояли прямо над ними
+    const authoredEl = document.getElementById('ud-authored-facts');
+    if (authoredEl) {
+      const passes = tests.reduce((sum, t) => sum + (t.submissions || 0), 0);
+      const views = articles.reduce((sum, a) => sum + (a.views || 0), 0);
+      const rating = articles.reduce((sum, a) => sum + (a.likes || 0), 0);
+      authoredEl.innerHTML = fact('Тестов', `${tests.filter(t => t.status === 'published').length} из ${tests.length}`)
+        + fact('Их прошли', passes)
+        + fact('Статей', `${articles.filter(a => a.status === 'published').length} из ${articles.length}`)
+        + fact('Просмотров', fmtNum(views))
+        + fact('Рейтинг статей', rating);
     }
 
-    // Company ratings
+    // Оценки компаниям
     const ratingsEl = document.getElementById('ud-my-ratings');
     if (ratingsEl) {
       if (!ratings.length) {
-        ratingsEl.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:8px 0;">Вы ещё не оценивали компании</div>`;
+        ratingsEl.innerHTML = '<div class="ud-note">Вы ещё не оценивали компании.</div>';
+        set('ud-ratings-note', '');
       } else {
+        const avg = (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1);
+        set('ud-ratings-note', `Средняя оценка: ${avg} из 5`);
         ratingsEl.innerHTML = ratings.map(r => {
-          const stars = [1,2,3,4,5].map(i =>
+          const stars = [1, 2, 3, 4, 5].map(i =>
             `<svg width="14" height="14" viewBox="0 0 24 24" fill="${i <= r.rating ? 'var(--amber-text)' : 'none'}" stroke="var(--amber-text)" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8-6.1-3.6-6.1 3.6 1.5-6.8-5.2-4.7 6.9-.7z"/></svg>`
           ).join('');
           return `<div class="ud-rating-row">
             <span class="ud-rating-av">${esc(initial(r.company_name))}</span>
-            <div style="flex:1;font-size:13.5px;font-weight:600;">${esc(r.company_name)}</div>
+            <a href="/${esc(r.company_username)}/" class="ud-mini-title" style="flex:1;">${esc(r.company_name)}</a>
             <div style="display:flex;gap:2px;">${stars}</div>
           </div>`;
         }).join('');
@@ -518,11 +545,14 @@
     }
   }
 
-  /* ---------- render settings tab ---------- */
-
-  /* ---------- activity heatmap ---------- */
+  /* ---------- активность и серия ---------- */
 
   const HEAT_WEEKS = 26;
+  const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  // Строки с подписями: все семь не помещаются, подписываем через одну
+  const WEEKDAY_ROWS = [0, 2, 4, 6];
+  const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн',
+                        'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
   // Даты приходят в двух форматах: ISO от статей и тестов, «ДД.ММ.ГГГГ ЧЧ:ММ» от работ на конкурс
   function parseActivityDate(value) {
@@ -532,15 +562,24 @@
     return isNaN(date) ? null : date;
   }
 
+  // Ключ обязан совпадать с ISO-датами, которыми сервер отдаёт прохождения:
+  // без ведущих нулей «2026-9-16» и «2026-09-16» — разные дни
   function dayKey(date) {
-    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
   }
 
-  function renderActivityHeatmap() {
-    const heatEl = document.getElementById('ud-heat-grid');
-    if (!heatEl) return;
+  /** Понедельник недели, в которую попадает дата. */
+  function mondayOf(date) {
+    const monday = new Date(date);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    return monday;
+  }
 
-    // Считаем реальные события: созданные статьи, тесты и отправленные работы
+  /** Сколько событий в каждый день: всё, что человек делал на площадке. */
+  function activityByDay() {
     const counts = new Map();
     const sources = [
       ...state.articles.map(a => a.created_at),
@@ -553,25 +592,204 @@
       const key = dayKey(date);
       counts.set(key, (counts.get(key) || 0) + 1);
     }
+    // Прохождения тестов приходят уже сгруппированными по дням: их бывают
+    // сотни, и тащить каждую попытку в браузер ради карты незачем
+    const daily = (state.attempts && state.attempts.daily) || {};
+    for (const [key, n] of Object.entries(daily)) {
+      counts.set(key, (counts.get(key) || 0) + n);
+    }
+    return counts;
+  }
 
+  /** Насыщенность клетки: четыре ступени, как в легенде под картой. */
+  function heatLevel(n) {
+    if (!n) return 0;
+    if (n === 1) return 1;
+    if (n === 2) return 2;
+    if (n <= 4) return 3;
+    return 4;
+  }
+
+  function renderActivity() {
+    const heatEl = document.getElementById('ud-heat');
+    if (!heatEl) return;
+
+    const counts = activityByDay();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    // Карта выровнена по неделям: колонка — неделя, строка — день недели.
+    // Последняя колонка — текущая неделя, поэтому её хвост ещё в будущем.
+    const start = mondayOf(today);
+    start.setDate(start.getDate() - (HEAT_WEEKS - 1) * 7);
+
+    const days = [];
     let cells = '';
-    for (let back = HEAT_WEEKS * 7 - 1; back >= 0; back--) {
-      const day = new Date(today);
-      day.setDate(today.getDate() - back);
-      const n = counts.get(dayKey(day)) || 0;
-      const bg = n >= 3 ? 'var(--brand)' : n > 0 ? 'var(--brand-soft)' : 'var(--surface-2)';
-      const label = `${day.toLocaleDateString('ru-RU')} — ${n ? pluralEvents(n) : 'нет активности'}`;
-      cells += `<div class="ud-heat-cell" style="background:${bg};" title="${esc(label)}"></div>`;
+    let months = '';
+    let total = 0;
+    let activeDays = 0;
+    let run = { month: null, span: 0 };
+
+    const flushMonth = () => {
+      if (run.month === null) return;
+      // Однонедельный хвост месяца подписывать некуда — подпись не влезет
+      const label = run.span > 1 ? MONTHS_SHORT[run.month] : '';
+      months += `<span style="grid-column:span ${run.span}">${label}</span>`;
+    };
+
+    for (let week = 0; week < HEAT_WEEKS; week++) {
+      const monday = new Date(start);
+      monday.setDate(start.getDate() + week * 7);
+      if (monday.getMonth() !== run.month) {
+        flushMonth();
+        run = { month: monday.getMonth(), span: 1 };
+      } else {
+        run.span += 1;
+      }
+
+      for (let weekday = 0; weekday < 7; weekday++) {
+        const day = new Date(monday);
+        day.setDate(monday.getDate() + weekday);
+        if (day > today) {
+          cells += '<i class="ud-heat-cell future"></i>';
+          continue;
+        }
+        const n = counts.get(dayKey(day)) || 0;
+        const label = `${day.toLocaleDateString('ru-RU')} — ${n ? pluralEvents(n) : 'нет активности'}`;
+        cells += `<i class="ud-heat-cell lvl-${heatLevel(n)}" title="${esc(label)}"></i>`;
+
+        days.push(n);
+        total += n;
+        if (n) activeDays += 1;
+      }
     }
-    heatEl.innerHTML = cells;
+    flushMonth();
+
+    const weekdayLabels = WEEKDAYS
+      .map((name, index) => `<span>${WEEKDAY_ROWS.includes(index) ? name : ''}</span>`)
+      .join('');
+
+    heatEl.innerHTML = `<span class="ud-heat-corner"></span><div class="ud-heat-months">${months}</div>`
+      + `<div class="ud-heat-weekdays">${weekdayLabels}</div>`
+      + `<div class="ud-heat-grid">${cells}</div>`;
+
+    const totalEl = document.getElementById('ud-heat-total');
+    if (totalEl) totalEl.innerHTML = `<b>${total}</b> ${eventWord(total)}`;
+    const activeEl = document.getElementById('ud-heat-active');
+    if (activeEl) {
+      activeEl.innerHTML = `Активных дней: <b>${activeDays}</b> из ${days.length}`;
+    }
+
+    renderStreak(days, counts, today, total, activeDays);
+  }
+
+  /** Сколько дней подряд идёт активность прямо сейчас.
+   *
+   * Отсутствие активности сегодня серию не обрывает: день ещё не кончился,
+   * и обнулять счётчик в полночь было бы враньём. Как только сутки прошли
+   * без событий, серия гаснет.
+   */
+  function currentStreak(days) {
+    let index = days.length - 1;
+    if (days[index] === 0) index -= 1;
+    let streak = 0;
+    while (index >= 0 && days[index] > 0) {
+      streak += 1;
+      index -= 1;
+    }
+    return streak;
+  }
+
+  const FLAME = '<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M13.6 1.5c.4 3-1.1 4.7-2.5 6.1C9.5 9.2 8 10.8 8.2 13.6c-.9-.6-1.6-1.7-1.9-2.9C4.8 12.2 4 14.1 4 16c0 4.2 3.6 6.9 8 6.9s8-3 8-7.3c0-3.9-2.3-6.4-4-8.2-1.7-1.8-2.4-3.8-2.4-5.9z"/></svg>';
+
+  function renderStreak(days, counts, today, total, activeDays) {
+    const box = document.getElementById('ud-streak');
+    if (!box) return;
+
+    const streak = currentStreak(days);
+    const alive = streak > 0;
+    const todayCount = counts.get(dayKey(today)) || 0;
+
+    // Полоска текущей недели: понедельник — воскресенье
+    const monday = mondayOf(today);
+    const week = WEEKDAYS.map((name, index) => {
+      const day = new Date(monday);
+      day.setDate(monday.getDate() + index);
+      const done = (counts.get(dayKey(day)) || 0) > 0;
+      const isToday = day.getTime() === today.getTime();
+      const classes = ['ud-week-cell', done ? 'on' : '', isToday ? 'today' : '',
+                       day > today ? 'future' : ''].filter(Boolean).join(' ');
+      return `<div class="ud-week-day"><span class="ud-week-label">${name}</span>
+        <div class="${classes}"></div></div>`;
+    }).join('');
+
+    let note;
+    if (todayCount) {
+      note = `Сегодня уже ${pluralEvents(todayCount)} — серия продолжается.`;
+    } else if (alive) {
+      note = 'Сегодня ещё нет активности. Пройдите тест или отправьте решение, чтобы серия не прервалась.';
+    } else {
+      note = 'Серия прервана. Любое действие сегодня начнёт новую.';
+    }
+
+    const best = bestStreak(days);
+    const perWeek = (total / HEAT_WEEKS).toFixed(1).replace('.', ',');
+
+    box.innerHTML = `
+      <div class="ud-streak-head">
+        <span class="ud-streak-flame${alive ? '' : ' cold'}">${FLAME}</span>
+        <div>
+          <div class="ud-streak-line">
+            <span class="ud-streak-value">${streak}</span>
+            <span class="ud-streak-word">${alive ? dayWord(streak) + ' подряд' : 'серия прервана'}</span>
+          </div>
+          <div class="ud-streak-best">Лучшая серия — <b>${pluralDays(best)}</b></div>
+        </div>
+      </div>
+
+      <div class="ud-week">${week}</div>
+
+      <div class="ud-callout${todayCount ? ' done' : ''}">
+        <i class="ud-callout-dot"></i>
+        <div>${note}</div>
+      </div>
+
+      <div class="ud-streak-stats">
+        <div class="ud-streak-stat"><b>${total}</b><span>${eventWord(total)}</span></div>
+        <div class="ud-streak-stat"><b>${activeDays}</b><span>активных дней</span></div>
+        <div class="ud-streak-stat"><b>${perWeek}</b><span>в неделю</span></div>
+      </div>`;
+  }
+
+  function bestStreak(days) {
+    let best = 0;
+    let run = 0;
+    for (const n of days) {
+      run = n ? run + 1 : 0;
+      if (run > best) best = run;
+    }
+    return best;
+  }
+
+  // Число и слово нужны то вместе («5 дней»), то порознь: в плашке серии
+  // число набрано крупно отдельной строкой
+  function dayWord(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return 'день';
+    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return 'дня';
+    return 'дней';
+  }
+
+  function pluralDays(n) {
+    return `${n} ${dayWord(n)}`;
+  }
+
+  function eventWord(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return 'событие';
+    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return 'события';
+    return 'событий';
   }
 
   function pluralEvents(n) {
-    if (n % 10 === 1 && n % 100 !== 11) return n + ' событие';
-    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return n + ' события';
-    return n + ' событий';
+    return `${n} ${eventWord(n)}`;
   }
 
   function renderSettingsTab() {
@@ -656,17 +874,24 @@
 
       if (panel === 'none') return;
 
-      const [testsResp, articlesResp, historyResp, ratingsResp] = await Promise.all([
+      // Прохождения нужны только странице статистики: остальным разделам
+      // это был бы пятый запрос впустую
+      const wantsAttempts = Boolean(document.getElementById('panel-stats'));
+      const [testsResp, articlesResp, historyResp, ratingsResp, attemptsResp] = await Promise.all([
         fetch(`/api/v1/tests/?owner=${encodeURIComponent(username)}`).then(r => r.json()).catch(() => ({ ok: false })),
         fetch('/api/v1/articles/my/').then(r => r.json()).catch(() => ({ ok: false })),
         fetch('/api/v1/contests/user-history/').then(r => r.json()).catch(() => ({ ok: false })),
         fetch('/api/v1/companies/my-ratings/').then(r => r.json()).catch(() => ({ ok: false })),
+        wantsAttempts
+          ? fetch('/api/v1/tests/my-attempts/').then(r => r.json()).catch(() => ({ ok: false }))
+          : Promise.resolve({ ok: false }),
       ]);
 
       state.tests = testsResp.ok ? (testsResp.tests || []) : [];
       state.articles = articlesResp.ok ? (articlesResp.articles || []) : [];
       state.contestHistory = historyResp.ok ? (historyResp.submissions || []) : [];
       state.myRatings = ratingsResp.ok ? (ratingsResp.ratings || []) : [];
+      state.attempts = attemptsResp.ok ? attemptsResp : null;
 
       renderProfileTab();
       renderTestsTab();

@@ -2,6 +2,15 @@
 
 {% block title %}Статистика — Alfa Career{% endblock %}
 
+{% comment %}
+  Страница показывала только то, что кандидат создал сам: свои тесты, статьи
+  и участия. Прохождения чужих тестов — его основное занятие на площадке —
+  не учитывались нигде, даже в тепловой карте. Теперь этот блок первый.
+
+  Плашки .ud-stat-card остались только в верхней строке: внутри секций
+  они давали карточку в карточке, поэтому там лёгкие .ud-facts без рамок.
+{% endcomment %}
+
 {% block panel %}
 <div class="ud-tab-panel" id="panel-stats">
   <div class="ud-page-header">
@@ -17,53 +26,66 @@
 
   <div class="ud-stats-row">
     <div class="ud-stat-card"><div class="ud-stat-value" id="sstat-days">—</div><div class="ud-stat-label">Дней на платформе</div></div>
-    <div class="ud-stat-card"><div class="ud-stat-value" id="sstat-tests">—</div><div class="ud-stat-label">Тестов создано</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="sstat-passed">—</div><div class="ud-stat-label">Тестов пройдено</div></div>
     <div class="ud-stat-card"><div class="ud-stat-value" id="sstat-contests">—</div><div class="ud-stat-label">Участий в конкурсах</div></div>
-    <div class="ud-stat-card"><div class="ud-stat-value" id="sstat-avg-rating">—</div><div class="ud-stat-label">Средняя оценка компаниям</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="sstat-articles">—</div><div class="ud-stat-label">Статей опубликовано</div></div>
   </div>
 
   <div class="ud-section">
-    <div class="ud-section-title">Активность за последние 26 недель</div>
-    <div class="ud-heat-grid" id="ud-heat-grid"></div>
-    <div class="ud-heat-legend">
-      меньше
-      <span class="ud-heat-cell" style="width:10px;height:10px;display:inline-block;"></span>
-      <span class="ud-heat-cell" style="width:10px;height:10px;display:inline-block;background:var(--brand-soft);"></span>
-      <span class="ud-heat-cell" style="width:10px;height:10px;display:inline-block;background:var(--brand);"></span>
-      больше
+    <div class="ud-section-title">Как вы проходите тесты</div>
+    <div class="ud-section-note" id="ud-attempts-note">Порог прохождения общий для площадки</div>
+    <div class="ud-facts" id="ud-attempts-facts"></div>
+    <div id="ud-attempts-recent"></div>
+  </div>
+
+  {% comment %}
+    Две равные плашки: карта недель слева, серия справа. Одной широкой
+    плашкой карта не заполняла ширину и оставляла пустоту, а её сводка
+    выглядела приложенной сбоку.
+  {% endcomment %}
+  <div class="ud-activity-row">
+    <div class="ud-section">
+      <div class="ud-card-head">
+        <div>
+          <div class="ud-section-title">Активность</div>
+          <div class="ud-section-note">Тесты, решения, статьи · последние 26 недель</div>
+        </div>
+        <span class="ud-pill" id="ud-heat-total"></span>
+      </div>
+      {# Сетка, подписи месяцев и дней недели собираются скриптом #}
+      <div class="ud-heat" id="ud-heat"></div>
+      <div class="ud-heat-foot">
+        <div id="ud-heat-active"></div>
+        <div class="ud-heat-legend">
+          меньше
+          <i class="ud-heat-cell"></i>
+          <i class="ud-heat-cell lvl-1"></i>
+          <i class="ud-heat-cell lvl-2"></i>
+          <i class="ud-heat-cell lvl-3"></i>
+          <i class="ud-heat-cell lvl-4"></i>
+          больше
+        </div>
+      </div>
     </div>
+    <div class="ud-section ud-streak-card" id="ud-streak"></div>
   </div>
 
   <div class="ud-two-col">
     <div class="ud-section">
       <div class="ud-section-title">Конкурсы</div>
-      <div class="ud-grid-2" style="margin-bottom:18px;">
-        <div class="ud-stat-card"><div class="ud-stat-value" id="ss-c-total">—</div><div class="ud-stat-label">Участий</div></div>
-        <div class="ud-stat-card"><div class="ud-stat-value" id="ss-c-wins">—</div><div class="ud-stat-label">Побед</div></div>
-      </div>
+      <div class="ud-section-note" id="ud-contests-note">Чем закончились ваши участия</div>
       <div class="ud-bar-list" id="ud-contest-bars"></div>
     </div>
     <div class="ud-section">
-      <div class="ud-section-title">Тесты</div>
-      <div class="ud-grid-2" style="margin-bottom:18px;">
-        <div class="ud-stat-card"><div class="ud-stat-value" id="ss-t-total">—</div><div class="ud-stat-label">Создано</div></div>
-        <div class="ud-stat-card"><div class="ud-stat-value" id="ss-t-pub">—</div><div class="ud-stat-label">Опубликовано</div></div>
-      </div>
-      <div class="ud-bar-list" id="ud-test-bars"></div>
-    </div>
-  </div>
-
-  <div class="ud-section">
-    <div class="ud-section-title">Статьи</div>
-    <div class="ud-grid-3">
-      <div class="ud-stat-card"><div class="ud-stat-value" id="ss-a-pub">—</div><div class="ud-stat-label">Опубликовано</div></div>
-      <div class="ud-stat-card"><div class="ud-stat-value" id="ss-a-views">—</div><div class="ud-stat-label">Просмотров</div></div>
-      <div class="ud-stat-card"><div class="ud-stat-value" id="ss-a-likes">—</div><div class="ud-stat-label">Реакций</div></div>
+      <div class="ud-section-title">Что вы создали</div>
+      <div class="ud-section-note">Ваши собственные тесты и статьи</div>
+      <div class="ud-facts" id="ud-authored-facts"></div>
     </div>
   </div>
 
   <div class="ud-section">
     <div class="ud-section-title">Оценки, которые вы поставили компаниям</div>
+    <div class="ud-section-note" id="ud-ratings-note"></div>
     <div id="ud-my-ratings"></div>
   </div>
 </div>

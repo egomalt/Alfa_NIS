@@ -7,7 +7,10 @@
 Сравнение со средним по площадке нужно, чтобы автор понимал, его тест
 сложный или обычный: 30% справившихся сами по себе ни о чём не говорят.
 """
+from datetime import timedelta
+
 from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Q
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from tests.attempts import ABANDON_AFTER, PASS_PERCENT
@@ -15,6 +18,13 @@ from tests.constructor.models import Test, TestAttempt
 
 # Границы столбиков гистограммы результатов, в процентах
 BUCKETS = [(0, 20), (21, 40), (41, 60), (61, 80), (81, 100)]
+
+# Глубина тепловой карты в кабинете кандидата — 26 недель
+HEAT_DAYS = 182
+
+# Сколько последних прохождений показывать списком. Это не история попыток,
+# а срез «как идёт сейчас»: длинный список только оттесняет остальные блоки.
+RECENT_ATTEMPTS = 5
 
 
 def _percent():
@@ -69,6 +79,65 @@ def platform_summary():
     summary = _summary(across)
     summary['tests'] = Test.objects.filter(status=Test.STATUS_PUBLISHED).count()
     return summary
+
+
+def _daily(queryset, days):
+    """Сколько прохождений закрыто в каждый из последних дней.
+
+    Нужно тепловой карте в кабинете: она рисовалась по созданным статьям,
+    тестам и отправленным решениям, а прохождения тестов — самое частое
+    действие кандидата — в ней не участвовали вовсе.
+
+    Считаем именно завершённые: открыть тест и уйти — не то событие,
+    которым стоит закрашивать день.
+    """
+    since = timezone.now() - timedelta(days=days)
+    rows = (queryset
+            .filter(finished_at__gte=since)
+            .annotate(day=TruncDate('finished_at'))
+            .values('day')
+            .annotate(n=Count('id'))
+            .values_list('day', 'n'))
+    return {day.isoformat(): n for day, n in rows if day is not None}
+
+
+def for_candidate(username, recent=RECENT_ATTEMPTS, days=HEAT_DAYS):
+    """Как кандидат проходит чужие тесты.
+
+    В кабинете кандидата этого не было вовсе: статистика показывала только
+    то, что он создал сам, хотя прохождение тестов — его основное занятие
+    на площадке.
+    """
+    attempts_qs = TestAttempt.objects.filter(candidate_username=username)
+    started = attempts_qs.count()
+    finished = attempts_qs.filter(finished_at__isnull=False).count()
+    summary = _summary(attempts_qs)
+    passed = _scored(attempts_qs).filter(
+        score__gte=F('max_score') * PASS_PERCENT / 100.0).count()
+
+    rows = (attempts_qs
+            .filter(finished_at__isnull=False)
+            .select_related('test')
+            .order_by('-finished_at')[:recent])
+
+    return {
+        'started': started,
+        'finished': finished,
+        'passed': passed,
+        'avg_percent': summary['avg_percent'],
+        'pass_rate': summary['pass_rate'],
+        'pass_percent': PASS_PERCENT,
+        'daily': _daily(attempts_qs, days),
+        'recent': [{
+            'test_id': attempt.test_id,
+            'title': attempt.test.title,
+            'score': attempt.score,
+            'max_score': attempt.max_score,
+            # max_score = 0 у теста без вопросов: делить на ноль нельзя
+            'percent': round(attempt.score * 100 / attempt.max_score) if attempt.max_score else None,
+            'finished_at': attempt.finished_at.isoformat(),
+        } for attempt in rows],
+    }
 
 
 def collect(test):

@@ -54,10 +54,91 @@
    кабинет кандидата выглядел иначе, чем кабинет компании, и не умел
    превращаться в карточки на телефоне. */
 
+/* Подпись под заголовком раздела и текст на месте пустого блока */
+.ud-section-note { font-size: 12.5px; color: var(--muted); margin: -10px 0 16px; line-height: 1.5; }
+.ud-note { font-size: 13px; color: var(--muted); padding: 6px 0; }
+
+/* Заголовок плашки со счётчиком справа */
+.ud-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.ud-card-head .ud-section-note { margin-bottom: 0; }
+.ud-pill { display: inline-flex; align-items: baseline; gap: 5px; padding: 6px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); font-size: 12.5px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.ud-pill b { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text); }
+
+/* Числа внутри раздела. Плашка .ud-stat-card здесь давала карточку
+   в карточке, поэтому у фактов нет ни рамки, ни фона. */
+.ud-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px 24px; }
+.ud-fact-label { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); margin-bottom: 4px; }
+.ud-fact-value { font-family: 'JetBrains Mono', monospace; font-size: 21px; font-weight: 600; letter-spacing: -.02em; }
+
+/* Последние прохождения: список без рамок, чтобы не спорить с секцией */
+.ud-mini-head { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); margin: 22px 0 2px; }
+.ud-mini-list { border-top: 1px solid var(--line); }
+.ud-mini-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ud-mini-row:last-child { border-bottom: none; }
+.ud-mini-title { font-size: 13.5px; font-weight: 600; color: var(--text); text-decoration: none; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ud-mini-title:hover { color: var(--brand-text); }
+.ud-mini-date { font-size: 12.5px; color: var(--faint); white-space: nowrap; }
+
+/* ── Активность и серия ──────────────────────────────────────────────── */
+
+.ud-activity-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+
+/* Карта выровнена по неделям: колонка — неделя, строка — день недели.
+   Раньше 182 дня шли подряд в 26 колонок, и строки не значили ничего. */
+.ud-heat { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 8px; margin-top: 18px; }
+/* Клетки расставлены явно. При автораскладке скрытие подписей месяцев
+   на телефоне сдвигало всё на одну позицию: дни недели уезжали в верхний
+   ряд, а сетка — в узкую колонку подписей и схлопывалась в ничто. */
+.ud-heat-corner { grid-area: 1 / 1; }
+.ud-heat-months { grid-area: 1 / 2; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; font-size: 11px; color: var(--faint); }
+.ud-heat-weekdays { grid-area: 2 / 1; display: grid; grid-template-rows: repeat(7, 1fr); gap: 4px; font-size: 10.5px; color: var(--faint); align-items: center; }
+.ud-heat-grid { grid-area: 2 / 2; display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, auto); grid-auto-columns: minmax(4px, 1fr); gap: 4px; }
+.ud-heat-cell { aspect-ratio: 1; border-radius: 5px; background: var(--surface-2); display: block; }
+/* Ступени насыщенности задаём прозрачностью: в палитре сайта есть только
+   один фирменный красный, а промежуточных оттенков нет */
+.ud-heat-cell.lvl-1 { background: var(--brand); opacity: .3; }
+.ud-heat-cell.lvl-2 { background: var(--brand); opacity: .5; }
+.ud-heat-cell.lvl-3 { background: var(--brand); opacity: .75; }
+.ud-heat-cell.lvl-4 { background: var(--brand); }
+/* Хвост текущей недели: дни, которые ещё не наступили */
+.ud-heat-cell.future { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.ud-heat-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 16px; font-size: 12.5px; color: var(--muted); }
+.ud-heat-foot b { color: var(--text); font-weight: 700; }
+.ud-heat-legend { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--faint); }
+.ud-heat-legend .ud-heat-cell { width: 11px; height: 11px; border-radius: 3px; }
+
+/* Текущая серия огоньком: это единственное на странице число, которое
+   хочется не столько прочитать, сколько не потерять */
+.ud-streak-card { display: flex; flex-direction: column; gap: 20px; }
+.ud-streak-head { display: flex; align-items: center; gap: 16px; }
+.ud-streak-flame { display: flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 16px; background: var(--amber-soft); color: var(--amber-text); flex-shrink: 0; }
+.ud-streak-flame.cold { background: var(--surface-2); color: var(--faint); }
+.ud-streak-line { display: flex; align-items: baseline; gap: 9px; }
+.ud-streak-value { font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+.ud-streak-word { font-size: 15px; font-weight: 600; color: var(--text-2); }
+.ud-streak-best { font-size: 13px; color: var(--muted); margin-top: 5px; }
+.ud-streak-best b { color: var(--text); font-weight: 600; }
+
+/* Текущая неделя крупными клетками: видно, какой день остался незакрытым */
+.ud-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.ud-week-label { display: block; font-size: 11.5px; color: var(--faint); text-align: center; margin-bottom: 7px; }
+.ud-week-cell { height: 34px; border-radius: 10px; background: var(--surface-2); }
+.ud-week-cell.on { background: var(--brand); }
+.ud-week-cell.future { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+/* Сегодняшний день обведён: его ещё можно закрыть */
+.ud-week-cell.today { box-shadow: inset 0 0 0 1.5px var(--brand); }
+
+.ud-callout { display: flex; gap: 11px; padding: 14px 16px; border-radius: 12px; background: var(--surface-2); font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.ud-callout-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); margin-top: 6px; flex-shrink: 0; }
+.ud-callout.done .ud-callout-dot { background: var(--green-text); }
+
+.ud-streak-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-top: auto; }
+.ud-streak-stat { padding: 14px 16px; border-right: 1px solid var(--line); }
+.ud-streak-stat:last-child { border-right: none; }
+.ud-streak-stat b { display: block; font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.ud-streak-stat span { font-size: 12px; color: var(--muted); }
+
 .ud-two-col { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
-.ud-heat-grid { display: grid; grid-template-columns: repeat(26, 1fr); gap: 3px; }
-.ud-heat-cell { aspect-ratio: 1; border-radius: 3px; background: var(--surface-2); }
-.ud-heat-legend { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 10px; justify-content: flex-end; }
 .ud-bar-list { display: flex; flex-direction: column; gap: 10px; }
 .ud-bar-row { display: grid; grid-template-columns: 140px 1fr 50px; align-items: center; gap: 10px; }
 .ud-bar-label { font-size: 12.5px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -95,7 +176,13 @@
 .cab-close:hover { color: var(--text); border-color: var(--brand); }
 .cab-chip-text { min-width: 0; }
 
-@media (max-width: 980px) { .ud-two-col { grid-template-columns: 1fr; } .ud-stats-row { grid-template-columns: repeat(2,1fr); } .ud-shortcuts { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 980px) {
+  .ud-two-col { grid-template-columns: 1fr; }
+  /* Карте нужно 461px, и вдвоём с серией они перестают помещаться */
+  .ud-activity-row { grid-template-columns: minmax(0, 1fr); }
+  .ud-stats-row { grid-template-columns: repeat(2,1fr); }
+  .ud-shortcuts { grid-template-columns: repeat(2,1fr); }
+}
 @media (max-width: 720px) {
   .ud-layout { grid-template-columns: minmax(0, 1fr); }
   .cab-burger { display: inline-flex; }
@@ -104,11 +191,23 @@
   .ud-layout.sidebar-open .ud-sidebar { transform: none; box-shadow: 0 10px 40px rgba(16,24,40,.25); }
   .ud-layout.sidebar-open .cab-scrim { display: block; position: fixed; inset: 64px 0 0 0; background: rgba(0,0,0,.4); z-index: 70; }
 }
-@media (max-width: 560px) { .ud-stats-row { grid-template-columns: repeat(2,1fr); } .ud-shortcuts { grid-template-columns: 1fr; } .ud-main { padding: 20px 16px 60px; } }
+@media (max-width: 560px) {
+  .ud-stats-row { grid-template-columns: repeat(2,1fr); }
+  .ud-shortcuts { grid-template-columns: 1fr; }
+  .ud-main { padding: 20px 16px 60px; }
+  /* 26 колонок в 300px: зазор режем первым, клетки и так уже мелкие */
+  .ud-heat-grid, .ud-heat-months { gap: 2px; }
+  .ud-heat-weekdays { gap: 2px; }
+  .ud-heat-cell { border-radius: 3px; }
+  /* Подписи месяцев на такой ширине сливаются в кашу */
+  .ud-heat-months { display: none; }
+  .ud-streak-stats { grid-template-columns: minmax(0, 1fr); }
+  .ud-streak-stat { border-right: none; border-bottom: 1px solid var(--line); }
+  .ud-streak-stat:last-child { border-bottom: none; }
+  .ud-week { gap: 5px; }
+  .ud-week-cell { height: 28px; border-radius: 8px; }
+}
 
-/* Адаптивные ряды статистики внутри секций (2 и 3 колонки) */
-.ud-grid-2, .ud-grid-3 { display: grid; gap: 14px; }
-.ud-grid-2 { grid-template-columns: repeat(2, 1fr); }
-.ud-grid-3 { grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 700px) { .ud-grid-3 { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 460px) { .ud-grid-2, .ud-grid-3 { grid-template-columns: 1fr; } }
+/* Здесь лежали .ud-grid-2 и .ud-grid-3 — ряды плашек внутри секций.
+   Плашки внутри секций заменены на .ud-facts, которая раскладывается
+   сама через auto-fit и не требует отдельных брейкпоинтов. */

@@ -159,6 +159,13 @@ def api_tests_list(request):
 
 @require_GET
 @api_login_required()
+def api_my_attempts(request):
+    """Как текущий пользователь проходит тесты — для кабинета кандидата."""
+    return JsonResponse({'ok': True, **statistics.for_candidate(request.account.username)})
+
+
+@require_GET
+@api_login_required()
 def api_test_statistics(request, test_id):
     """Как проходят тест — только автору: это непубличные данные."""
     test, error = _owned_test_or_error(request, test_id)

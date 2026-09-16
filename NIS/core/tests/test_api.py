@@ -19,6 +19,7 @@ from companies.models import Company, CompanyRating
 from contests.contests_cabinet.models import ContestSubmission
 from exports.company import build_company_pdf, contest_rows, test_rows
 from exports.pdf import fit_column_widths, plural
+from exports.user import build_user_pdf
 from tests.constructor.models import TestAttempt, TestPage
 from users.models import UserProfile
 
@@ -568,6 +569,80 @@ class UserTestsSectionTests(BaseCase):
             with self.subTest(path=path):
                 source = (Path(settings.BASE_DIR) / path).read_text(encoding='utf-8')
                 self.assertIn('?preview=1', source)
+
+
+class CandidateStatisticsTests(BaseCase):
+    """Прохождения чужих тестов — главная активность кандидата."""
+
+    URL = '/api/v1/tests/my-attempts/'
+
+    def attempt(self, test, score, max_score=10, finished=True, days_ago=0):
+        attempt = TestAttempt.objects.create(
+            test=test, candidate_username='kandidat', score=score, max_score=max_score,
+            finished_at=timezone.now() - timedelta(days=days_ago) if finished else None)
+        return attempt
+
+    def test_requires_login(self):
+        self.assertEqual(Client().get(self.URL).status_code, 401)
+
+    def test_counts_only_scored_attempts_in_the_average(self):
+        """Тест без вопросов даёт max_score = 0 — делить на ноль нельзя."""
+        test = self.make_test(owner='firma')
+        self.attempt(test, 8)
+        self.attempt(test, 4)
+        self.attempt(test, 0, max_score=0)          # пустой тест
+        self.attempt(test, 0, finished=False)       # не закончил
+
+        data = self.login('kandidat').get(self.URL).json()
+        self.assertEqual(data['started'], 4)
+        self.assertEqual(data['finished'], 3)
+        self.assertEqual(data['avg_percent'], 60)   # (80 + 40) / 2
+        self.assertEqual(data['passed'], 1)         # порог 60%
+
+    def test_daily_series_groups_by_day(self):
+        test = self.make_test(owner='firma')
+        self.attempt(test, 5, days_ago=1)
+        self.attempt(test, 6, days_ago=1)
+        self.attempt(test, 7, days_ago=3)
+
+        daily = self.login('kandidat').get(self.URL).json()['daily']
+        self.assertEqual(sorted(daily.values()), [1, 2])
+
+    def test_recent_list_is_newest_first(self):
+        test = self.make_test(owner='firma', title='Тест')
+        self.attempt(test, 3, days_ago=5)
+        self.attempt(test, 9, days_ago=1)
+
+        recent = self.login('kandidat').get(self.URL).json()['recent']
+        self.assertEqual([item['percent'] for item in recent], [90, 30])
+        self.assertEqual(recent[0]['title'], 'Тест')
+
+    def test_statistics_page_shows_the_attempts_block(self):
+        body = self.login('kandidat').get('/cabinet/user/statistics/').content.decode()
+        self.assertIn('ud-attempts-facts', body)
+        self.assertIn('Как вы проходите тесты', body)
+        # Плашки внутри секций заменены на лёгкие факты
+        self.assertNotIn('ud-grid-2', body)
+
+    def test_statistics_script_looks_for_ids_that_exist(self):
+        """Скрипт выходил по проверке блока, который стал собираться в JS,
+        и страница оставалась пустой целиком."""
+        source = (Path(settings.BASE_DIR) / 'cabinet/static/cabinet/user.js').read_text(encoding='utf-8')
+        page = (Path(settings.BASE_DIR) / 'cabinet/templates/cabinet/user_statistics.html').read_text(encoding='utf-8')
+        in_page = set(re.findall(r'id="([\w-]+)"', page))
+
+        block = source[source.index('function renderStatsTab()'):source.index('function currentStreak')]
+        guards = re.findall(r"if \(!document\.getElementById\('([\w-]+)'\)\) return;", block)
+        self.assertTrue(guards, 'у отрисовки статистики нет проверки на свою страницу')
+        for element_id in guards:
+            with self.subTest(id=element_id):
+                self.assertIn(element_id, in_page)
+
+    def test_report_carries_the_same_numbers(self):
+        test = self.make_test(owner='firma')
+        self.attempt(test, 8)
+        data = build_user_pdf(self.candidate)
+        self.assertTrue(data.startswith(b'%PDF'))
 
 
 class UserArticlesSectionTests(BaseCase):

@@ -12,19 +12,22 @@
     manage.py seed_candidate --user kandidat
     manage.py seed_candidate --clear         # удалить созданное этой командой
 """
+import random
 import re
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.db.models import Count
 from django.utils import timezone
 
 from articles.constructor.models import Article
 from articles.sanitize import clean_article_html
 from authorization.models import Account, ROLE_USER
+from companies.models import Company, CompanyRating
 from contests.contests_cabinet.models import Contest, ContestSubmission
 from core.demo import MARK, build_pages, make_attempts
-from tests.constructor.models import Test
+from tests.constructor.models import Test, TestAttempt
 from users.models import UserProfile
 
 DEFAULT_USER = 'egor'
@@ -199,7 +202,26 @@ PARTICIPATIONS = [
      'Постмортем на две страницы: хронология, корневая причина и три меры.'),
     ('Редизайн формы отклика', ContestSubmission.STATUS_ACCEPTED, True,
      'Свёл четыре экрана в один с прогрессом. Обосновал цифрами из воронки.'),
+    ('Дашборд продаж за квартал', ContestSubmission.STATUS_REJECTED, False,
+     'Собрал дашборд, но не успел разобрать падение выручки в четвёртом квартале.'),
 ]
+
+# Глубина, на которую разносим прохождения чужих тестов: полгода — ровно
+# окно тепловой карты в кабинете
+ATTEMPTS_DAYS = 182
+# Вероятность позаниматься назавтра после занятия и после паузы. Разница
+# между ними и даёт на карте полосы вместо равномерной ряби.
+ACTIVE_AFTER_ACTIVE = 0.55
+ACTIVE_AFTER_PAUSE = 0.22
+# Доля брошенных попыток
+ABANDON_SHARE = 0.17
+# Проходим только тесты, где результат в процентах о чём-то говорит
+MIN_TEST_PAGES = 2
+# Сколько последних дней подряд заполняем, чтобы в кабинете была живая серия
+STREAK_TAIL = 4
+
+# Оценки компаниям: без них раздел «Оценки, которые вы поставили» пуст
+RATINGS = [5, 4, 5, 3, 4]
 
 
 def _read_time(html):
@@ -237,9 +259,12 @@ class Command(BaseCommand):
             tests = self._make_tests(username)
             articles = self._make_articles(username)
             entries = self._make_participations(account)
+            attempts = self._take_tests(username)
+            ratings = self._rate_companies(username)
 
         self.stdout.write(self.style.SUCCESS(
-            f'«{account.name or username}»: тестов {tests}, статей {articles}, участий {entries}.'))
+            f'«{account.name or username}»: тестов {tests}, статей {articles}, '
+            f'участий {entries}, прохождений {attempts}, оценок компаниям {ratings}.'))
         self.stdout.write(f'Кабинет: /cabinet/user/   Профиль: /{username}/')
         self.stdout.write(f'Удалить: manage.py seed_candidate --user {username} --clear')
 
@@ -333,6 +358,108 @@ class Command(BaseCommand):
             created += 1
         return created
 
+    def _take_tests(self, username):
+        """Прохождения чужих тестов — то, ради чего кандидат сюда и приходит.
+
+        Метку кладём в session_key: у вошедшего пользователя он всегда пуст
+        (см. attempts._identity), поэтому --clear не заденет настоящие попытки,
+        а start() не переиспользует эти записи как незакрытые.
+        """
+        if TestAttempt.objects.filter(candidate_username=username, session_key=MARK).exists():
+            return 0
+
+        # Тест из одного вопроса даёт только 0% или 100%, а таких в базе
+        # полно от ручных проб — по ним ни средний балл, ни гистограмма
+        # ничего не покажут
+        tests = list(
+            Test.objects
+            .filter(status=Test.STATUS_PUBLISHED)
+            .exclude(owner_username=username)
+            .annotate(pages_total=Count('pages'))
+            .filter(pages_total__gte=MIN_TEST_PAGES)
+            .order_by('id')
+        )
+        if not tests:
+            self.stdout.write(self.style.WARNING(
+                f'Нет чужих опубликованных тестов от {MIN_TEST_PAGES} вопросов — '
+                'сначала manage.py seed_contests'))
+            return 0
+
+        rng = random.Random(f'attempts:{username}')
+        now = timezone.now()
+        local_now = timezone.localtime(now)
+        created = 0
+        was_active = False
+
+        # Идём по дням, а не по попыткам: карта активности рисует день, и ей
+        # нужны и пустые недели, и дни с несколькими событиями — иначе все
+        # клетки выходят одной насыщенности, а серии не складываются.
+        for days_ago in range(ATTEMPTS_DAYS - 1, -1, -1):
+            # Последние дни закрываем подряд, иначе текущая серия всегда нулевая
+            if days_ago < STREAK_TAIL:
+                per_day = rng.randint(1, 3)
+            else:
+                # Занятия идут полосами: назавтра после занятия сесть проще,
+                # чем начать с нуля. Отсюда и живые серии на карте.
+                chance = ACTIVE_AFTER_ACTIVE if was_active else ACTIVE_AFTER_PAUSE
+                if rng.random() > chance:
+                    was_active = False
+                    continue
+                per_day = rng.choices([1, 2, 3, 5], weights=[50, 26, 15, 9])[0]
+            was_active = True
+
+            # Результат растёт со временем — иначе средний балл ни о чём
+            # не говорит, а в списке последних попыток не видно прогресса
+            progress = 1 - days_ago / ATTEMPTS_DAYS
+
+            # Время внутри суток отсчитываем от полуночи, а не вычитаем часы
+            # из «сейчас»: иначе попытка с большим сдвигом уезжала во вчера,
+            # и день, который мы только что назначили активным, оставался пуст
+            day_start = (local_now - timedelta(days=days_ago)).replace(
+                hour=0, minute=0, second=0, microsecond=0)
+            latest = int(min(now - day_start, timedelta(hours=23)).total_seconds() // 60)
+
+            for number in range(per_day):
+                test = rng.choice(tests)
+                max_score = test.pages_total
+                started = day_start + timedelta(minutes=rng.randint(0, max(latest - 40, 1)))
+                # Часть попыток брошена: без них доля завершённых была бы 100%,
+                # и метрика ничего бы не значила. Но на днях серии первая
+                # попытка всегда доводится до конца: карта активности считает
+                # завершённые прохождения, и день из одних брошенных попыток
+                # остался бы на ней пустым, разорвав серию.
+                guaranteed = days_ago < STREAK_TAIL and number == 0
+                abandoned = not guaranteed and rng.random() < ABANDON_SHARE
+                share = min(max(rng.gauss(0.35 + progress * 0.45, 0.18), 0), 1)
+
+                attempt = TestAttempt.objects.create(
+                    test=test,
+                    candidate_username=username,
+                    session_key=MARK,
+                    finished_at=None if abandoned else started + timedelta(minutes=rng.randint(4, 30)),
+                    score=0 if abandoned else round(max_score * share),
+                    max_score=0 if abandoned else max_score,
+                )
+                # started_at объявлено как auto_now_add — задаём отдельным запросом
+                TestAttempt.objects.filter(pk=attempt.pk).update(started_at=started)
+                created += 1
+        return created
+
+    def _rate_companies(self, username):
+        """Оценки компаниям: раздел «Оценки, которые вы поставили» иначе пуст."""
+        companies = list(
+            Company.objects
+            .filter(verification_status=Company.VERIF_APPROVED)
+            .exclude(username=username)
+            .order_by('id')[:len(RATINGS)]
+        )
+        created = 0
+        for company, rating in zip(companies, RATINGS):
+            _, is_new = CompanyRating.objects.get_or_create(
+                company=company, user_username=username, defaults={'rating': rating})
+            created += int(is_new)
+        return created
+
     def _clear(self, username):
         tests = Test.objects.filter(owner_username=username,
                                     description__contains=MARK).delete()[0]
@@ -340,6 +467,10 @@ class Command(BaseCommand):
                                           content__contains=MARK).delete()[0]
         entries = ContestSubmission.objects.filter(candidate_username=username,
                                                    text__contains=MARK).delete()[0]
+        # Настоящие попытки пользователя идут с пустым session_key — их не трогаем
+        attempts = TestAttempt.objects.filter(candidate_username=username,
+                                              session_key=MARK).delete()[0]
         self.stdout.write(self.style.SUCCESS(
             f'Удалено: тестов {tests} (со страницами и прохождениями), '
-            f'статей {articles}, участий {entries}.'))
+            f'статей {articles}, участий {entries}, прохождений {attempts}. '
+            f'Оценки компаниям оставлены.'))

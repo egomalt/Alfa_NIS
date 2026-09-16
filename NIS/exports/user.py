@@ -1,10 +1,13 @@
 """Сбор статистики кандидата и сборка PDF-отчёта."""
+from datetime import datetime
+
 from django.db.models import Avg, Count
 from django.utils import timezone
 
 from articles.constructor.models import Article
 from companies.models import CompanyRating
 from contests.contests_cabinet.models import ContestSubmission
+from tests import statistics as test_statistics
 from users.models import UserProfile
 
 from .pdf import ReportBuilder, fmt_date
@@ -39,6 +42,9 @@ def build_user_pdf(account):
     agg = CompanyRating.objects.filter(user_username=username).aggregate(avg=Avg('rating'), cnt=Count('id'))
     avg_given = ('%.1f ★' % agg['avg']) if agg['avg'] is not None else '—'
 
+    # Числа те же, что рисует кабинет: считаются в одном месте
+    taking = test_statistics.for_candidate(username)
+
     days = (timezone.now() - account.created_at).days
 
     r = ReportBuilder('Личная статистика', account.name or username)
@@ -54,11 +60,32 @@ def build_user_pdf(account):
 
     # KPI
     r.kpi([
+        (taking['passed'], 'Тестов пройдено'),
         (len(published_articles), 'Статей опубликовано'),
         (len(subs), 'Участий в конкурсах'),
         (wins, 'Побед в конкурсах'),
-        (avg_given, 'Средняя оценка компаниям'),
     ])
+
+    # Прохождение тестов — то же, что на странице статистики в кабинете
+    r.section('Как вы проходите тесты')
+    if taking['started']:
+        r.note('Тест считается пройденным от %d%% верных ответов.' % taking['pass_percent'])
+        r.kpi([
+            (taking['started'], 'Начато'),
+            (taking['finished'], 'Завершено'),
+            ('%d%%' % taking['avg_percent'] if taking['avg_percent'] is not None else '—', 'Средний результат'),
+            ('%d%%' % taking['pass_rate'] if taking['pass_rate'] is not None else '—', 'Доля пройденных'),
+        ])
+        if taking['recent']:
+            rows = [[
+                item['title'] or ('Тест #%d' % item['test_id']),
+                '%d из %d' % (item['score'], item['max_score']),
+                '%d%%' % item['percent'] if item['percent'] is not None else '—',
+                fmt_date(datetime.fromisoformat(item['finished_at'])),
+            ] for item in taking['recent']]
+            r.table(['Тест', 'Баллы', 'Результат', 'Дата'], rows, col_ratios=[3.4, 1.2, 1.3, 1.3])
+    else:
+        r.empty_note('Вы ещё не проходили тесты.')
 
     # Статьи
     r.section('Публикации')

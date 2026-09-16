@@ -58,6 +58,7 @@ urlpatterns = [
     path('tests/',                              constructor_views.api_tests_list),
     path('tests/create/',                       constructor_views.api_tests_create),
     path('tests/catalog/',                      tests_catalog_views.api_tests_catalog),
+    path('tests/my-attempts/',                  constructor_views.api_my_attempts),
     path('tests/<int:test_id>/',                constructor_views.api_test_detail),
     path('tests/<int:test_id>/publish/',        constructor_views.api_test_publish),
     path('tests/<int:test_id>/statistics/',     constructor_views.api_test_statistics),
