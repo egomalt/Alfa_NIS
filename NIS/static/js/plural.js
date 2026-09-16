@@ -35,7 +35,6 @@
     attempts: function (n) { return withNumber(n, 'прохождение', 'прохождения', 'прохождений'); },
     ratings: function (n) { return withNumber(n, 'оценка', 'оценки', 'оценок'); },
     articles: function (n) { return withNumber(n, 'статья', 'статьи', 'статей'); },
-    likes: function (n) { return withNumber(n, 'лайк', 'лайка', 'лайков'); },
     contests: function (n) { return withNumber(n, 'конкурс', 'конкурса', 'конкурсов'); },
 
     /** «июля 2026» — для оборотов вида «на платформе с …» */

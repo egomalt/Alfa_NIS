@@ -570,6 +570,36 @@ class UserTestsSectionTests(BaseCase):
                 self.assertIn('?preview=1', source)
 
 
+class UserArticlesSectionTests(BaseCase):
+    """«Мои статьи» собраны из тех же блоков, что тесты и конкурсы."""
+
+    def test_page_uses_the_shared_table(self):
+        body = self.login('kandidat').get('/cabinet/user/articles/').content.decode()
+        for marker in ('list-card', 'tests-table', 'cr-chip', 'ud-articles-body'):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, body)
+        self.assertNotIn('ud-articles-list', body)
+
+    def test_views_and_likes_reach_the_cabinet(self):
+        """Подробной статистики у статьи нет — числа берутся прямо из карточки."""
+        self.make_article(author='kandidat', title='Статья', views=120, likes=7)
+        card = self.login('kandidat').get('/api/v1/articles/my/').json()['articles'][0]
+        self.assertEqual(card['views'], 120)
+        self.assertEqual(card['likes'], 7)
+        self.assertEqual(card['status'], 'published')
+
+    def test_draft_opens_in_preview(self):
+        """Публичный адрес черновика отдаёт 404 даже автору."""
+        draft = self.make_article(author='kandidat', published=False, title='Черновик')
+        client = self.login('kandidat')
+        self.assertEqual(client.get(f'/articles/{draft.id}/').status_code, 404)
+        self.assertEqual(
+            client.get(f'/cabinet/user/articles/{draft.id}/preview/').status_code, 200)
+
+        source = (Path(settings.BASE_DIR) / 'cabinet/static/cabinet/user.js').read_text(encoding='utf-8')
+        self.assertIn('/preview/', source)
+
+
 class UserContestsSectionTests(BaseCase):
     """Участия кандидата: список как у компании плюс страница своего решения."""
 

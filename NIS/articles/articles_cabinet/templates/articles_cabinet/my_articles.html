@@ -2,6 +2,13 @@
 
 {% block title %}Мои статьи — Alfa Career{% endblock %}
 
+{% comment %}
+  Раздел собран из тех же блоков, что «Мои тесты» и «Конкурсы»: плашки,
+  чипы фильтров и таблица в карточке, которая на телефоне разворачивается
+  в карточки. Отдельной страницы статистики у статьи нет — просмотры
+  и рейтинг стоят колонками прямо в таблице.
+{% endcomment %}
+
 {% block panel %}
 <div class="ud-tab-panel" id="panel-articles">
   <div class="ud-page-header">
@@ -14,12 +21,46 @@
       Написать статью
     </a>
   </div>
+
   <div class="ud-stats-row">
     <div class="ud-stat-card"><div class="ud-stat-value" id="astat-published">—</div><div class="ud-stat-label">Опубликовано</div></div>
     <div class="ud-stat-card"><div class="ud-stat-value" id="astat-drafts">—</div><div class="ud-stat-label">Черновики</div></div>
-    <div class="ud-stat-card"><div class="ud-stat-value" id="astat-views">—</div><div class="ud-stat-label">Просмотров за всё время</div></div>
-    <div class="ud-stat-card"><div class="ud-stat-value" id="astat-likes">—</div><div class="ud-stat-label">Лайков</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="astat-views">—</div><div class="ud-stat-label">Просмотров</div></div>
+    <div class="ud-stat-card"><div class="ud-stat-value" id="astat-likes">—</div><div class="ud-stat-label">Рейтинг</div></div>
   </div>
-  <div id="ud-articles-list"></div>
+
+  <div class="cr-filters">
+    <button class="cr-chip active" data-articles-filter="all">Все</button>
+    <button class="cr-chip" data-articles-filter="published">Опубликованные</button>
+    <button class="cr-chip" data-articles-filter="draft">Черновики</button>
+    <span class="cr-filter-count" id="ud-articles-count"></span>
+  </div>
+
+  <div class="list-card">
+    <div class="list-card-header">
+      <h2>Обзор статей</h2>
+    </div>
+
+    <div id="ud-articles-wrapper" class="table-wrapper" hidden>
+      <table class="tests-table">
+        <thead>
+          <tr>
+            <th>Название</th><th>Статус</th><th>Просмотры</th><th>Рейтинг</th><th>Дата</th><th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="ud-articles-body"></tbody>
+      </table>
+    </div>
+
+    <div id="tests-empty" hidden>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="1.5" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        {# Текст зависит от того, пусто из-за фильтра или статей нет вовсе #}
+        <div id="tests-empty-title" style="font-size:15px;font-weight:600;">Статей пока нет</div>
+        <div id="tests-empty-sub" style="font-size:13.5px;color:var(--muted);">Расскажите о своём опыте — статьи видят все кандидаты и компании</div>
+        <a id="tests-empty-create" href="/cabinet/user/articles/new/" class="ud-btn-create" style="text-decoration:none;">Написать статью</a>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

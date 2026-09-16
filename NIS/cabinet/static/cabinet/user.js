@@ -24,11 +24,6 @@
     try { return new Date(iso).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' }); }
     catch { return ''; }
   }
-  function formatDateShort(iso) {
-    if (!iso) return '';
-    try { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); }
-    catch { return ''; }
-  }
   function fmtNum(n) {
     if (n >= 1000) return (n / 1000).toFixed(1).replace('.0', '') + ' тыс.';
     return String(n);
@@ -252,73 +247,90 @@
 
   /* ---------- render articles tab ---------- */
 
+  const ARTICLE_STATUS_LABEL = { draft: 'Черновик', published: 'Опубликована' };
+
+  function articleRowHtml(article) {
+    // Черновик по публичному адресу отдаёт 404 — владельцу открываем предпросмотр
+    const viewUrl = article.status === 'published'
+      ? `/articles/${article.id}/`
+      : `/cabinet/user/articles/${article.id}/preview/`;
+    const editUrl = `/cabinet/user/articles/${article.id}/edit/`;
+    // У опубликованной статьи важна дата публикации, у черновика её нет —
+    // показываем, когда его завели
+    const date = article.published_at || article.created_at;
+    return `<tr>
+      <td><a href="${viewUrl}" target="_blank" rel="noopener">${esc(article.title || 'Без названия')}</a></td>
+      <td data-label="Статус"><span class="status-pill ${esc(article.status)}">${esc(ARTICLE_STATUS_LABEL[article.status] || article.status)}</span></td>
+      <td data-label="Просмотры">${fmtNum(article.views || 0)}</td>
+      <td data-label="Рейтинг">${article.likes || 0}</td>
+      <td data-label="Дата">${esc(formatDateCell(date))}</td>
+      <td><div class="action-row">
+        <a class="action-icon-btn" href="${editUrl}" title="Редактировать">${ICON_EDIT}</a>
+        <button type="button" class="action-icon-btn danger" data-delete-article="${article.id}" title="Удалить">${ICON_DELETE}</button>
+      </div></td>
+    </tr>`;
+  }
+
   function renderArticlesTab() {
-    if (!document.getElementById('ud-articles-list')) return;
+    const body = document.getElementById('ud-articles-body');
+    if (!body) return;
+
     const articles = state.articles;
-    const published = articles.filter(a => a.status === 'published').length;
-    const drafts = articles.filter(a => a.status === 'draft').length;
-    const totalViews = articles.reduce((s, a) => s + (a.views || 0), 0);
-    const totalLikes = articles.reduce((s, a) => s + (a.likes || 0), 0);
+    // Плашки считают по всем статьям: это сводка, а не срез под фильтром
+    set('astat-published', articles.filter(a => a.status === 'published').length);
+    set('astat-drafts', articles.filter(a => a.status === 'draft').length);
+    set('astat-views', fmtNum(articles.reduce((sum, a) => sum + (a.views || 0), 0)));
+    set('astat-likes', fmtNum(articles.reduce((sum, a) => sum + (a.likes || 0), 0)));
 
-    set('astat-published', published);
-    set('astat-drafts', drafts);
-    set('astat-views', fmtNum(totalViews));
-    set('astat-likes', totalLikes);
+    const shown = articlesFilter === 'all'
+      ? articles
+      : articles.filter(a => a.status === articlesFilter);
+    set('ud-articles-count', articles.length ? `${shown.length} из ${articles.length}` : '');
 
-    const listEl = document.getElementById('ud-articles-list');
-    if (!listEl) return;
+    const wrapper = document.getElementById('ud-articles-wrapper');
+    const empty = document.getElementById('tests-empty');
 
-    if (!articles.length) {
-      listEl.innerHTML = `<div class="ud-empty"><div class="ud-empty-title">Нет статей</div><div class="ud-empty-sub">Напишите первую статью, нажав кнопку выше.</div></div>`;
+    if (!shown.length) {
+      body.innerHTML = '';
+      wrapper.hidden = true;
+      empty.hidden = false;
+      // Пусто из-за фильтра и пусто вообще — разные сообщения
+      set('tests-empty-title', articles.length ? 'Статей не найдено' : 'Статей пока нет');
+      set('tests-empty-sub', articles.length
+        ? 'Под выбранный фильтр ничего не подходит'
+        : 'Расскажите о своём опыте — статьи видят все кандидаты и компании');
+      document.getElementById('tests-empty-create').hidden = Boolean(articles.length);
       return;
     }
 
-    const STATUS_BG = { draft: 'var(--amber-soft)', published: 'var(--green-soft)' };
-    const STATUS_CO = { draft: 'var(--amber-text)', published: 'var(--green-text)' };
-    const STATUS_LB = { draft: 'Черновик', published: 'Опубликована' };
-
-    listEl.innerHTML = articles.map(a => {
-      const metaParts = [
-        STATUS_LB[a.status] || a.status,
-        a.published_at ? formatDateShort(a.published_at) : formatDateShort(a.created_at),
-        a.views ? `${fmtNum(a.views)} просмотров` : null,
-        a.likes ? `${a.likes} лайков` : null,
-      ].filter(Boolean).join(' · ');
-      // Черновик ещё не опубликован — публичная страница отдаёт на нём 404,
-      // поэтому ведём в редактор
-      const href = a.status === 'published' ? `/articles/${a.id}/` : `/cabinet/user/articles/${a.id}/edit/`;
-      return `<a class="ud-list-row" href="${href}">
-        <div class="ud-list-main">
-          <div class="ud-list-title">${esc(a.title || 'Без названия')}</div>
-          <div class="ud-list-meta">${esc(metaParts)}</div>
-        </div>
-        <span class="ud-status-pill" style="background:${STATUS_BG[a.status]||'var(--surface-2)'};color:${STATUS_CO[a.status]||'var(--muted)'};">${STATUS_LB[a.status] || a.status}</span>
-        <div class="ud-row-actions" onclick="event.stopPropagation()">
-          <a class="ud-icon-btn" href="/cabinet/user/articles/${a.id}/edit/" title="Редактировать">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-          </a>
-          <button class="ud-icon-btn" data-delete-article="${a.id}" title="Удалить">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-          </button>
-        </div>
-      </a>`;
-    }).join('');
-
-    listEl.querySelectorAll('[data-delete-article]').forEach(btn => {
-      btn.addEventListener('click', async e => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!confirm('Удалить статью? Это действие нельзя отменить.')) return;
-        try {
-          await apiFetch(`/api/v1/articles/${btn.dataset.deleteArticle}/delete/`, { method: 'DELETE' });
-          state.articles = state.articles.filter(a => String(a.id) !== btn.dataset.deleteArticle);
-          renderArticlesTab();
-          renderProfileTab();
-          renderStatsTab();
-        } catch (e) { alert(e.message); }
-      });
-    });
+    body.innerHTML = shown.map(articleRowHtml).join('');
+    wrapper.hidden = false;
+    empty.hidden = true;
   }
+
+  let articlesFilter = 'all';
+
+  document.getElementById('ud-articles-body')?.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-delete-article]');
+    if (!btn) return;
+    if (!confirm('Удалить статью? Это действие нельзя отменить.')) return;
+    try {
+      await apiFetch(`/api/v1/articles/${btn.dataset.deleteArticle}/delete/`, { method: 'DELETE' });
+      state.articles = state.articles.filter(a => String(a.id) !== btn.dataset.deleteArticle);
+      renderArticlesTab();
+      renderProfileTab();
+      renderStatsTab();
+    } catch (err) { alert(err.message); }
+  });
+
+  document.getElementById('panel-articles')?.addEventListener('click', e => {
+    const chip = e.target.closest('[data-articles-filter]');
+    if (!chip) return;
+    articlesFilter = chip.dataset.articlesFilter;
+    document.querySelectorAll('[data-articles-filter]')
+      .forEach(b => b.classList.toggle('active', b.dataset.articlesFilter === articlesFilter));
+    renderArticlesTab();
+  });
 
   /* ---------- render contests tab ---------- */
 

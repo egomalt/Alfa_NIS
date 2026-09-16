@@ -70,7 +70,7 @@ def build_user_pdf(account):
             a.likes,
             fmt_date(a.published_at),
         ] for a in articles]
-        r.table(['Название', 'Статус', 'Просмотры', 'Лайки', 'Дата'], rows,
+        r.table(['Название', 'Статус', 'Просмотры', 'Рейтинг', 'Дата'], rows,
                 col_ratios=[3.2, 1.5, 1.2, 1.0, 1.3])
     else:
         r.empty_note('Публикаций пока нет.')

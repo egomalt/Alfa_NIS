@@ -63,7 +63,7 @@
           return '<a class="pu-article-row" href="/articles/' + esc(a.id) + '/">'
             + '<div class="pu-article-cover" style="background:' + covBg + ';"></div>'
             + '<div><div class="pu-article-title">' + esc(a.title) + '</div>'
-            + '<div class="pu-article-meta">' + dateStr + (dateStr && a.views ? ' · ' : '') + (a.views || 0) + ' просм. · ' + AlfaPlural.likes(a.likes) + '</div></div>'
+            + '<div class="pu-article-meta">' + dateStr + (dateStr && a.views ? ' · ' : '') + (a.views || 0) + ' просм. · рейтинг ' + (a.likes || 0) + '</div></div>'
             + '</a>';
         }).join('')
       : '<div class="pu-empty">Публикаций пока нет.</div>';
