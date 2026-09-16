@@ -1,0 +1,71 @@
+{% extends 'cabinet/base_user.html' %}
+{% load static %}
+
+{% comment %}
+  Одно отправленное решение: что ушло в компанию и чем она ответила.
+  Раньше кандидат видел только строку в списке участий и не мог ни перечитать
+  свой текст, ни скачать отправленный файл.
+{% endcomment %}
+
+{% block title %}{{ contest_title|default:"Решение" }} — Alfa Career{% endblock %}
+
+{% block head_extra %}
+<script>Object.assign(window.ALFA_APP_BOOTSTRAP, { submissionId: {{ submission_id }} });</script>
+<style>
+  .us-back { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; text-decoration: none; margin-bottom: 18px; transition: color .12s; }
+  .us-back:hover { color: var(--text); }
+
+  .us-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+  .us-title { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 6px; overflow-wrap: break-word; }
+  .us-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .us-chip { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); }
+
+  /* Вердикт: одна широкая плашка, а не строка в таблице — это главное,
+     ради чего кандидат сюда заходит */
+  .us-verdict { display: flex; align-items: center; gap: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 20px 22px; margin-bottom: 18px; }
+  .us-verdict-icon { display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0; }
+  .us-verdict-title { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+  .us-verdict-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  .us-section { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 20px 22px; margin-bottom: 18px; }
+  .us-section-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .us-section-note { font-size: 12.5px; color: var(--faint); margin-bottom: 16px; }
+
+  .us-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; }
+  .us-fact-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); margin-bottom: 3px; }
+  .us-fact-value { font-size: 14px; color: var(--text); overflow-wrap: break-word; }
+
+  /* Текст решения приходит как обычный текст, переносы в нём значимые */
+  .us-answer { font-size: 14px; line-height: 1.65; color: var(--text-2); white-space: pre-wrap; overflow-wrap: break-word; }
+  .us-file { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--bg); flex-wrap: wrap; }
+  .us-file-name { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+  .us-link { font-size: 14px; color: var(--brand-text); text-decoration: none; overflow-wrap: anywhere; }
+  .us-link:hover { text-decoration: underline; }
+  .us-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 600; text-decoration: none; transition: color .12s, border-color .12s; margin-left: auto; }
+  .us-btn:hover { color: var(--brand-text); border-color: var(--brand); }
+
+  .us-loading { padding: 60px; text-align: center; color: var(--muted); }
+
+  @media (max-width: 560px) {
+    .us-title { font-size: 20px; }
+    .us-facts { grid-template-columns: minmax(0, 1fr); }
+    .us-verdict { padding: 16px; gap: 12px; }
+    .us-btn { margin-left: 0; width: 100%; justify-content: center; }
+  }
+</style>
+{% endblock %}
+
+{% block panel %}
+<a class="us-back" href="/cabinet/user/contests/">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
+  Мои конкурсы
+</a>
+
+<div id="us-content">
+  <div class="us-loading">Загрузка…</div>
+</div>
+{% endblock %}
+
+{% block page_script %}
+<script src="{% static 'contests/contests_cabinet/user_submission.js' %}?v={{ ASSET_V }}"></script>
+{% endblock %}

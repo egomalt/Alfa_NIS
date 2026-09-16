@@ -570,6 +570,56 @@ class UserTestsSectionTests(BaseCase):
                 self.assertIn('?preview=1', source)
 
 
+class UserContestsSectionTests(BaseCase):
+    """Участия кандидата: список как у компании плюс страница своего решения."""
+
+    def submission(self, candidate='kandidat', **kwargs):
+        contest = kwargs.pop('contest', None) or self.make_contest(owner='firma')
+        return ContestSubmission.objects.create(
+            contest=contest, candidate_username=candidate,
+            text='Моё решение', comment='Делал на выходных', **kwargs)
+
+    def test_list_uses_the_shared_table(self):
+        body = self.login('kandidat').get('/cabinet/user/contests/').content.decode()
+        for marker in ('list-card', 'tests-table', 'cr-chip', 'ud-contests-body'):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, body)
+        self.assertNotIn('ud-contests-list', body)
+
+    def test_history_carries_company_name_and_deadline(self):
+        """В таблице стоит название компании и срок, а не один логин."""
+        self.submission()
+        entry = self.login('kandidat').get('/api/v1/contests/user-history/').json()['submissions'][0]
+        self.assertEqual(entry['company_name'], 'Фирма')
+        self.assertIsNotNone(entry['deadline'])
+
+    def test_owner_sees_the_whole_submission(self):
+        submission = self.submission(status=ContestSubmission.STATUS_ACCEPTED)
+        data = self.login('kandidat').get(
+            f'/api/v1/contests/my-submissions/{submission.id}/').json()
+        self.assertEqual(data['submission']['text'], 'Моё решение')
+        self.assertEqual(data['submission']['comment'], 'Делал на выходных')
+        self.assertEqual(data['submission']['status'], 'accepted')
+        self.assertEqual(data['contest']['company_name'], 'Фирма')
+
+    def test_someone_elses_submission_is_not_reachable(self):
+        """Внутри решения файл и переписка — чужое отдавать нельзя."""
+        submission = self.submission(candidate='drugoy')
+        client = self.login('kandidat')
+        self.assertEqual(
+            client.get(f'/api/v1/contests/my-submissions/{submission.id}/').status_code, 404)
+        self.assertEqual(client.get(f'/cabinet/user/contests/{submission.id}/').status_code, 404)
+
+    def test_submission_page_opens_for_its_author(self):
+        submission = self.submission()
+        response = self.login('kandidat').get(f'/cabinet/user/contests/{submission.id}/')
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        self.assertIn('us-content', body)
+        # Кабинет свои четыре списочных запроса на этой странице не делает
+        self.assertIn('panel: "none"', body)
+
+
 class CabinetSidebarTests(BaseCase):
     """Боковая панель кабинета должна быть одна и та же на всех страницах.
 

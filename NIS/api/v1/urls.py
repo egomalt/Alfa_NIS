@@ -72,6 +72,7 @@ urlpatterns = [
     path('contests/',                                                 contest_views.api_contest_create),
     path('contests/catalog/',                                         contest_views.api_contests_catalog),
     path('contests/user-history/',                                    contest_views.api_user_contest_history),
+    path('contests/my-submissions/<int:sub_id>/',                     contest_views.api_user_submission),
     path('contests/<int:contest_id>/',                                contest_views.api_contest_detail),
     path('contests/<int:contest_id>/publish/',                        contest_views.api_contest_publish),
     path('contests/<int:contest_id>/attachments/',                    contest_views.api_contest_attachment_upload),

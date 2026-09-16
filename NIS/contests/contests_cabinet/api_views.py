@@ -459,11 +459,18 @@ def api_my_submissions(request, contest_id):
 @api_login_required()
 def api_user_contest_history(request):
     account = request.account
-    subs = (
+    subs = list(
         ContestSubmission.objects
         .filter(candidate_username=account.username)
         .select_related('contest')
         .order_by('-created_at')
+    )
+    # Имена компаний — одним запросом на весь список, а не по строке:
+    # в таблице участий раньше показывался логин вместо названия
+    names = dict(
+        Company.objects
+        .filter(username__in={s.contest.company_username for s in subs})
+        .values_list('username', 'name')
     )
     result = []
     for s in subs:
@@ -473,11 +480,65 @@ def api_user_contest_history(request):
             'contest_id': c.id,
             'contest_title': c.title,
             'company_username': c.company_username,
+            'company_name': names.get(c.company_username) or c.company_username,
+            'contest_status': c.status,
+            'deadline': c.deadline.isoformat() if c.deadline else None,
             'status': s.status,
             'winner': s.winner,
             'submitted_at': s.created_at.isoformat(),
         })
     return JsonResponse({'ok': True, 'submissions': result})
+
+
+@require_http_methods(['GET'])
+@api_login_required()
+def api_user_submission(request, sub_id):
+    """Одно своё решение целиком: что отправили и чем ответила компания.
+
+    Кандидат видел только строку в списке участий — ни файла, ни ссылки,
+    ни собственного комментария к работе. Чужое решение отдавать нельзя:
+    внутри и файл, и контакты, поэтому фильтруем по автору, а не проверяем
+    после выборки.
+    """
+    submission = (
+        ContestSubmission.objects
+        .filter(id=sub_id, candidate_username=request.account.username)
+        .select_related('contest')
+        .first()
+    )
+    if submission is None:
+        return JsonResponse({'ok': False, 'message': 'Решение не найдено.'}, status=404)
+
+    contest = submission.contest
+    company = Company.objects.filter(username=contest.company_username).first()
+    return JsonResponse({
+        'ok': True,
+        'submission': {
+            'id': submission.id,
+            'status': submission.status,
+            'winner': submission.winner,
+            'liked': submission.liked,
+            'attempt': submission.attempt,
+            'comment': submission.comment,
+            'text': submission.text,
+            'link': submission.link,
+            'file_url': submission.file.url if submission.file else '',
+            'file_name': submission.file.name.split('/')[-1] if submission.file else '',
+            'submitted_at': submission.created_at.isoformat(),
+        },
+        'contest': {
+            'id': contest.id,
+            'title': contest.title,
+            'category': contest.category,
+            'level': contest.level,
+            'status': contest.status,
+            'prize': contest.prize,
+            'deadline': contest.deadline.isoformat() if contest.deadline else None,
+            'submission_type': contest.submission_type,
+            'company_username': contest.company_username,
+            'company_name': (company.name if company else '') or contest.company_username,
+        },
+    })
 
 
 @require_http_methods(['GET'])

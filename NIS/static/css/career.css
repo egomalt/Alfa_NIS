@@ -300,6 +300,20 @@ input, textarea, select {
 .status-pill { display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
 .status-pill.published { background: var(--green-soft); color: var(--green-text); }
 .status-pill.draft     { background: var(--amber-soft); color: var(--amber-text); }
+/* Вердикт по решению конкурса в кабинете кандидата.
+ *
+ * Победа — золотая, как значок победителя в кабинете компании: красным она
+ * читалась как отказ, потому что красный на сайте означает опасное действие.
+ * Отказ красным и стал: серым он терялся среди нейтральных ячеек.
+ *
+ * «На проверке» здесь нейтрально-серое, хотя у компании оно янтарное.
+ * Это разные смыслы: компании цвет говорит «разбери работу», кандидату —
+ * «решения пока нет». Янтарный на обе роли сразу означал бы, что победа
+ * и ожидание подсвечены одинаково. */
+.status-pill.accepted  { background: var(--green-soft); color: var(--green-text); }
+.status-pill.pending   { background: var(--surface-2);  color: var(--text-2); }
+.status-pill.rejected  { background: var(--red-soft);   color: var(--red-text); }
+.status-pill.winner    { background: var(--amber-soft); color: var(--amber-text); box-shadow: inset 0 0 0 1px var(--amber-text); }
 
 /* ── Card ────────────────────────────────────────────────────────────────── */
 .cr-card {

@@ -16,16 +16,13 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
-from authorization.models import Account, ROLE_USER
 from companies.models import Company
 from contests.contests_cabinet.models import Contest, ContestSubmission
-from tests.constructor.models import Test, TestAnswer, TestAttempt, TestPage
+from core.demo import MARK, TAKER_PREFIX, build_pages, ensure_takers, make_attempts
+from tests.constructor.models import Test
 from users.models import UserProfile
 
 DEFAULT_COMPANY = 'alfa'
-
-# Помечаем созданное, чтобы --clear не задел конкурсы, заведённые руками
-MARK = '[demo]'
 
 RULES = [
     'Решение принимается только до истечения дедлайна',
@@ -84,21 +81,6 @@ CONTESTS = [
         'Нужно было предложить вариант, который сокращает путь, не теряя обязательные поля, '
         'и обосновать решение цифрами из приложенной воронки.',
     ),
-]
-
-DEMO_PASSWORD = 'Alfa-Dev-2026'
-TAKER_PREFIX = 'demo-taker-'
-
-# Навыки демо-кандидатов: из них собирается «портрет участников» в кабинете
-SKILL_SETS = [
-    ['Python', 'SQL', 'Django'],
-    ['JavaScript', 'React', 'TypeScript'],
-    ['Python', 'SQL', 'Pandas'],
-    ['Go', 'Docker', 'PostgreSQL'],
-    ['Python', 'Docker', 'Linux'],
-    ['SQL', 'Excel', 'Tableau'],
-    ['Java', 'Spring', 'SQL'],
-    ['C++', 'Алгоритмы', 'Linux'],
 ]
 
 # (название, уровень, категория, завершённых прохождений, вопросы)
@@ -187,78 +169,17 @@ class Command(BaseCommand):
                     status=Test.STATUS_PUBLISHED,
                     stats={'level': level, 'category': category},
                 )
-                self._make_attempts(test, submissions, len(questions))
-                for order, (page_type, question, answers) in enumerate(questions):
-                    page = TestPage.objects.create(
-                        test=test, order=order,
-                        type=TestPage.TYPE_QUIZ if page_type == 'quiz' else TestPage.TYPE_INPUT,
-                        title=question,
-                    )
-                    for answer_order, (text, is_correct) in enumerate(answers):
-                        TestAnswer.objects.create(page=page, text=text,
-                                                  is_correct=is_correct, order=answer_order)
+                make_attempts(test, submissions, len(questions))
+                build_pages(test, questions)
                 tests += 1
 
         self.stdout.write(self.style.SUCCESS(
             f'Компания «{company.name}»: создано конкурсов {contests}, тестов {tests}.'))
         self.stdout.write(f'Профиль: /{username}/   Удалить: manage.py seed_contests --company {username} --clear')
 
-    def _make_attempts(self, test, finished, max_score):
-        """Прохождения теста: завершённые с разбросом баллов плюс брошенные.
-
-        Раньше число прохождений было просто числом в Test.stats. Теперь это
-        настоящие записи — иначе новая статистика (средний балл, доля
-        справившихся, брошенные попытки) считалась бы по пустой таблице.
-        """
-        if not finished or not max_score:
-            return
-
-        takers = self._ensure_takers()
-        now = timezone.now()
-        rng = random.Random(test.id)  # один и тот же тест — одни и те же числа
-
-        def add(index, started, finished_at, score):
-            attempt = TestAttempt.objects.create(
-                test=test,
-                candidate_username=takers[index % len(takers)],
-                finished_at=finished_at,
-                score=score,
-                max_score=max_score,
-            )
-            # started_at объявлено как auto_now_add, поэтому в create() не задаётся:
-            # разносим попытки по времени отдельным обновлением
-            TestAttempt.objects.filter(pk=attempt.pk).update(started_at=started)
-
-        for i in range(finished):
-            started = now - timedelta(days=rng.randint(0, 60), minutes=rng.randint(0, 600))
-            add(i, started, started + timedelta(minutes=rng.randint(3, 25)), rng.randint(0, max_score))
-
-        # Примерно каждый пятый открывает тест и не доходит до конца
-        for i in range(max(1, finished // 5)):
-            add(finished + i, now - timedelta(days=rng.randint(1, 45)), None, 0)
-
-    def _ensure_takers(self):
-        """Кандидаты, от чьего имени записаны прохождения и решения.
-
-        У каждого свой профиль с навыками — без него «портрет участников»
-        в кабинете компании остаётся пустым.
-        """
-        takers = []
-        for i, skills in enumerate(SKILL_SETS):
-            username = f'{TAKER_PREFIX}{i}'
-            if not Account.objects.filter(username=username).exists():
-                Account.objects.create_user(username, name=f'Кандидат {i + 1}',
-                                            password=DEMO_PASSWORD, role=ROLE_USER)
-            UserProfile.objects.get_or_create(
-                username=username,
-                defaults={'bio': 'Демонстрационный профиль участника.', 'skills': skills},
-            )
-            takers.append(username)
-        return takers
-
     def _make_submissions(self, contest, finished):
         """Решения на конкурс: часть проверена, часть ждёт, у завершённого — победитель."""
-        takers = self._ensure_takers()
+        takers = ensure_takers()
         rng = random.Random(contest.id)
         # До отправки решения доходят не все зарегистрировавшиеся — иначе
         # воронка «зарегистрировался → прислал» всегда показывала бы 100%

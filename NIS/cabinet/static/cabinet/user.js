@@ -322,59 +322,86 @@
 
   /* ---------- render contests tab ---------- */
 
+  const SUB_STATUS_LABEL = {
+    pending: 'На проверке',
+    accepted: 'Принято',
+    rejected: 'Отклонено',
+  };
+  const ICON_OPEN = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>';
+
+  function formatDeadline(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    // Дедлайны по всему сайту пишутся ДД.ММ.ГГГГ
+    return isNaN(d) ? '—' : d.toLocaleDateString('ru-RU');
+  }
+
+  function contestRowHtml(entry) {
+    // Отличается не только цветом: у победы ещё и золотая обводка
+    const verdict = entry.winner
+      ? '<span class="status-pill winner">Победа</span>'
+      : `<span class="status-pill ${esc(entry.status)}">${esc(SUB_STATUS_LABEL[entry.status] || entry.status)}</span>`;
+    return `<tr>
+      <td><a href="/contests/${entry.contest_id}/">${esc(entry.contest_title || 'Конкурс')}</a></td>
+      <td data-label="Компания">${esc(entry.company_name || entry.company_username)}</td>
+      <td data-label="Вердикт">${verdict}</td>
+      <td data-label="Подано">${esc(formatDateCell(entry.submitted_at))}</td>
+      <td data-label="Дедлайн">${esc(formatDeadline(entry.deadline))}</td>
+      <td><div class="action-row">
+        <a class="action-icon-btn" href="/cabinet/user/contests/${entry.id}/" title="Моё решение и вердикт">${ICON_OPEN}</a>
+      </div></td>
+    </tr>`;
+  }
+
   function renderContestsTab() {
-    if (!document.getElementById('ud-contests-list')) return;
+    const body = document.getElementById('ud-contests-body');
+    if (!body) return;
+
     const history = state.contestHistory;
-    const wins = history.filter(s => s.winner).length;
-    const pending = history.filter(s => s.status === 'pending').length;
-    const accepted = history.filter(s => s.status === 'accepted').length;
-
+    // Плашки считают по всем участиям: это сводка, а не срез под фильтром
     set('cstat-total', history.length);
-    set('cstat-wins', wins);
-    set('cstat-pending', pending);
-    set('cstat-accepted', accepted);
+    set('cstat-wins', history.filter(s => s.winner).length);
+    set('cstat-pending', history.filter(s => s.status === 'pending').length);
+    set('cstat-accepted', history.filter(s => s.status === 'accepted').length);
 
-    const listEl = document.getElementById('ud-contests-list');
-    if (!listEl) return;
+    const shown = contestsFilter === 'all'
+      ? history
+      : contestsFilter === 'winner'
+        ? history.filter(s => s.winner)
+        : history.filter(s => s.status === contestsFilter);
+    set('ud-contests-count', history.length ? `${shown.length} из ${history.length}` : '');
 
-    if (!history.length) {
-      listEl.innerHTML = `<div class="ud-empty"><div class="ud-empty-title">Нет участий</div><div class="ud-empty-sub">Подайте решение в любой конкурс из каталога.</div></div>`;
+    const wrapper = document.getElementById('ud-contests-wrapper');
+    const empty = document.getElementById('tests-empty');
+
+    if (!shown.length) {
+      body.innerHTML = '';
+      wrapper.hidden = true;
+      empty.hidden = false;
+      // Пусто из-за фильтра и пусто вообще — разные сообщения
+      set('tests-empty-title', history.length ? 'Ничего не найдено' : 'Участий пока нет');
+      set('tests-empty-sub', history.length
+        ? 'Под выбранный фильтр не подходит ни одно решение'
+        : 'Выберите конкурс в каталоге и пришлите решение до дедлайна');
+      document.getElementById('tests-empty-create').hidden = Boolean(history.length);
       return;
     }
 
-    const STATUS_BG = {
-      pending:  'var(--amber-soft)',
-      accepted: 'var(--green-soft)',
-      rejected: 'var(--surface-2)',
-    };
-    const STATUS_CO = {
-      pending:  'var(--amber-text)',
-      accepted: 'var(--green-text)',
-      rejected: 'var(--muted)',
-    };
-    const STATUS_LB = {
-      pending:  'На проверке',
-      accepted: 'Принято',
-      rejected: 'Отклонено',
-    };
-
-    listEl.innerHTML = history.map(s => {
-      const placeHtml = s.winner
-        ? `<span class="ud-place-badge">🏆 Победитель</span>`
-        : '';
-      const statusBg = s.status === 'accepted' && s.winner ? 'var(--green-soft)' : STATUS_BG[s.status] || 'var(--surface-2)';
-      const statusCo = s.status === 'accepted' && s.winner ? 'var(--green-text)' : STATUS_CO[s.status] || 'var(--muted)';
-      const statusLb = s.winner ? 'Победа' : (STATUS_LB[s.status] || s.status);
-      return `<a class="ud-list-row" href="/contests/${s.contest_id}/">
-        <div class="ud-list-main">
-          <div class="ud-list-title">${esc(s.contest_title || 'Конкурс')}</div>
-          <div class="ud-list-meta">${esc(s.company_username)} · подано ${esc(formatDateShort(s.submitted_at))}</div>
-        </div>
-        ${placeHtml}
-        <span class="ud-status-pill" style="background:${statusBg};color:${statusCo};">${esc(statusLb)}</span>
-      </a>`;
-    }).join('');
+    body.innerHTML = shown.map(contestRowHtml).join('');
+    wrapper.hidden = false;
+    empty.hidden = true;
   }
+
+  let contestsFilter = 'all';
+
+  document.getElementById('panel-contests')?.addEventListener('click', e => {
+    const chip = e.target.closest('[data-contests-filter]');
+    if (!chip) return;
+    contestsFilter = chip.dataset.contestsFilter;
+    document.querySelectorAll('[data-contests-filter]')
+      .forEach(b => b.classList.toggle('active', b.dataset.contestsFilter === contestsFilter));
+    renderContestsTab();
+  });
 
   /* ---------- render stats tab ---------- */
 
