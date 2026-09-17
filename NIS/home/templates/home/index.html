@@ -180,25 +180,12 @@
   document.getElementById('hero-search-btn')?.addEventListener('click',runHeroSearch);
   document.getElementById('hero-search')?.addEventListener('keydown',e=>{ if(e.key==='Enter')runHeroSearch(); });
 
-  async function loadUser(){
-    try{
-      const res=await fetch('/api/v1/auth/me/');
-      const data=await res.json();
-      const el=document.getElementById('home-user-chip');
-      if(!el)return;
-      if(data.ok&&data.account){
-        const a=data.account;
-        const avatarInner=a.avatar?`<img src="${esc(a.avatar)}" alt="">`:`${esc(initial(a.name))}`;
-        el.innerHTML=`<a href="${esc(a.profile_url)}" class="cr-user-chip">
-          <div class="cr-user-avatar">${avatarInner}</div>
-          <div><div class="cr-user-name">${esc(a.name||a.username)}</div>
-          <div class="cr-user-role">${a.role==='company'?'Компания':'Кандидат'}</div></div>
-        </a>`;
-      }
-    }catch(_){}
-  }
+  /* Чип пользователя рисует общий career.js по атрибуту data-user-chip.
+     Здесь лежала его копия: она знала только две роли, поэтому модератору
+     на главной писалось «Кандидат», и не умела показывать «Войти»
+     для гостя — просто затирала собой то, что нарисовал career.js. */
 
-  document.addEventListener('DOMContentLoaded',()=>{loadCompanies();loadTests();loadUser();});
+  document.addEventListener('DOMContentLoaded',()=>{loadCompanies();loadTests();});
 })();
 </script>
 </body>

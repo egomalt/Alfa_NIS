@@ -778,6 +778,25 @@ class CabinetSidebarTests(BaseCase):
                 client = self.login('firma' if url.startswith(('/cabinet/company', '/constructor')) else 'kandidat')
                 self.assertNotIn('data-logout-btn', client.get(url).content.decode())
 
+    def test_only_one_place_renders_the_user_chip(self):
+        """На главной лежала копия чипа, знавшая две роли из трёх, —
+        модератору там писалось «Кандидат». Копия ещё и затирала собой
+        то, что уже нарисовал career.js."""
+        root = Path(settings.BASE_DIR)
+        renderers = []
+        for path in list(root.glob('*/templates/**/*.html')) + list(root.glob('*/*/templates/**/*.html')) \
+                + list(root.glob('*/static/**/*.js')) + list(root.glob('*/*/static/**/*.js')):
+            if 'cr-user-role' in path.read_text(encoding='utf-8'):
+                renderers.append(str(path.relative_to(root)))
+        self.assertEqual(renderers, [], 'чип пользователя рисует только static/js/career.js')
+
+    def test_user_chip_knows_every_role(self):
+        """Подписи те же, что в панели модерации и в шапке админки."""
+        source = (Path(settings.BASE_DIR) / 'static/js/career.js').read_text(encoding='utf-8')
+        for label in ('Компания', 'Модератор', 'Кандидат'):
+            with self.subTest(label=label):
+                self.assertIn(label, source)
+
     def test_logout_button_is_actually_wired(self):
         """Кнопка «Выйти» в кабинете кандидата полгода ничего не делала:
         обработчик сняли вместе с выходом из верхней шапки, а кнопку в
