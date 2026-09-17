@@ -3,15 +3,37 @@ from django.core.validators import validate_email
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
-from authorization.models import Account, ROLE_USER
+from authorization.models import Account, ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
+from companies.models import Company
 from core.auth import api_login_required
 from core.utils import load_json_body
 from core.uploads import UploadError, validate_image
+from tests import statistics
+
+from . import activity, links
 from .models import UserProfile
 
 # Столько же навыков показывает редактор в настройках кабинета
 MAX_SKILLS = 20
+
+
+def _sees_contacts(viewer, account):
+    """Кому показывать почту и телефон кандидата.
+
+    Владельцу — всегда. Подтверждённой компании — потому что иначе профиль
+    не работает как профиль: посмотреть человека можно, а позвать нельзя.
+    Всем остальным, включая анонимов и неподтверждённые компании, — нет:
+    иначе адреса собираются обходом каталога.
+    """
+    if viewer is None:
+        return False
+    if viewer.username == account.username:
+        return True
+    if viewer.role != ROLE_COMPANY:
+        return False
+    company = Company.objects.filter(username=viewer.username).first()
+    return bool(company and company.is_verified)
 
 
 @require_GET
@@ -24,9 +46,16 @@ def api_candidate_detail(request, username):
     current = get_current_account(request)
     is_owner = current is not None and current.username == account.username
 
+    candidate = _serialize_candidate(
+        account, profile, include_private=_sees_contacts(current, account))
+    # Подтверждение навыков делом и признак живого профиля — то, ради чего
+    # компания вообще открывает страницу
+    candidate['strengths'] = statistics.strengths(account.username)
+    candidate['streak'] = activity.streaks(activity.daily(account.username))
+
     return JsonResponse({
         'ok': True,
-        'candidate': _serialize_candidate(account, profile, include_private=is_owner),
+        'candidate': candidate,
         'is_owner': is_owner,
     })
 
@@ -76,6 +105,9 @@ def api_candidate_update(request, username):
     if skills_raw is not None:
         profile.skills = [s.strip() for s in skills_raw if isinstance(s, str) and s.strip()][:MAX_SKILLS]
         updated.append('skills')
+    if 'links' in body:
+        profile.links = links.clean(body['links'])
+        updated.append('links')
     if body.get('remove_avatar'):
         profile.avatar.delete(save=False)
         updated.append('avatar')
@@ -110,16 +142,19 @@ def api_candidate_avatar(request, username):
 
 
 def _serialize_candidate(account, profile, include_private=False):
-    """Карточка кандидата. Email отдаём только владельцу: раньше его мог собрать
-    любой аноним, обойдя /api/v1/candidates/<username>/."""
+    """Карточка кандидата. Контакты — только владельцу и подтверждённой
+    компании: раньше почту мог собрать любой аноним, обойдя
+    /api/v1/candidates/<username>/."""
     data = {
         'username': account.username,
         'name': account.name,
         'bio': profile.bio if profile else '',
         'skills': profile.skills if profile else [],
+        'links': links.as_list(profile.links if profile else {}),
         'avatar': profile.avatar.url if profile and profile.avatar else None,
         'created_at': account.created_at.isoformat(),
     }
+    data['contacts_visible'] = include_private
     if include_private:
         data['email'] = account.email
         data['phone'] = profile.phone if profile else ''

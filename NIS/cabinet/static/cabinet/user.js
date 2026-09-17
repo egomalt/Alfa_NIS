@@ -554,14 +554,6 @@
   const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн',
                         'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
-  // Даты приходят в двух форматах: ISO от статей и тестов, «ДД.ММ.ГГГГ ЧЧ:ММ» от работ на конкурс
-  function parseActivityDate(value) {
-    if (!value) return null;
-    const ru = /^(\d{2})\.(\d{2})\.(\d{4})/.exec(value);
-    const date = ru ? new Date(`${ru[3]}-${ru[2]}-${ru[1]}`) : new Date(value);
-    return isNaN(date) ? null : date;
-  }
-
   // Ключ обязан совпадать с ISO-датами, которыми сервер отдаёт прохождения:
   // без ведущих нулей «2026-9-16» и «2026-09-16» — разные дни
   function dayKey(date) {
@@ -578,29 +570,6 @@
     return monday;
   }
 
-  /** Сколько событий в каждый день: всё, что человек делал на площадке. */
-  function activityByDay() {
-    const counts = new Map();
-    const sources = [
-      ...state.articles.map(a => a.created_at),
-      ...state.tests.map(t => t.created_at),
-      ...state.contestHistory.map(s => s.submitted_at),
-    ];
-    for (const raw of sources) {
-      const date = parseActivityDate(raw);
-      if (!date) continue;
-      const key = dayKey(date);
-      counts.set(key, (counts.get(key) || 0) + 1);
-    }
-    // Прохождения тестов приходят уже сгруппированными по дням: их бывают
-    // сотни, и тащить каждую попытку в браузер ради карты незачем
-    const daily = (state.attempts && state.attempts.daily) || {};
-    for (const [key, n] of Object.entries(daily)) {
-      counts.set(key, (counts.get(key) || 0) + n);
-    }
-    return counts;
-  }
-
   /** Насыщенность клетки: четыре ступени, как в легенде под картой. */
   function heatLevel(n) {
     if (!n) return 0;
@@ -614,7 +583,9 @@
     const heatEl = document.getElementById('ud-heat');
     if (!heatEl) return;
 
-    const counts = activityByDay();
+    // Сервер считает активность по всем событиям сразу — браузеру
+    // остаётся только раскрасить клетки
+    const counts = new Map(Object.entries((state.attempts && state.attempts.daily) || {}));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     // Карта выровнена по неделям: колонка — неделя, строка — день недели.
@@ -679,33 +650,19 @@
       activeEl.innerHTML = `Активных дней: <b>${activeDays}</b> из ${days.length}`;
     }
 
-    renderStreak(days, counts, today, total, activeDays);
-  }
-
-  /** Сколько дней подряд идёт активность прямо сейчас.
-   *
-   * Отсутствие активности сегодня серию не обрывает: день ещё не кончился,
-   * и обнулять счётчик в полночь было бы враньём. Как только сутки прошли
-   * без событий, серия гаснет.
-   */
-  function currentStreak(days) {
-    let index = days.length - 1;
-    if (days[index] === 0) index -= 1;
-    let streak = 0;
-    while (index >= 0 && days[index] > 0) {
-      streak += 1;
-      index -= 1;
-    }
-    return streak;
+    renderStreak(counts, today, total, activeDays);
   }
 
   const FLAME = '<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M13.6 1.5c.4 3-1.1 4.7-2.5 6.1C9.5 9.2 8 10.8 8.2 13.6c-.9-.6-1.6-1.7-1.9-2.9C4.8 12.2 4 14.1 4 16c0 4.2 3.6 6.9 8 6.9s8-3 8-7.3c0-3.9-2.3-6.4-4-8.2-1.7-1.8-2.4-3.8-2.4-5.9z"/></svg>';
 
-  function renderStreak(days, counts, today, total, activeDays) {
+  function renderStreak(counts, today, total, activeDays) {
     const box = document.getElementById('ud-streak');
     if (!box) return;
 
-    const streak = currentStreak(days);
+    // Правило серии живёт на сервере (users/activity.py): его же
+    // показывает огонёк в публичном профиле
+    const info = (state.attempts && state.attempts.streak) || { current: 0, best: 0 };
+    const streak = info.current;
     const alive = streak > 0;
     const todayCount = counts.get(dayKey(today)) || 0;
 
@@ -731,7 +688,7 @@
       note = 'Серия прервана. Любое действие сегодня начнёт новую.';
     }
 
-    const best = bestStreak(days);
+    const best = info.best;
     const perWeek = (total / HEAT_WEEKS).toFixed(1).replace('.', ',');
 
     box.innerHTML = `
@@ -758,16 +715,6 @@
         <div class="ud-streak-stat"><b>${activeDays}</b><span>активных дней</span></div>
         <div class="ud-streak-stat"><b>${perWeek}</b><span>в неделю</span></div>
       </div>`;
-  }
-
-  function bestStreak(days) {
-    let best = 0;
-    let run = 0;
-    for (const n of days) {
-      run = n ? run + 1 : 0;
-      if (run > best) best = run;
-    }
-    return best;
   }
 
   // Число и слово нужны то вместе («5 дней»), то порознь: в плашке серии
@@ -849,6 +796,12 @@
     document.getElementById('ud-s-email').value = c.email || '';
     document.getElementById('ud-s-phone').value = c.phone || '';
     document.getElementById('ud-s-bio').value = c.bio || '';
+    // Сервер отдаёт ссылки списком для показа — в форму раскладываем по видам
+    const links = {};
+    (c.links || []).forEach(link => { links[link.kind] = link.url; });
+    document.getElementById('ud-s-github').value = links.github || '';
+    document.getElementById('ud-s-telegram').value = links.telegram || '';
+    document.getElementById('ud-s-site').value = links.site || '';
     skills = (c.skills || []).slice();
     renderSkills();
     renderAvatarBox(c);
@@ -889,9 +842,16 @@
         phone: document.getElementById('ud-s-phone').value.trim(),
         bio: document.getElementById('ud-s-bio').value.trim(),
         skills,
+        links: {
+          github: document.getElementById('ud-s-github').value.trim(),
+          telegram: document.getElementById('ud-s-telegram').value.trim(),
+          site: document.getElementById('ud-s-site').value.trim(),
+        },
       }, candidate => {
         skills = (candidate.skills || []).slice();
         renderSkills();
+        // Сервер приводит «@nick» к полному адресу — показываем, что вышло
+        renderSettingsTab();
         flashSettings('Сохранено', 'success');
       });
     } catch (e) {

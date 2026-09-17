@@ -7,10 +7,8 @@
 Сравнение со средним по площадке нужно, чтобы автор понимал, его тест
 сложный или обычный: 30% справившихся сами по себе ни о чём не говорят.
 """
-from datetime import timedelta
-
 from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Q
-from django.db.models.functions import TruncDate
+from django.db.models.fields.json import KeyTextTransform
 from django.utils import timezone
 
 from tests.attempts import ABANDON_AFTER, PASS_PERCENT
@@ -19,8 +17,8 @@ from tests.constructor.models import Test, TestAttempt
 # Границы столбиков гистограммы результатов, в процентах
 BUCKETS = [(0, 20), (21, 40), (41, 60), (61, 80), (81, 100)]
 
-# Глубина тепловой карты в кабинете кандидата — 26 недель
-HEAT_DAYS = 182
+# Активность по дням и серии считает users.activity: там события со всей
+# площадки, а не только прохождения тестов
 
 # Сколько последних прохождений показывать списком. Это не история попыток,
 # а срез «как идёт сейчас»: длинный список только оттесняет остальные блоки.
@@ -81,27 +79,55 @@ def platform_summary():
     return summary
 
 
-def _daily(queryset, days):
-    """Сколько прохождений закрыто в каждый из последних дней.
+# Подписи тем. Такой же словарь лежит в четырёх скриптах каталогов —
+# здесь он нужен, чтобы публичный профиль не заводил пятую копию.
+CATEGORY_LABELS = {
+    'frontend': 'Frontend',
+    'backend': 'Backend',
+    'devops': 'DevOps',
+    'analytics': 'Аналитика',
+    'other': 'Другое',
+}
 
-    Нужно тепловой карте в кабинете: она рисовалась по созданным статьям,
-    тестам и отправленным решениям, а прохождения тестов — самое частое
-    действие кандидата — в ней не участвовали вовсе.
+# Тема засчитывается в сильные стороны от такого числа пройденных тестов:
+# по одному результату судить не о чем
+MIN_TOPIC_ATTEMPTS = 2
+TOP_TOPICS = 6
 
-    Считаем именно завершённые: открыть тест и уйти — не то событие,
-    которым стоит закрашивать день.
+
+def strengths(username, limit=TOP_TOPICS, min_attempts=MIN_TOPIC_ATTEMPTS):
+    """По каким темам кандидат показывает результат.
+
+    Это единственное на публичном профиле, что подтверждается делом, а не
+    вписано руками: навыки в профиле человек указывает сам, а тут результат
+    чужих тестов. Тема лежит внутри JSON-поля Test.stats, поэтому
+    группируем по ключу, а не по колонке.
     """
-    since = timezone.now() - timedelta(days=days)
-    rows = (queryset
-            .filter(finished_at__gte=since)
-            .annotate(day=TruncDate('finished_at'))
-            .values('day')
-            .annotate(n=Count('id'))
-            .values_list('day', 'n'))
-    return {day.isoformat(): n for day, n in rows if day is not None}
+    rows = (_scored(TestAttempt.objects.filter(candidate_username=username))
+            .annotate(topic=KeyTextTransform('category', 'test__stats'))
+            .values('topic')
+            .annotate(attempts=Count('id'), average=Avg(_percent()))
+            .filter(attempts__gte=min_attempts)
+            .order_by('-average'))
+
+    result = []
+    for row in rows:
+        topic = row['topic'] or ''
+        # Тест без темы в сильные стороны записать нельзя: непонятно, в чём
+        if not topic:
+            continue
+        result.append({
+            'topic': topic,
+            'label': CATEGORY_LABELS.get(topic, topic),
+            'attempts': row['attempts'],
+            'avg_percent': round(row['average']),
+        })
+        if len(result) == limit:
+            break
+    return result
 
 
-def for_candidate(username, recent=RECENT_ATTEMPTS, days=HEAT_DAYS):
+def for_candidate(username, recent=RECENT_ATTEMPTS):
     """Как кандидат проходит чужие тесты.
 
     В кабинете кандидата этого не было вовсе: статистика показывала только
@@ -127,7 +153,6 @@ def for_candidate(username, recent=RECENT_ATTEMPTS, days=HEAT_DAYS):
         'avg_percent': summary['avg_percent'],
         'pass_rate': summary['pass_rate'],
         'pass_percent': PASS_PERCENT,
-        'daily': _daily(attempts_qs, days),
         'recent': [{
             'test_id': attempt.test_id,
             'title': attempt.test.title,

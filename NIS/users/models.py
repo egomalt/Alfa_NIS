@@ -6,6 +6,10 @@ class UserProfile(models.Model):
     bio = models.TextField(blank=True)
     phone = models.CharField(max_length=32, blank=True)
     skills = models.JSONField(default=list, blank=True)
+    # Ссылки на себя: github, telegram, site. Словарь, а не три поля —
+    # набор ещё будет меняться, а миграция на каждую ссылку того не стоит.
+    # Приводит значения к виду и отбрасывает лишние ключи users.links.clean()
+    links = models.JSONField(default=dict, blank=True)
     avatar = models.ImageField(upload_to='user_avatars/', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

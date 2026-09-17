@@ -8,6 +8,7 @@ from authorization.models import ROLE_COMPANY, ROLE_USER
 from core.auth import api_login_required, page_login_required
 from core.utils import load_json_body
 from tests import attempts, code_results, statistics
+from users import activity
 
 from .executor import LANGUAGES, run_in_docker
 from .models import Test, TestAnswer, TestPage
@@ -160,8 +161,20 @@ def api_tests_list(request):
 @require_GET
 @api_login_required()
 def api_my_attempts(request):
-    """Как текущий пользователь проходит тесты — для кабинета кандидата."""
-    return JsonResponse({'ok': True, **statistics.for_candidate(request.account.username)})
+    """Как текущий пользователь проходит тесты — для кабинета кандидата.
+
+    Заодно отдаём активность по дням и серии: карта в кабинете собирала
+    события в браузере, а серию считала там же, и с появлением огонька
+    в публичном профиле правило пришлось бы написать второй раз.
+    """
+    username = request.account.username
+    daily = activity.daily(username)
+    return JsonResponse({
+        'ok': True,
+        **statistics.for_candidate(username),
+        'daily': daily,
+        'streak': activity.streaks(daily),
+    })
 
 
 @require_GET
