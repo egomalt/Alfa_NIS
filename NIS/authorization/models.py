@@ -15,13 +15,13 @@ ROLE_CHOICES = [
 # Подписи ролей для интерфейса и отчётов — берём отсюда, а не дублируем по файлам
 ROLE_LABELS = dict(ROLE_CHOICES)
 
+# Предупреждения убраны: они сохранялись в аккаунт и жили только в админке,
+# до самого пользователя не доходило ничего — ни при входе, ни в кабинете
 STATUS_ACTIVE = 'active'
-STATUS_WARNED = 'warned'
 STATUS_BANNED = 'banned'
 
 STATUS_CHOICES = [
     (STATUS_ACTIVE, 'Активен'),
-    (STATUS_WARNED, 'Предупреждён'),
     (STATUS_BANNED, 'Забанен'),
 ]
 
@@ -57,8 +57,6 @@ class Account(AbstractBaseUser):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE, db_index=True)
     ban_until = models.DateTimeField(null=True, blank=True)
     ban_reason = models.TextField(blank=True)
-    warning_reason = models.TextField(blank=True)
-    warned_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = 'username'
@@ -75,9 +73,15 @@ class Account(AbstractBaseUser):
 
     @property
     def is_active(self):
-        """Django сверяется с этим полем на каждом запросе — забаненный теряет доступ сразу,
-        не дожидаясь истечения своей сессии."""
-        return not self.is_banned
+        """Заблокированный аккаунт остаётся живым для Django намеренно.
+
+        Раньше здесь возвращалось `not self.is_banned`, и забаненного
+        выбрасывало на любом запросе. Из-за этого он не мог узнать ни причину,
+        ни срок: единственным местом, где это писалось, была форма входа.
+        Теперь он входит и видит в кабинете плашку с причиной, а действовать
+        ему не даёт core.auth — там любой запрос, кроме чтения, отклоняется.
+        """
+        return True
 
     @property
     def is_staff(self):

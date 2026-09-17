@@ -1,4 +1,4 @@
-/* Раздел «Пользователи»: бан / предупреждение / разбан. */
+/* Раздел «Пользователи»: бан и разбан. */
 (function () {
   'use strict';
   var A = window.AdminPanel;
@@ -20,8 +20,7 @@
     } else if (u.status === 'banned') {
       actions = '<button class="ap-btn-mini" data-act="unban" data-user="' + A.esc(u.username) + '">Разбанить</button>';
     } else {
-      actions = '<button class="ap-btn-mini" data-act="warn" data-user="' + A.esc(u.username) + '" data-name="' + A.esc(u.name) + '">Варн</button>'
-        + '<button class="ap-btn-mini ap-danger" data-act="ban" data-user="' + A.esc(u.username) + '" data-name="' + A.esc(u.name) + '">Бан</button>';
+      actions = '<button class="ap-btn-mini ap-danger" data-act="ban" data-user="' + A.esc(u.username) + '" data-name="' + A.esc(u.name) + '">Бан</button>';
     }
     return '<div class="ap-trow ap-body">'
       + '<div style="display:flex;align-items:center;gap:10px;"><span class="ap-company-avatar" style="width:30px;height:30px;font-size:13px;">' + A.esc(u.letter) + '</span><div class="ap-u-name">' + A.esc(u.name) + '</div></div>'
@@ -87,10 +86,6 @@
       var name = t.dataset.name || username;
       if (act === 'unban') {
         A.apiPost('/api/v1/admin/users/' + username + '/unban/', {}).then(afterAction).catch(function (err) { alert(err.message); });
-      } else if (act === 'warn') {
-        A.openReasonModal('Причина предупреждения — ' + name, function (reason) {
-          A.apiPost('/api/v1/admin/users/' + username + '/warn/', { reason: reason }).then(afterAction).catch(function (err) { alert(err.message); });
-        });
       } else if (act === 'ban') {
         A.openReasonModal('Причина и срок бана — ' + name, function (reason, duration) {
           A.apiPost('/api/v1/admin/users/' + username + '/ban/', { reason: reason, duration: duration }).then(afterAction).catch(function (err) { alert(err.message); });

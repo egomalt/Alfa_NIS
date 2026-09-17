@@ -7,10 +7,11 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_http_methods
 
+from authorization import bans
 from authorization.models import Account, ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
 from companies.models import Company
-from core.auth import api_login_required
+from core.auth import api_login_required, ban_block
 
 from . import statistics
 from core.pagination import paginate
@@ -87,14 +88,21 @@ def _candidate_cards(usernames):
     profiles = {
         p.username: p for p in UserProfile.objects.filter(username__in=usernames)
     }
+    # Решение скрыть нельзя — компания должна видеть присланную работу, —
+    # поэтому у заблокированного прячем только личность и контакты
+    hidden = bans.banned_usernames()
     cards = {}
     for username in usernames:
         profile = profiles.get(username)
+        if username in hidden:
+            cards[username] = {'email': '', 'phone': '', 'skills': [], 'bio': '', 'banned': True}
+            continue
         cards[username] = {
             'email': emails.get(username) or '',
             'phone': (profile.phone if profile else None) or '',
             'skills': (profile.skills if profile else None) or [],
             'bio': (profile.bio if profile else None) or '',
+            'banned': False,
         }
     return cards
 
@@ -104,10 +112,14 @@ def _sub_to_dict(s, cards=None):
     if card is None:
         card = _candidate_cards([s.candidate_username])[s.candidate_username]
     email, skills, bio = card['email'], card['skills'], card['bio']
+    banned = card.get('banned', False)
     return {
         'id': s.id,
-        'candidate_username': s.candidate_username,
-        'candidate_name': s.candidate_name,
+        # Имя и логин заблокированного заменяем подписью: работа остаётся
+        # на месте, автор перестаёт быть ссылкой на скрытый профиль
+        'candidate_username': '' if banned else s.candidate_username,
+        'candidate_name': bans.BANNED_LABEL if banned else s.candidate_name,
+        'candidate_banned': banned,
         'candidate_email': email,
         'candidate_phone': card['phone'],
         'candidate_skills': skills,
@@ -192,6 +204,11 @@ def api_contest_detail(request, contest_id):
         return JsonResponse({'ok': False, 'message': 'Требуется вход.'}, status=401)
     if c.company_username != account.username:
         return JsonResponse({'ok': False, 'message': 'Нет доступа'}, status=403)
+    # Единственная пишущая вьюха с собственной проверкой доступа —
+    # общий guard её не оборачивает, поэтому бан сверяем здесь же
+    blocked = ban_block(account, request.method)
+    if blocked is not None:
+        return blocked
 
     if request.method == 'DELETE':
         c.delete()
@@ -363,7 +380,9 @@ def api_submission_winner(request, contest_id, sub_id):
 
 @require_http_methods(['GET'])
 def api_contests_catalog(request):
-    qs = Contest.objects.filter(status__in=['active', 'finished', 'review'])
+    qs = (Contest.objects
+          .filter(status__in=['active', 'finished', 'review'])
+          .exclude(company_username__in=bans.banned_usernames()))
     if request.GET.get('status'):
         qs = qs.filter(status=request.GET['status'])
     if request.GET.get('category'):

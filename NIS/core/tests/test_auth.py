@@ -114,24 +114,37 @@ class LoginTests(BaseCase):
 
 
 class BanTests(BaseCase):
-    def test_ban_applies_to_existing_session(self):
-        """Раньше забаненный доживал на старой сессии до 30 дней."""
+    """Блокировка забирает право действовать, а не право видеть.
+
+    Раньше забаненного выбрасывало на любом запросе: `Account.is_active`
+    возвращал `not is_banned`. Причину он мог узнать только на форме входа,
+    куда попадал, лишь выйдя сам, — то есть обычно не узнавал вовсе.
+    Теперь он входит, видит в кабинете плашку с причиной и сроком, но любой
+    запрос, кроме чтения, отклоняется в core.auth.
+    """
+
+    def test_ban_stops_actions_but_not_reading(self):
         client = self.login('kandidat')
-        self.assertIsNotNone(client.get('/api/v1/auth/me/').json()['account'])
-
-        Account.objects.filter(username='kandidat').update(status=STATUS_BANNED, ban_until=None)
-        self.assertIsNone(client.get('/api/v1/auth/me/').json()['account'])
-
-    def test_banned_cannot_log_in_and_sees_reason(self):
         Account.objects.filter(username='kandidat').update(
             status=STATUS_BANNED, ban_until=None, ban_reason='спам')
-        response = Client().post('/api/v1/auth/signin/', {'username': 'kandidat', 'password': PASSWORD})
+
+        account = client.get('/api/v1/auth/me/').json()['account']
+        self.assertTrue(account['banned'])
+        self.assertEqual(account['ban_reason'], 'спам')
+
+        response = client.patch('/api/v1/candidates/kandidat/update/',
+                                '{"name": "Другое"}', 'application/json')
         self.assertEqual(response.status_code, 403)
-        # Блокировка — состояние аккаунта, а не ошибка поля: приходит как message
-        payload = response.json()
-        self.assertNotIn('errors', payload)
-        self.assertIn('заблокирован', payload['message'].lower())
-        self.assertIn('спам', payload['message'])
+        self.assertEqual(response.json()['code'], 'banned')
+
+    def test_banned_logs_in_and_learns_why(self):
+        Account.objects.filter(username='kandidat').update(
+            status=STATUS_BANNED, ban_until=None, ban_reason='спам')
+        client = Client()
+        self.assertEqual(
+            client.post('/api/v1/auth/signin/',
+                        {'username': 'kandidat', 'password': PASSWORD}).status_code, 200)
+        self.assertIn('спам', client.get('/api/v1/auth/me/').json()['account']['ban_reason'])
 
     def test_expired_ban_lifts_itself(self):
         Account.objects.filter(username='kandidat').update(

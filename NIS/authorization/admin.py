@@ -12,6 +12,6 @@ class AccountAdmin(admin.ModelAdmin):
     readonly_fields = ('password', 'last_login', 'created_at')
     fieldsets = (
         ('Аккаунт', {'fields': ('username', 'name', 'email', 'role')}),
-        ('Модерация', {'fields': ('status', 'ban_until', 'ban_reason', 'warning_reason', 'warned_at')}),
+        ('Модерация', {'fields': ('status', 'ban_until', 'ban_reason')}),
         ('Служебное', {'fields': ('password', 'last_login', 'created_at')}),
     )

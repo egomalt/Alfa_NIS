@@ -6,6 +6,7 @@ from django.views.decorators.http import require_GET
 
 from tests import attempts
 from tests.constructor.models import Test
+from authorization import bans
 from authorization.models import Account
 from core.pagination import paginate
 
@@ -24,6 +25,7 @@ def api_tests_catalog(request):
     owner_names = {a.username: a.name for a in Account.objects.all()}
     tests_qs = (Test.objects
                 .filter(status=Test.STATUS_PUBLISHED)
+                .exclude(owner_username__in=bans.banned_usernames())
                 .annotate(page_total=Count('pages', distinct=True),
                           finished_attempts=attempts.finished_count())
                 .order_by('-created_at'))

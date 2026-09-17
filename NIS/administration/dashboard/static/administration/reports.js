@@ -22,7 +22,6 @@
     var authorActions = isNew
       ? '<div class="ap-action-group"><div class="ap-action-group-title">' + (isUserReport ? 'Пользователь' : 'Автор') + '</div><div class="ap-report-actions">'
         + (authorLink ? '<a class="ap-btn-secondary" href="' + authorLink + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none;" data-stop="1">Открыть профиль</a>' : '')
-        + '<button class="ap-btn-mini" data-act="warn-author" data-id="' + r.id + '" data-user="' + A.esc(r.author_username) + '">Предупредить</button>'
         + '<button class="ap-btn-mini ap-danger" data-act="ban-author" data-id="' + r.id + '" data-user="' + A.esc(r.author_username) + '">Забанить</button>'
         + '</div></div>'
       : '';
@@ -124,15 +123,6 @@
           return;
         }
         if (act === 'keep' || act === 'dismiss') { A.apiPost('/api/v1/admin/reports/' + id + '/dismiss/', {}).then(afterAction).catch(function (err) { alert(err.message); }); return; }
-        if (act === 'warn-author') {
-          var wu = actEl.dataset.user;
-          A.openReasonModal('Причина предупреждения — ' + wu, function (reason) {
-            A.apiPost('/api/v1/admin/users/' + wu + '/warn/', { reason: reason })
-              .then(function () { return A.apiPost('/api/v1/admin/reports/' + id + '/resolve/', {}); })
-              .then(afterAction).catch(function (err) { alert(err.message); });
-          });
-          return;
-        }
         if (act === 'ban-author') {
           var bu = actEl.dataset.user;
           A.openReasonModal('Причина и срок бана — ' + bu, function (reason, duration) {

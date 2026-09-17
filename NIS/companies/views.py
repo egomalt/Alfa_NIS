@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
+from authorization import bans
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
 from core.auth import api_login_required, page_login_required
@@ -98,6 +99,7 @@ def api_companies_list(request):
     companies_qs = (
         Company.objects
         .filter(verification_status=Company.VERIF_APPROVED)
+        .exclude(username__in=bans.banned_usernames())
         .annotate(tests_total=Coalesce(Subquery(published_tests, output_field=IntegerField()), 0))
         .order_by('-tests_total', '-created_at')
     )

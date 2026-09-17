@@ -2,7 +2,8 @@
    Страница объявляет цель через window.ALFA_MOD_TARGET:
      { type:'article', id, author, title }
      { type:'contest', id }                     // автора/заголовок добираем из API
-     { type:'user', username }                  // публичный профиль
+     { type:'user', username }                  // профиль кандидата
+     { type:'company', username }               // профиль компании
    Панель и действия показываются только аккаунту с ролью moderator. */
 (function () {
   'use strict';
@@ -50,26 +51,49 @@
         return { author: c.company_username, authorRole: 'company', title: c.title || 'конкурс' };
       });
     }
-    // user
-    return Promise.resolve({ author: target.username, authorRole: 'user', title: '' });
+    // Профиль человека или компании: автор — он сам
+    return Promise.resolve({
+      author: target.username,
+      authorRole: target.type === 'company' ? 'company' : 'user',
+      title: '',
+    });
   }
 
   // ── Панель ───────────────────────────────────────────────────
+
+  // Что именно мы сейчас модерируем — подпись рядом со значком
+  var TARGET_LABEL = {
+    article: 'Статья', contest: 'Конкурс',
+    user: 'Кандидат', company: 'Компания',
+  };
+
   function buildBar(ctx) {
     var bar = document.createElement('div');
     bar.className = 'mb-bar';
+
     var buttons = '';
     if (target.type === 'article') {
-      buttons = '<button class="mb-btn mb-danger" data-mb="del-article">Удалить статью</button>'
-        + '<button class="mb-btn" data-mb="author">Действия с автором</button>';
+      buttons = '<button class="mb-btn mb-danger" data-mb="del-article">Удалить статью</button>';
     } else if (target.type === 'contest') {
-      buttons = '<button class="mb-btn mb-danger" data-mb="del-contest">Удалить конкурс</button>'
-        + '<button class="mb-btn" data-mb="author">Действия с автором</button>';
-    } else {
-      buttons = '<button class="mb-btn" data-mb="author">Действия модератора</button>';
+      buttons = '<button class="mb-btn mb-danger" data-mb="del-contest">Удалить конкурс</button>';
     }
-    bar.innerHTML = '<span class="mb-badge"><span class="mb-dot"></span>Модератор</span>' + buttons;
+    buttons += '<button class="mb-btn" data-mb="author">Действия</button>';
+
+    // Кого модерируем: без этого на профиле было непонятно, к кому относятся
+    // действия, — плашка выглядела одинаково на любой странице
+    var who = TARGET_LABEL[target.type] || '';
+    if (ctx.author) who += ' · @' + esc(ctx.author);
+
+    bar.innerHTML = '<span class="mb-badge"><span class="mb-dot"></span>Модератор</span>'
+      + (who ? '<span class="mb-target">' + who + '</span>' : '')
+      + '<span class="mb-sep"></span>'
+      + buttons
+      + '<button class="mb-close" data-mb="hide" title="Скрыть панель" aria-label="Скрыть панель">'
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
     document.body.appendChild(bar);
+    // Панель висит поверх страницы — освобождаем под неё место, иначе она
+    // закрывает нижний край контента
+    document.body.style.paddingBottom = bar.offsetHeight + 34 + 'px';
 
     bar.addEventListener('click', function (e) {
       var b = e.target.closest('[data-mb]');
@@ -78,6 +102,10 @@
       if (act === 'del-article') confirmDeleteMaterial(ctx, 'article');
       else if (act === 'del-contest') confirmDeleteMaterial(ctx, 'contest');
       else if (act === 'author') openAuthorActions(ctx.author);
+      else if (act === 'hide') {
+        bar.remove();
+        document.body.style.paddingBottom = '';
+      }
     });
   }
 
@@ -92,7 +120,7 @@
       + '<div class="mb-actions">'
       + '<button class="mb-btn" data-close>Отмена</button>'
       + '<button class="mb-btn mb-danger" id="mb-do-del">Удалить</button>'
-      + (ctx.author ? '<button class="mb-btn" data-open-author>Другие действия с автором</button>' : '')
+      + (ctx.author ? '<button class="mb-btn" data-open-author>Другие действия</button>' : '')
       + '</div>';
     var m = openModal(body);
     m.querySelector('[data-open-author]') && m.querySelector('[data-open-author]').addEventListener('click', function () {
@@ -137,7 +165,7 @@
           }).join('')
         : '<div class="mb-modal-text">Материалов нет.</div>';
 
-      var body = '<div class="mb-modal-title">Автор @' + esc(u.username) + '</div>'
+      var body = '<div class="mb-modal-title">@' + esc(u.username) + '</div>'
         + '<div class="mb-modal-text">' + esc(u.name || '') + (u.role ? ' · ' + esc(ROLE_LABEL[u.role] || u.role) : '') + '</div>'
 
         + '<div class="mb-group-title">Блокировка</div>'
@@ -145,7 +173,6 @@
         + '<div class="mb-row"><input type="number" class="mb-num" id="mb-ban-days" min="1" value="7"> дней '
         + '<button class="mb-btn mb-mini" id="mb-ban-perm" type="button">Навсегда</button>'
         + '<span class="mb-grow"></span>'
-        + '<button class="mb-btn" id="mb-do-warn">Предупредить</button>'
         + '<button class="mb-btn mb-danger" id="mb-do-ban">Заблокировать</button></div>'
 
         + '<div class="mb-group-title">Удалить контент автора</div>'
@@ -169,13 +196,6 @@
         jpost('/api/v1/admin/users/' + username + '/ban/', { reason: reason, duration: duration })
           .then(function () { flash(m, 'Пользователь заблокирован.', true); })
           .catch(function (err) { flash(m, err.message); this && (this.disabled = false); }.bind(this));
-      });
-      m.querySelector('#mb-do-warn').addEventListener('click', function () {
-        var reason = m.querySelector('#mb-ban-reason').value.trim();
-        this.disabled = true;
-        jpost('/api/v1/admin/users/' + username + '/warn/', { reason: reason })
-          .then(function () { flash(m, 'Предупреждение отправлено.', true); })
-          .catch(function (err) { flash(m, err.message); });
       });
       var purgeBtn = m.querySelector('#mb-do-purge');
       if (purgeBtn) purgeBtn.addEventListener('click', function () {
@@ -239,9 +259,17 @@
   function injectStyles() {
     if (document.getElementById('mb-styles')) return;
     var css = ''
-      + '.mb-bar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:9000;display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface,#fff);border:1px solid var(--line,#e2e7f0);border-radius:14px;box-shadow:0 8px 30px rgba(16,24,40,.18);}'
-      + '.mb-badge{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--brand-text,#c81e2d);padding:0 6px;}'
-      + '.mb-dot{width:7px;height:7px;border-radius:50%;background:var(--brand,#d62839);box-shadow:0 0 0 3px rgba(214,40,57,.18);}'
+      + '.mb-bar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:9000;display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;max-width:calc(100vw - 24px);background:var(--surface,#fff);border:1px solid var(--line,#e2e7f0);border-radius:14px;box-shadow:0 10px 34px rgba(16,24,40,.20);}'
+      + '.mb-badge{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--brand-text,#c81e2d);white-space:nowrap;}'
+      + '.mb-dot{width:7px;height:7px;border-radius:50%;background:var(--brand,#d62839);box-shadow:0 0 0 3px rgba(214,40,57,.18);flex-shrink:0;}'
+      /* Кого модерируем: длинный логин обрезаем, а не растягиваем панель */
+      + '.mb-target{font-size:12.5px;color:var(--muted,#6e7787);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}'
+      + '.mb-sep{width:1px;align-self:stretch;background:var(--line,#e2e7f0);margin:0 2px;}'
+      + '.mb-close{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;border:none;border-radius:8px;background:transparent;color:var(--faint,#99a2b2);cursor:pointer;}'
+      + '.mb-close:hover{background:var(--surface-2,#edf0f6);color:var(--text,#161a22);}'
+      /* На телефоне панель занимает всю ширину и переносит кнопки */
+      + '@media(max-width:560px){.mb-bar{left:12px;right:12px;bottom:12px;transform:none;max-width:none;flex-wrap:wrap;row-gap:8px;}'
+      + '.mb-sep{display:none;}.mb-target{max-width:none;flex:1;}.mb-btn{flex:1;}}'
       + '.mb-btn{height:34px;padding:0 14px;border:1px solid var(--line-2,#d2d9e6);border-radius:9px;background:var(--surface,#fff);color:var(--text,#161a22);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;}'
       + '.mb-btn:hover{border-color:var(--brand,#d62839);color:var(--brand-text,#c81e2d);}'
       + '.mb-btn.mb-danger{background:var(--brand,#d62839);border-color:var(--brand,#d62839);color:#fff;}'

@@ -42,7 +42,6 @@
     approved: { label: 'Одобрено',    bg: 'var(--green-soft)', color: 'var(--green-text)' },
     rejected: { label: 'Отклонено',   bg: 'var(--red-soft)',   color: 'var(--red-text)' },
     active:   { label: 'Активен',     bg: 'var(--green-soft)', color: 'var(--green-text)' },
-    warned:   { label: 'Предупреждён',bg: 'var(--amber-soft)', color: 'var(--amber-text)' },
     banned:   { label: 'Забанен',     bg: 'var(--red-soft)',   color: 'var(--red-text)' },
     new:      { label: 'Новая',       bg: 'var(--amber-soft)', color: 'var(--amber-text)' },
     resolved: { label: 'Рассмотрена', bg: 'var(--green-soft)', color: 'var(--green-text)' },

@@ -16,8 +16,8 @@ def get_current_account(request):
     """Текущий вошедший аккаунт или None.
 
     Единая точка входа для всех проверок в проекте — 36 мест по коду зовут именно её.
-    Забаненных Django отсекает сам: `Account.is_active` завязан на состояние бана,
-    и стандартный бэкенд сверяется с ним при каждом запросе.
+    Заблокированный аккаунт отсюда тоже возвращается: он должен видеть свой
+    кабинет и причину бана. Действовать ему не даёт core.auth.ban_block.
     """
     if not request.user.is_authenticated:
         return None
@@ -63,16 +63,6 @@ def api_register(request):
     return JsonResponse({'ok': True, 'next_url': cabinet_url}, status=201)
 
 
-def _ban_message(account):
-    if account.ban_until is None:
-        message = 'Аккаунт заблокирован навсегда.'
-    else:
-        message = f'Аккаунт заблокирован до {account.ban_until.strftime("%d.%m.%Y")}.'
-    if account.ban_reason:
-        message += f' Причина: {account.ban_reason}'
-    return message
-
-
 def _cabinet_url(account):
     if account.role == ROLE_MODERATOR:
         return '/administration/'
@@ -95,14 +85,12 @@ def api_login(request):
         # Истёкший бан снимаем заранее, иначе Django сочтёт аккаунт неактивным и не пустит
         account.refresh_ban_state()
 
-    # Забаненному authenticate откажет сам: Account.is_active завязан на состояние бана
+    # Заблокированного пускаем: причину и срок он увидит плашкой в кабинете,
+    # а действовать ему не даст core.auth. Раньше здесь стоял отказ 403,
+    # и человек узнавал о блокировке, только если сам выходил из аккаунта.
     user = authenticate(request, username=account.username if account else username, password=password)
 
     if user is None:
-        # Ошибки уровня формы отдаём как message, а не привязываем к полю: это
-        # не «поле заполнено неверно», а состояние аккаунта или пары логин-пароль.
-        if account is not None and account.is_banned and account.check_password(password):
-            return JsonResponse({'ok': False, 'message': _ban_message(account), 'code': 'banned'}, status=403)
         # Один и тот же ответ на «нет такого аккаунта» и «неверный пароль»,
         # иначе по коду ответа можно перебором узнать, какие логины существуют.
         return JsonResponse(
@@ -146,5 +134,10 @@ def api_me(request):
             'email': account.email or '',
             'avatar': avatar,
             'profile_url': _cabinet_url(account),
+            # Состояние блокировки отдаём, чтобы кабинет показал плашку:
+            # человек должен понимать, почему у него ничего не сохраняется
+            'banned': account.is_banned,
+            'ban_reason': account.ban_reason if account.is_banned else '',
+            'ban_until': account.ban_until.isoformat() if account.is_banned and account.ban_until else None,
         },
     })

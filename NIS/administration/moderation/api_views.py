@@ -6,12 +6,13 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from contests.contests_cabinet.models import Contest
 from core.auth import moderator_required
 from core.pagination import paginate
 from core.utils import load_json_body
 from authorization.models import (
     Account, ROLE_LABELS, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER,
-    STATUS_ACTIVE, STATUS_BANNED, STATUS_WARNED,
+    STATUS_ACTIVE, STATUS_BANNED,
 )
 
 # Списки модерации могут вырасти, поэтому выдача постраничная.
@@ -30,7 +31,6 @@ def serialize_account(account):
         'status': account.status,
         'ban_until': account.ban_until.isoformat() if account.ban_until else None,
         'ban_reason': account.ban_reason,
-        'warning_reason': account.warning_reason,
     }
 
 
@@ -78,23 +78,24 @@ def api_user_ban(request, username):
     account.ban_until = ban_until
     account.ban_reason = reason
     account.save(update_fields=['status', 'ban_until', 'ban_reason'])
-    return JsonResponse({'ok': True, 'user': serialize_account(account)})
 
+    # Конкурсы заблокированной компании удаляем, а не прячем: у конкурса
+    # есть дедлайн и присланные решения, и повисший приём работ, который
+    # никто не разберёт, хуже, чем его отсутствие. Остальной контент
+    # (статьи, тесты, профиль) только скрывается и вернётся после разбана.
+    removed = 0
+    if account.role == ROLE_COMPANY:
+        contests = Contest.objects.filter(company_username=username)
+        # Считаем до удаления: delete() возвращает число всех задетых записей,
+        # включая решения и вложения, — в ответе это выглядело бы завышенным
+        removed = contests.count()
+        contests.delete()
 
-@require_POST
-@moderator_required
-def api_user_warn(request, username):
-    account = get_object_or_404(Account, username=username)
-    if account.role == ROLE_MODERATOR:
-        return JsonResponse({'ok': False, 'message': 'Нельзя предупредить модератора.'}, status=400)
-
-    data = load_json_body(request)
-    reason = (data.get('reason') or '').strip()
-    account.status = STATUS_WARNED
-    account.warning_reason = reason
-    account.warned_at = timezone.now()
-    account.save(update_fields=['status', 'warning_reason', 'warned_at'])
-    return JsonResponse({'ok': True, 'user': serialize_account(account)})
+    return JsonResponse({
+        'ok': True,
+        'user': serialize_account(account),
+        'contests_removed': removed,
+    })
 
 
 @require_POST

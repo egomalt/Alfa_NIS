@@ -94,7 +94,6 @@ urlpatterns = [
     path('admin/verifications/<slug:username>/reject/',  admin_verification_views.api_verification_reject),
     path('admin/users/',                                 admin_moderation_views.api_users),
     path('admin/users/<slug:username>/ban/',             admin_moderation_views.api_user_ban),
-    path('admin/users/<slug:username>/warn/',            admin_moderation_views.api_user_warn),
     path('admin/users/<slug:username>/unban/',           admin_moderation_views.api_user_unban),
     path('admin/reports/',                               admin_reports_views.api_reports),
     path('admin/reports/<int:report_id>/takedown/',      admin_reports_views.api_report_takedown),

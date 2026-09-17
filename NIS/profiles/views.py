@@ -2,7 +2,9 @@ from django.http import Http404
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 
+from authorization import bans
 from authorization.models import Account, ROLE_COMPANY, ROLE_USER
+from authorization.views import get_current_account
 from companies.models import Company
 
 
@@ -11,6 +13,11 @@ def profile_view(request, username):
     try:
         account = Account.objects.get(username=username)
     except Account.DoesNotExist:
+        raise Http404
+
+    # Заблокированный виден только себе и модератору. Именно 404, а не
+    # страница-заглушка: иначе по профилям можно ходить и смотреть, кого забанили
+    if not bans.visible_to(get_current_account(request), username):
         raise Http404
 
     if account.role == ROLE_COMPANY:
@@ -30,6 +37,8 @@ def profile_view(request, username):
 
 @ensure_csrf_cookie
 def company_contests_view(request, username):
+    if not bans.visible_to(get_current_account(request), username):
+        raise Http404
     try:
         company = Company.objects.get(username=username)
     except Company.DoesNotExist:
@@ -42,6 +51,8 @@ def company_contests_view(request, username):
 @ensure_csrf_cookie
 def company_tests_view(request, username):
     """Все опубликованные тесты компании — публичный аналог списка конкурсов."""
+    if not bans.visible_to(get_current_account(request), username):
+        raise Http404
     try:
         company = Company.objects.get(username=username)
     except Company.DoesNotExist:
@@ -54,5 +65,7 @@ def company_tests_view(request, username):
 @ensure_csrf_cookie
 def user_articles_view(request, username):
     if not Account.objects.filter(username=username, role=ROLE_USER).exists():
+        raise Http404
+    if not bans.visible_to(get_current_account(request), username):
         raise Http404
     return render(request, 'profiles/user_articles.html', {'username': username})

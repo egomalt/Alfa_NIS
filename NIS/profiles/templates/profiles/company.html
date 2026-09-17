@@ -97,5 +97,14 @@
 
 <script src="{% static 'js/plural.js' %}?v={{ ASSET_V }}"></script>
 <script src="{% static 'profiles/company.js' %}?v={{ ASSET_V }}"></script>
+{% comment %}
+  Плашка модератора: показывается только аккаунту с ролью moderator,
+  остальным скрипт не рисует ничего. На профиле компании её не было —
+  забанить компанию или снести её материалы можно было только из админки.
+{% endcomment %}
+<script>
+  window.ALFA_MOD_TARGET = { type: 'company', username: "{{ username|escapejs }}" };
+</script>
+<script src="{% static 'js/moderation-bar.js' %}?v={{ ASSET_V }}"></script>
 </body>
 </html>

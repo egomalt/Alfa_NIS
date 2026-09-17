@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 
+from authorization import bans
 from articles.constructor.models import Article
 from articles.serializers import author_names_for, serialize_article
 from core.pagination import paginate
@@ -17,7 +18,12 @@ def articles_catalog_shell(request):
 
 
 def api_articles_catalog(request):
-    articles_qs = Article.objects.filter(status=Article.STATUS_PUBLISHED).order_by('-published_at')
+    # Материалы заблокированных не показываем, но и не удаляем: после
+    # разбана они вернутся сами, потому что фильтр считается на лету
+    articles_qs = (Article.objects
+                   .filter(status=Article.STATUS_PUBLISHED)
+                   .exclude(author_username__in=bans.banned_usernames())
+                   .order_by('-published_at'))
     articles, page_meta = paginate(request, articles_qs, CATALOG_PER_PAGE)
     names = author_names_for(articles)
     data = [serialize_article(a, author_names=names) for a in articles]

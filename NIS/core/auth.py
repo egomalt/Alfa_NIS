@@ -23,6 +23,22 @@ from authorization.views import get_current_account
 SIGNIN_URL = '/authorization/signin/'
 
 
+def ban_block(account, method):
+    """Ответ вместо действия, если аккаунт заблокирован. Иначе None.
+
+    Заблокированному оставлено чтение: он должен видеть свой кабинет и
+    причину бана. Всё, что меняет данные, отклоняем — и делаем это здесь,
+    а не в каждой вьюхе: через этот guard проходят все эндпоинты, кроме
+    входа, регистрации и отправки ответов на тест.
+    """
+    if method in ('GET', 'HEAD', 'OPTIONS') or not account.is_banned:
+        return None
+    message = 'Аккаунт заблокирован'
+    if account.ban_reason:
+        message += ': ' + account.ban_reason
+    return JsonResponse({'ok': False, 'message': message + '.', 'code': 'banned'}, status=403)
+
+
 def api_login_required(*roles):
     """Guard для JSON-эндпоинтов: 401 без входа, 403 при неподходящей роли.
 
@@ -37,6 +53,9 @@ def api_login_required(*roles):
                 return JsonResponse({'ok': False, 'message': 'Требуется вход.'}, status=401)
             if roles and account.role not in roles:
                 return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
+            blocked = ban_block(account, request.method)
+            if blocked is not None:
+                return blocked
             request.account = account
             return view(request, *args, **kwargs)
         return wrapper

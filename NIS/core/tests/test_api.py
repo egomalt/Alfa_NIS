@@ -16,7 +16,7 @@ from articles.constructor.models import Article
 from authorization.models import Account, ROLE_USER
 from companies import statistics
 from companies.models import Company, CompanyRating
-from contests.contests_cabinet.models import ContestSubmission
+from contests.contests_cabinet.models import Contest, ContestSubmission
 from exports.company import build_company_pdf, contest_rows, test_rows
 from exports.pdf import fit_column_widths, plural
 from exports.user import build_user_pdf
@@ -777,6 +777,117 @@ class CabinetSidebarTests(BaseCase):
             with self.subTest(url=url):
                 client = self.login('firma' if url.startswith(('/cabinet/company', '/constructor')) else 'kandidat')
                 self.assertNotIn('data-logout-btn', client.get(url).content.decode())
+
+    def test_ban_hides_the_account_from_everyone_else(self):
+        """Бан означал только «не войти»: профиль и материалы жили дальше."""
+        self.make_article(author='kandidat', title='Статья')
+        self.make_test(owner='kandidat', title='Тест')
+        Account.objects.filter(username='kandidat').update(
+            status='banned', ban_until=None, ban_reason='спам')
+
+        anon = Client()
+        self.assertEqual(anon.get('/kandidat/').status_code, 404)
+        self.assertEqual(anon.get('/kandidat/articles/').status_code, 404)
+        catalog = anon.get('/api/v1/articles/catalog/').json()['articles']
+        self.assertEqual([a for a in catalog if a['author_username'] == 'kandidat'], [])
+        tests = anon.get('/api/v1/tests/catalog/').json()['tests']
+        self.assertEqual([t for t in tests if t.get('owner_username') == 'kandidat'], [])
+
+    def test_ban_leaves_the_account_visible_to_itself_and_moderator(self):
+        """Иначе человек не узнает ни причину, ни срок."""
+        Account.objects.filter(username='kandidat').update(status='banned', ban_reason='спам')
+        self.assertEqual(self.login('kandidat').get('/kandidat/').status_code, 200)
+        self.assertEqual(self.login('moder').get('/kandidat/').status_code, 200)
+
+    def test_expired_ban_stops_hiding_by_itself(self):
+        """status снимается только при входе, поэтому фильтр смотрит на дату."""
+        from authorization import bans
+
+        Account.objects.filter(username='kandidat').update(
+            status='banned', ban_until=timezone.now() - timedelta(days=1))
+        self.assertNotIn('kandidat', bans.banned_usernames())
+        self.assertEqual(Client().get('/kandidat/').status_code, 200)
+
+    def test_banned_account_can_read_but_not_write(self):
+        Account.objects.filter(username='kandidat').update(status='banned', ban_reason='спам')
+        client = self.login('kandidat')
+
+        me = client.get('/api/v1/auth/me/').json()['account']
+        self.assertTrue(me['banned'])
+        self.assertEqual(me['ban_reason'], 'спам')
+
+        response = client.patch('/api/v1/candidates/kandidat/update/',
+                                json.dumps({'name': 'Новое'}), 'application/json')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['code'], 'banned')
+        self.assertEqual(Account.objects.get(username='kandidat').name, 'Кандидат')
+
+    def test_banning_a_company_removes_its_contests(self):
+        """Конкурс с дедлайном, который никто не разберёт, хуже его отсутствия."""
+        self.make_contest(owner='firma')
+        self.make_contest(owner='firma', title='Второй')
+
+        response = self.login('moder').post(
+            '/api/v1/admin/users/firma/ban/',
+            json.dumps({'reason': 'нарушение', 'duration': 'perm'}), 'application/json')
+        self.assertEqual(response.json()['contests_removed'], 2)
+        self.assertEqual(Contest.objects.filter(company_username='firma').count(), 0)
+
+    def test_submissions_show_a_label_instead_of_a_banned_candidate(self):
+        """Работу компания видеть должна, личность заблокированного — нет."""
+        contest = self.make_contest(owner='firma')
+        ContestSubmission.objects.create(
+            contest=contest, candidate_username='kandidat', candidate_name='Кандидат', text='Решение')
+        Account.objects.filter(username='kandidat').update(status='banned')
+
+        row = self.login('firma').get(
+            f'/api/v1/contests/{contest.id}/submissions/').json()['submissions'][0]
+        self.assertEqual(row['candidate_name'], 'Заблокирован')
+        self.assertEqual(row['candidate_username'], '')
+        self.assertTrue(row['candidate_banned'])
+        self.assertEqual(row['candidate_email'], '')
+        self.assertEqual(row['text'], 'Решение')
+
+    def test_warnings_are_gone_everywhere(self):
+        """Предупреждение сохранялось в аккаунт и жило только в админке —
+        до пользователя не доходило ничего. Механики больше нет."""
+        from authorization.models import Account as AccountModel
+
+        fields = {f.name for f in AccountModel._meta.get_fields()}
+        self.assertNotIn('warning_reason', fields)
+        self.assertNotIn('warned_at', fields)
+        self.assertNotIn('warned', dict(AccountModel._meta.get_field('status').choices))
+
+        self.assertEqual(
+            self.login('moder').post('/api/v1/admin/users/kandidat/warn/').status_code, 404)
+
+        root = Path(settings.BASE_DIR)
+        for path in list(root.glob('*/static/**/*.js')) + list(root.glob('*/*/static/**/*.js')) \
+                + [root / 'static/js/moderation-bar.js']:
+            with self.subTest(file=path.name):
+                self.assertNotIn('/warn/', path.read_text(encoding='utf-8'))
+
+    def test_moderation_bar_is_on_every_moderatable_page(self):
+        """Профиль компании панели не имел: забанить её можно было только
+        из админки, хотя у кандидата кнопка была прямо на странице."""
+        root = Path(settings.BASE_DIR)
+        pages = (
+            'articles/articles_app/templates/articles_app/read.html',
+            'contests/contests_app/templates/contests/contests_app/contest_view.html',
+            'profiles/templates/profiles/user.html',
+            'profiles/templates/profiles/company.html',
+        )
+        for page in pages:
+            with self.subTest(page=page):
+                markup = (root / page).read_text(encoding='utf-8')
+                self.assertIn('ALFA_MOD_TARGET', markup)
+                self.assertIn('moderation-bar.js', markup)
+
+    def test_moderation_bar_says_actions_not_author_actions(self):
+        source = (Path(settings.BASE_DIR) / 'static/js/moderation-bar.js').read_text(encoding='utf-8')
+        self.assertNotIn('Действия с автором', source)
+        self.assertNotIn('Действия модератора', source)
+        self.assertIn('>Действия<', source)
 
     def test_only_one_place_renders_the_user_chip(self):
         """На главной лежала копия чипа, знавшая две роли из трёх, —

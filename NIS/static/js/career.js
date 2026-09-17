@@ -19,6 +19,7 @@
         return;
       }
       const a = data.account;
+      if (a.banned) showBanNotice(a);
       const avatarInner = a.avatar
         ? `<img src="${esc(a.avatar)}" alt="">`
         : esc(initial(a.name));
@@ -31,6 +32,24 @@
           </div>
         </a>`;
     } catch(_) {}
+  }
+
+  /* Плашка блокировки. Заблокированный теперь входит в кабинет — иначе он
+     не узнал бы ни причину, ни срок: раньше единственным местом, где это
+     писалось, была форма входа, а на неё он попадал только выйдя сам. */
+  function showBanNotice(account) {
+    if (document.querySelector('.cr-ban-notice')) return;
+    const until = account.ban_until
+      ? 'До ' + new Date(account.ban_until).toLocaleDateString('ru-RU') + '.'
+      : 'Блокировка бессрочная.';
+    const notice = document.createElement('div');
+    notice.className = 'cr-ban-notice';
+    notice.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+      + ' stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>'
+      + '<div><b>Аккаунт заблокирован.</b> ' + esc(until)
+      + (account.ban_reason ? ' Причина: ' + esc(account.ban_reason) : '')
+      + '<br><span>Профиль и материалы скрыты от других, публиковать и отправлять ничего нельзя.</span></div>';
+    document.body.insertBefore(notice, document.body.firstChild);
   }
 
   window.careerMountUserChip = mountUserChip;

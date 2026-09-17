@@ -7,6 +7,7 @@ from django.views.decorators.http import require_http_methods
 from articles.constructor.models import Article, ArticleVote
 from articles.serializers import cover_gradient
 from authorization.models import Account, ROLE_COMPANY, ROLE_USER
+from authorization import bans
 from authorization.views import get_current_account
 from companies.models import Company
 from core.auth import api_login_required
@@ -55,6 +56,9 @@ def _author_link(username):
 def article_read(request, article_id):
     article = Article.objects.filter(id=article_id, status=Article.STATUS_PUBLISHED).first()
     if not article:
+        raise Http404
+    # Статья заблокированного автора пропадает вместе с ним, но не удаляется
+    if not bans.visible_to(get_current_account(request), article.author_username):
         raise Http404
 
     Article.objects.filter(id=article_id).update(views=F('views') + 1)
