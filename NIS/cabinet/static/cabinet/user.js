@@ -52,6 +52,17 @@
 
   /* ---------- logout ---------- */
 
+  /* Кнопка живёт в сайдбаре (cabinet/_user_sidebar.html). Обработчик уже
+     был потерян один раз — когда выход убирали из верхней шапки, заодно
+     сняли и этот, и «Выйти» у кандидата перестала работать вовсе. */
+  document.getElementById('ud-logout-btn')?.addEventListener('click', () => {
+    // Уходим на главную в любом случае: если сессии уже нет, выход всё равно
+    // должен увести со страницы кабинета
+    apiFetch('/api/v1/auth/signout/', { method: 'POST' })
+      .catch(() => {})
+      .finally(() => window.location.assign('/'));
+  });
+
   /* ---------- avatar ---------- */
 
   async function uploadAvatar(file) {

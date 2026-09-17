@@ -778,6 +778,23 @@ class CabinetSidebarTests(BaseCase):
                 client = self.login('firma' if url.startswith(('/cabinet/company', '/constructor')) else 'kandidat')
                 self.assertNotIn('data-logout-btn', client.get(url).content.decode())
 
+    def test_logout_button_is_actually_wired(self):
+        """Кнопка «Выйти» в кабинете кандидата полгода ничего не делала:
+        обработчик сняли вместе с выходом из верхней шапки, а кнопку в
+        сайдбаре оставили. Разметка без обработчика выглядит исправной."""
+        root = Path(settings.BASE_DIR)
+        pairs = (
+            ('cabinet/templates/cabinet/_user_sidebar.html', 'cabinet/static/cabinet/user.js', 'ud-logout-btn'),
+            ('cabinet/templates/cabinet/_company_sidebar.html', 'cabinet/static/cabinet/company.js', 'cp-logout-btn'),
+        )
+        for template, script, button_id in pairs:
+            with self.subTest(button=button_id):
+                markup = (root / template).read_text(encoding='utf-8')
+                source = (root / script).read_text(encoding='utf-8')
+                self.assertIn(f'id="{button_id}"', markup)
+                self.assertIn(button_id, source)
+                self.assertIn('auth/signout/', source)
+
     def test_sidebar_can_be_closed_and_has_no_home_link(self):
         """Панель выезжает поверх страницы — нужен способ её задвинуть."""
         body = self.login('firma').get('/cabinet/company/').content.decode()
