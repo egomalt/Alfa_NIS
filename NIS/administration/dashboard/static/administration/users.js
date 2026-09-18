@@ -5,10 +5,10 @@
   var filter = 'all';
   var query = '';
 
+  /* Коротко: слово «Забанен» дублирует и цвет плашки, и колонку «Статус» */
   function banLabel(u) {
     if (u.status !== 'banned') return null;
-    if (!u.ban_until) return 'Забанен навсегда';
-    return 'Забанен до ' + A.fmtDate(u.ban_until);
+    return u.ban_until ? 'Бан до ' + A.fmtDate(u.ban_until) : 'Бан навсегда';
   }
 
   function rowHtml(u) {

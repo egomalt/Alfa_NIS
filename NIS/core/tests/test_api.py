@@ -932,6 +932,26 @@ class CabinetSidebarTests(BaseCase):
             with self.subTest(rule=rule):
                 self.assertNotIn(rule, css)
 
+    def test_admin_sidebar_stays_on_screen(self):
+        """Панель тянулась вместе со страницей: на длинном списке до кнопки
+        «Выйти» приходилось листать весь список до конца."""
+        css = (Path(settings.BASE_DIR)
+               / 'administration/dashboard/static/administration/dashboard.css').read_text(encoding='utf-8')
+        rule = re.search(r'\.ap-sidebar \{([^}]*)\}', css)
+        self.assertIsNotNone(rule, 'нет правила .ap-sidebar')
+        self.assertIn('position: sticky', rule.group(1))
+        self.assertIn('overflow-y: auto', rule.group(1))
+
+    def test_admin_table_cells_cannot_overflow(self):
+        """Плашка «Забанен до 2 октября 2026 г.» вылезала на соседнюю
+        колонку: ячейка грида не сжимается ниже содержимого без minmax(0)."""
+        css = (Path(settings.BASE_DIR)
+               / 'administration/dashboard/static/administration/dashboard.css').read_text(encoding='utf-8')
+        rule = re.search(r'\.ap-trow \{([^}]*)\}', css)
+        self.assertIsNotNone(rule, 'нет правила .ap-trow')
+        self.assertIn('minmax(0', rule.group(1))
+        self.assertIn('.ap-trow > * { min-width: 0; }', css)
+
     def test_chip_mounts_without_an_id(self):
         """Автомонтирование передавало `el.id`, и у контейнера без id
         получался getElementById('') — чип молча не появлялся. В админке

@@ -16,10 +16,13 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  /* ДД.ММ.ГГГГ, как дедлайны и даты во всём остальном интерфейсе.
+     «18 сентября 2026 г.» не помещалось в колонку таблицы и ломалось
+     на две строки, а в плашке бана вылезало на соседнюю колонку. */
   function fmtDate(iso) {
     if (!iso) return '';
-    try { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }); }
-    catch (e) { return ''; }
+    var d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleDateString('ru-RU');
   }
 
   function apiGet(url) {

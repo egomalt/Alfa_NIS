@@ -13,7 +13,10 @@
 :root[data-theme="dark"] .ap-icon-sun { display: block; }
 
 .ap-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 64px); }
-.ap-sidebar { border-right: 1px solid var(--line); background: var(--surface); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; }
+/* Панель прилипает к шапке и живёт в высоту экрана, как в обоих кабинетах.
+   Без этого она тянулась вместе со страницей: на списке из сотни жалоб
+   до кнопки «Выйти» приходилось листать весь список до конца. */
+.ap-sidebar { border-right: 1px solid var(--line); background: var(--surface); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
 .ap-company-chip { display: flex; align-items: center; gap: 10px; padding: 10px 10px 18px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
 .ap-company-avatar { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background: var(--surface-3); color: var(--text-2); font-weight: 700; font-size: 16px; flex-shrink: 0; }
 .ap-company-name { font-size: 14px; font-weight: 700; }
@@ -70,7 +73,16 @@
 
 /* таблица пользователей */
 .ap-table { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; }
-.ap-trow { display: grid; grid-template-columns: 1.6fr 100px 110px 150px 150px; gap: 10px; padding: 13px 16px; align-items: center; }
+/* minmax(0, …) обязателен: без него ячейка не сжимается ниже содержимого,
+   и плашка «Бан до …» вылезала поверх соседней колонки с кнопками */
+.ap-trow { display: grid; grid-template-columns: minmax(0, 1.6fr) 100px 110px minmax(0, 170px) 118px; gap: 12px; padding: 13px 16px; align-items: center; }
+.ap-trow > * { min-width: 0; }
+/* Длинное имя обрезаем многоточием, а не переносим: строка таблицы
+   должна оставаться одной высоты */
+.ap-u-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-u-meta { white-space: nowrap; }
+.ap-status-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.ap-row-actions { justify-content: flex-end; }
 .ap-thead { border-bottom: 1px solid var(--line); background: var(--surface-2); padding: 10px 16px; }
 .ap-thead span { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
 .ap-trow.ap-body { border-bottom: 1px solid var(--line); }
@@ -133,7 +145,9 @@
   .ap-stats-row { grid-template-columns: repeat(2,1fr); }
   /* широкие таблицы — горизонтальный скролл */
   .ap-table { overflow-x: auto; }
-  .ap-trow { min-width: 640px; }
+  /* Фиксированные колонки занимают 546px — имени при 640 оставалось
+     меньше сотни, и оно обрезалось многоточием почти всегда */
+  .ap-trow { min-width: 720px; }
   .ap-main { padding: 22px 16px 60px; }
   /* чип аккаунта → только аватар, размером как кнопки навбара */
 }
