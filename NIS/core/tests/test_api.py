@@ -918,6 +918,17 @@ class CabinetSidebarTests(BaseCase):
                 renderers.append(str(path.relative_to(root)))
         self.assertEqual(renderers, [], 'чип пользователя рисует только static/js/career.js')
 
+    def test_admin_panel_uses_the_shared_navbar(self):
+        """Своя шапка не имела ни одной ссылки: из панели нельзя было уйти
+        никуда, кроме главной по логотипу."""
+        body = self.login('moder').get('/administration/').content.decode()
+        self.assertIn('cr-navbar', body)
+        self.assertNotIn('ap-navbar', body)
+        self.assertNotIn('ap-admin-tag', body)
+        for section in ('/companies/', '/articles/', '/tests/', '/contests/'):
+            with self.subTest(section=section):
+                self.assertIn(f'href="{section}"', body)
+
     def test_admin_panel_uses_the_shared_chip(self):
         """У админки была своя плашка: серый аватар, логин вместо имени
         и собственные размеры, которые совпадали с общими только вручную."""

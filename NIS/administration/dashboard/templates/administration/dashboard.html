@@ -16,21 +16,12 @@
 </head>
 <body>
 
-<nav class="ap-navbar">
-  <a href="/" class="ap-logo">
-    <span class="ap-logo-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><rect x="3.5" y="13" width="4.3" height="8" rx="1.4"/><rect x="9.85" y="8" width="4.3" height="13" rx="1.4"/><rect x="16.2" y="3" width="4.3" height="18" rx="1.4"/></svg></span>
-    <span class="ap-logo-text">Career</span>
-  </a>
-  <span class="ap-admin-tag">Admin</span>
-  <div class="ap-nav-right">
-    <button class="ap-btn-theme" data-theme-toggle aria-label="Сменить тему">
-      <svg class="ap-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.3 6.3 0 0 0 10.5 10.5Z"/></svg>
-      <svg class="ap-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-    </button>
-    {# Чип рисует общий career.js — тот же, что в шапке остальных страниц #}
-    <div data-user-chip></div>
-  </div>
-</nav>
+{% comment %}
+  Шапка общая с остальным сайтом: логотип, разделы, тема и чип аккаунта.
+  Своя была без единой ссылки — из панели нельзя было перейти никуда,
+  кроме главной по логотипу.
+{% endcomment %}
+{% include 'partials/navbar.html' %}
 
 <button type="button" class="ap-burger" id="ap-sidebar-burger" aria-label="Разделы">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>

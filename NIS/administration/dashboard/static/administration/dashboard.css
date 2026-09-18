@@ -1,16 +1,9 @@
 /* ── Админ-панель. Токены и тема берутся из career.css ─────────────────── */
 
-.ap-navbar { height: 64px; display: flex; align-items: center; padding: 0 32px; background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 50; }
-.ap-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); margin-right: 32px; }
-.ap-logo-icon { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: var(--brand); }
-.ap-logo-text { font-weight: 800; font-size: 16.5px; letter-spacing: -.01em; }
-.ap-admin-tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--surface-3); color: var(--text-2); margin-right: 20px; text-transform: uppercase; letter-spacing: .05em; }
-.ap-nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-.ap-btn-theme { height: 36px; width: 36px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text-2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color .15s; }
-.ap-btn-theme:hover { color: var(--text); }
-.ap-icon-sun { display: none; }
-:root[data-theme="dark"] .ap-icon-moon { display: none; }
-:root[data-theme="dark"] .ap-icon-sun { display: block; }
+/* Шапка — общий partials/navbar.html и его стили из career.css.
+   Здесь лежала своя: логотип, метка ADMIN, кнопка темы и чип, и ни одной
+   ссылки на разделы сайта. Высота та же, 64px, поэтому сдвиг панели
+   (top: 64px) остался прежним. */
 
 .ap-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 64px); }
 /* Панель прилипает к шапке и живёт в высоту экрана, как в обоих кабинетах.
@@ -139,7 +132,6 @@
 
 @media (max-width: 1100px) { .ap-stats-row { grid-template-columns: repeat(3,1fr); } }
 @media (max-width: 900px) {
-  .ap-navbar { padding: 0 16px; }
   .ap-burger { display: inline-flex; }
   .ap-layout { grid-template-columns: 1fr; }
   .ap-sidebar { position: fixed; top: 64px; left: 0; bottom: 0; width: 240px; transform: translateX(-100%); transition: transform .22s ease; z-index: 80; }
