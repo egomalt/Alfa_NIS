@@ -942,6 +942,21 @@ class CabinetSidebarTests(BaseCase):
         self.assertIn('position: sticky', rule.group(1))
         self.assertIn('overflow-y: auto', rule.group(1))
 
+    def test_admin_cards_wrap_on_a_phone(self):
+        """Карточка заявки была одной нерезиновой строкой: аватар, название,
+        чип документа и две кнопки. Названию оставалось меньше ширины буквы,
+        и оно переносилось по одному символу."""
+        css = (Path(settings.BASE_DIR)
+               / 'administration/dashboard/static/administration/dashboard.css').read_text(encoding='utf-8')
+        phone = re.search(r'@media \(max-width: 560px\) \{(.*?)\n\}', css, re.S)
+        self.assertIsNotNone(phone, 'у админки нет телефонного медиазапроса')
+        for rule in ('.ap-verify-card', '.ap-verify-main', '.ap-search-input'):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, phone.group(1))
+        # Чип документа обрезается, а не растягивает карточку
+        doc = re.search(r'\.ap-verify-doc \{([^}]*)\}', css)
+        self.assertIn('text-overflow: ellipsis', doc.group(1))
+
     def test_admin_table_cells_cannot_overflow(self):
         """Плашка «Забанен до 2 октября 2026 г.» вылезала на соседнюю
         колонку: ячейка грида не сжимается ниже содержимого без minmax(0)."""

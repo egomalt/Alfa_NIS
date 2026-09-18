@@ -56,13 +56,16 @@
 
 /* очередь верификации */
 .ap-verify-card { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin-bottom: 10px; display: flex; gap: 14px; align-items: center; }
-.ap-verify-doc { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface-2); font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: border-color .12s, color .12s; text-decoration: none; color: var(--text-2); }
+/* Имя документа бывает длинным: без обрезки чип распирал карточку,
+   а на телефоне уезжал за экран */
+.ap-verify-doc { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface-2); font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: border-color .12s, color .12s; text-decoration: none; color: var(--text-2); max-width: 260px; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+.ap-verify-doc svg { flex-shrink: 0; }
 .ap-verify-doc:hover { border-color: var(--brand); color: var(--brand-text); }
 .ap-doc-preview-page { width: 100%; aspect-ratio: 210/297; background: #fff; border: 1px solid var(--line-2); border-radius: 10px; padding: 26px 22px; margin-bottom: 16px; box-shadow: var(--shadow); }
 .ap-doc-preview-page .ap-l { height: 8px; border-radius: 3px; background: #E4E9F2; margin-bottom: 12px; }
 .ap-doc-preview-name { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); margin-bottom: 16px; }
 .ap-verify-main { flex: 1; min-width: 0; }
-.ap-verify-title { font-size: 14px; font-weight: 700; }
+.ap-verify-title { font-size: 14px; font-weight: 700; overflow-wrap: break-word; }
 .ap-verify-meta { font-size: 12px; color: var(--muted); }
 .ap-status-pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
 .ap-btn-accept { height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: var(--green-text); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; white-space: nowrap; font-family: inherit; }
@@ -100,9 +103,9 @@
 .ap-escalation-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: var(--red-soft); color: var(--red-text); white-space: nowrap; }
 .ap-report-card:hover { border-color: var(--line-2); }
 .ap-report-card.ap-open { cursor: default; }
-.ap-report-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ap-report-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
 .ap-report-type { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: var(--surface-2); color: var(--text-2); }
-.ap-report-target { font-size: 14px; font-weight: 700; }
+.ap-report-target { font-size: 14px; font-weight: 700; min-width: 0; overflow-wrap: break-word; }
 .ap-report-reason { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-bottom: 10px; }
 .ap-report-meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
 .ap-report-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -151,4 +154,29 @@
   .ap-main { padding: 22px 16px 60px; }
   /* чип аккаунта → только аватар, размером как кнопки навбара */
 }
-@media (max-width: 520px) { .ap-stats-row { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .ap-stats-row { grid-template-columns: 1fr; }
+  .ap-section { padding: 18px 16px; }
+
+  /* Карточка заявки: аватар, название, документ и кнопки в одну строку
+     не помещаются — названию оставалось меньше ширины буквы, и оно
+     переносилось по одному символу */
+  .ap-verify-card { flex-wrap: wrap; row-gap: 12px; padding: 14px 16px; }
+  .ap-verify-main { flex-basis: calc(100% - 52px); }
+  .ap-verify-doc { max-width: 100%; flex-shrink: 1; }
+  .ap-verify-card .ap-btn-accept,
+  .ap-verify-card .ap-btn-reject { flex: 1; }
+  .ap-decided-note { flex-basis: 100%; }
+
+  /* Строка жалобы: заголовок на своей строке, метки под ним */
+  .ap-report-target { flex-basis: 100%; order: -1; }
+  .ap-report-chevron { margin-left: auto; }
+
+  /* Поиск на всю ширину: рядом с чипами фильтров ему остаётся полоска */
+  .ap-search-input { width: 100%; }
+  .ap-filter-count { flex-basis: 100%; margin-left: 0; }
+
+  .ap-modal { padding: 20px 16px; }
+  .ap-modal-actions { flex-direction: column-reverse; }
+  .ap-modal-actions button { width: 100%; }
+}
