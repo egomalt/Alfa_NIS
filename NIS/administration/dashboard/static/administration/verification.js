@@ -84,11 +84,15 @@
       if (act === 'viewdoc') {
         A.openDocModal(t.dataset.name, t.dataset.url);
       } else if (act === 'approve') {
-        A.apiPost('/api/v1/admin/verifications/' + t.dataset.user + '/approve/', {}).then(afterAction).catch(function (err) { alert(err.message); });
+        A.apiPost('/api/v1/admin/verifications/' + t.dataset.user + '/approve/', {})
+          .then(function () { A.notify('Компания подтверждена.', 'ok'); afterAction(); })
+          .catch(A.fail);
       } else if (act === 'reject') {
         var username = t.dataset.user;
         A.openReasonModal('Причина отклонения заявки', function (reason) {
-          A.apiPost('/api/v1/admin/verifications/' + username + '/reject/', { reason: reason }).then(afterAction).catch(function (err) { alert(err.message); });
+          A.apiPost('/api/v1/admin/verifications/' + username + '/reject/', { reason: reason })
+            .then(function () { A.notify('Заявка отклонена, компания увидит причину.', 'ok'); afterAction(); })
+            .catch(A.fail);
         });
       }
     });

@@ -1,10 +1,14 @@
 """Модерация: жалобы, баны, верификация компаний и зачистка контента."""
 import json
+import re
+import shutil
+import tempfile
 from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
-from django.test import Client
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, override_settings
 from django.utils import timezone
 
 from administration.moderation.api_views import MAX_BAN_DAYS
@@ -195,19 +199,65 @@ class VerificationDecisionTests(BaseCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(Company.objects.get(username='firma').is_verified)
 
-    def test_document_is_not_served_to_outsiders(self):
-        """Ссылка на документ ведёт во вьюху под проверкой роли, а не в /media/."""
-        company = Company.objects.get(username='firma')
-        company.registration_document.name = 'company_documents/ustav.pdf'
-        company.verification_status = Company.VERIF_PENDING
-        company.save(update_fields=['registration_document', 'verification_status'])
 
+class DocumentAccessTests(BaseCase):
+    """Регистрационный документ компании лежит вне media/ и раздаётся вьюхой."""
+
+    URL = '/administration/verification/firma/document/'
+
+    def setUp(self):
+        private = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, private, True)
+        patch = override_settings(PRIVATE_MEDIA_ROOT=private)
+        patch.enable()
+        self.addCleanup(patch.disable)
+
+        folder = Path(private) / 'company_documents'
+        folder.mkdir(parents=True)
+        (folder / 'ustav.pdf').write_bytes(b'%PDF-1.4 test')
+
+        self.company = Company.objects.get(username='firma')
+        self.company.registration_document.name = 'company_documents/ustav.pdf'
+        self.company.verification_status = Company.VERIF_PENDING
+        self.company.save(update_fields=['registration_document', 'verification_status'])
+
+    def test_panel_links_to_the_protected_view(self):
         data = self.login('moder').get('/api/v1/admin/verifications/?status=pending').json()
-        url = data['verifications'][0]['document_url']
-        self.assertEqual(url, '/administration/verification/firma/document/')
+        self.assertEqual(data['verifications'][0]['document_url'], self.URL)
 
-        # Посторонний уходит на форму входа, а не получает файл
-        self.assertEqual(self.login('drugoy').get(url).status_code, 302)
+    def test_outsiders_do_not_get_the_file(self):
+        self.assertEqual(Client().get(self.URL).status_code, 302)       # на форму входа
+        self.assertEqual(self.login('drugoy').get(self.URL).status_code, 404)
+        self.assertEqual(self.login('konkurent').get(self.URL).status_code, 404)
+
+    def test_moderator_and_owner_get_the_file(self):
+        for username in ('moder', 'firma'):
+            response = self.login(username).get(self.URL)
+            self.assertEqual(response.status_code, 200, username)
+            self.assertEqual(b''.join(response.streaming_content), b'%PDF-1.4 test')
+
+    def test_document_can_be_shown_in_admin_iframe(self):
+        """Предпросмотр в модалке — это iframe: DENY из middleware его гасит."""
+        response = self.login('moder').get(self.URL)
+        self.assertEqual(response.headers['X-Frame-Options'], 'SAMEORIGIN')
+
+    def test_document_has_no_public_url(self):
+        """Прямая ссылка на файл не должна существовать даже в коде."""
+        with self.assertRaises(ValueError):
+            self.company.registration_document.url
+
+    def test_upload_lands_outside_media(self):
+        """Загрузка из кабинета кладёт документ в приватную папку, не в media/."""
+        upload = SimpleUploadedFile('ustav-new.pdf', b'%PDF-1.4 new', content_type='application/pdf')
+        response = self.login('firma').post(
+            '/api/v1/companies/firma/verification/', {'registration_document': upload})
+        self.assertEqual(response.status_code, 200)
+
+        name = Company.objects.get(username='firma').registration_document.name
+        self.assertTrue((Path(settings.PRIVATE_MEDIA_ROOT) / name).exists())
+        self.assertFalse((Path(settings.MEDIA_ROOT) / name).exists())
+        # Компания снова уходит на проверку, а ссылка ведёт во вьюху
+        self.assertEqual(response.json()['company']['registration_document_url'], self.URL)
 
 
 class ContentPurgeTests(BaseCase):
@@ -226,17 +276,30 @@ class ContentPurgeTests(BaseCase):
         self.assertEqual(response.json()['removed'], {'articles': 2, 'tests': 1})
         self.assertEqual(Article.objects.filter(author_username='kandidat').count(), 0)
 
-    def test_document_can_be_shown_in_admin_iframe(self):
-        """Предпросмотр в модалке — это iframe: DENY из middleware его гасит."""
-        media = Path(settings.MEDIA_ROOT) / 'company_documents'
-        media.mkdir(parents=True, exist_ok=True)
-        (media / 'ustav-test.pdf').write_bytes(b'%PDF-1.4 test')
-        self.addCleanup(lambda: (media / 'ustav-test.pdf').unlink(missing_ok=True))
 
-        company = Company.objects.get(username='firma')
-        company.registration_document.name = 'company_documents/ustav-test.pdf'
-        company.save(update_fields=['registration_document'])
+class PanelMarkupTests(BaseCase):
+    """Скрипты панели и её шаблон должны сходиться по идентификаторам.
 
-        response = self.login('moder').get('/administration/verification/firma/document/')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers['X-Frame-Options'], 'SAMEORIGIN')
+    Раздел ищет свои узлы через AdminPanel.el(id). Если узел переименовали
+    или забыли добавить в шаблон, поиск вернёт null и раздел отвалится
+    молча — без ошибки в интерфейсе.
+    """
+
+    def test_every_id_used_by_scripts_exists_in_the_template(self):
+        root = Path(settings.BASE_DIR) / 'administration/dashboard'
+        markup = (root / 'templates/administration/dashboard.html').read_text(encoding='utf-8')
+        known = set(re.findall(r'id="([\w-]+)"', markup))
+
+        for script in sorted((root / 'static/administration').glob('*.js')):
+            source = script.read_text(encoding='utf-8')
+            for element_id in re.findall(r"(?:A\.)?el\('([\w-]+)'\)", source):
+                with self.subTest(script=script.name, id=element_id):
+                    self.assertIn(element_id, known)
+
+    def test_panel_has_no_fake_document_preview(self):
+        """Серые полоски вместо документа выдавали себя за его содержимое."""
+        markup = (Path(settings.BASE_DIR)
+                  / 'administration/dashboard/templates/administration/dashboard.html'
+                  ).read_text(encoding='utf-8')
+        self.assertNotIn('ap-doc-preview-page', markup)
+        self.assertIn('ap-doc-frame', markup)

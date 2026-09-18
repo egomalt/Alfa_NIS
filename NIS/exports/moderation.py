@@ -1,7 +1,9 @@
 """Сбор сводки модерации и сборка PDF-отчёта для админ-панели."""
 from django.utils import timezone
 
-from administration.reports.api_views import _new_counts_by_target
+from administration.reports.api_views import (
+    _new_counts_by_target, escalated_first, escalated_keys,
+)
 from administration.reports.models import ESCALATION_THRESHOLD, Report, TARGET_LABELS
 from authorization import bans
 from authorization.models import Account, ROLE_LABELS
@@ -12,12 +14,10 @@ from .pdf import ReportBuilder, fmt_date
 
 def build_admin_pdf():
     pending = list(Company.objects.filter(verification_status=Company.VERIF_PENDING).order_by('submitted_at'))
-    new_reports = list(Report.objects.filter(status=Report.STATUS_NEW))
     new_counts = _new_counts_by_target()
-    escalated = sum(
-        1 for r in new_reports
-        if new_counts.get((r.target_type, r.target_id), 0) >= ESCALATION_THRESHOLD
-    )
+    # В отчёте тот же порядок, что и в панели: приоритетные жалобы сверху
+    new_reports = list(escalated_first(Report.objects.filter(status=Report.STATUS_NEW), new_counts))
+    escalated = sum(new_counts[key] for key in escalated_keys(new_counts))
     banned = list(Account.objects.filter(bans.active_ban_q()).order_by('-created_at'))
 
     r = ReportBuilder('Сводка модерации', 'Панель администратора')

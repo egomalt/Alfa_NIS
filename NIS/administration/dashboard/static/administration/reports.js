@@ -13,7 +13,7 @@
     var contentActions = (isNew && !isUserReport)
       ? '<div class="ap-action-group"><div class="ap-action-group-title">Материал</div><div class="ap-report-actions">'
         + (r.target_url ? '<a class="ap-btn-secondary" href="' + A.esc(r.target_url) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none;" data-stop="1">Открыть материал</a>' : '')
-        + '<button class="ap-btn-accept" data-act="takedown" data-id="' + r.id + '">Снять материал</button>'
+        + '<button class="ap-btn-accept" data-act="takedown" data-id="' + r.id + '" data-title="' + A.esc(r.target_title) + '">Снять материал</button>'
         + '</div></div>'
       : '';
 
@@ -125,17 +125,31 @@
         if (act === 'open-target') { window.open(actEl.dataset.url, '_blank'); return; }
         if (act === 'open-author') { window.open('/' + actEl.dataset.user + '/', '_blank'); return; }
         if (act === 'takedown') {
-          if (!confirm('Удалить материал? Это действие нельзя отменить.')) return;
-          A.apiPost('/api/v1/admin/reports/' + id + '/takedown/', {}).then(afterAction).catch(function (err) { alert(err.message); });
+          var title = actEl.dataset.title || 'материал';
+          A.openConfirm({
+            title: 'Снять материал?',
+            text: '«' + title + '» будет удалён безвозвратно, а все жалобы на него — закрыты.',
+            confirmLabel: 'Удалить',
+          }, function () {
+            A.apiPost('/api/v1/admin/reports/' + id + '/takedown/', {})
+              .then(function () { A.notify('Материал удалён, жалобы закрыты.', 'ok'); afterAction(); })
+              .catch(A.fail);
+          });
           return;
         }
-        if (act === 'dismiss') { A.apiPost('/api/v1/admin/reports/' + id + '/dismiss/', {}).then(afterAction).catch(function (err) { alert(err.message); }); return; }
+        if (act === 'dismiss') {
+          A.apiPost('/api/v1/admin/reports/' + id + '/dismiss/', {})
+            .then(function () { A.notify('Жалоба отклонена.', 'ok'); afterAction(); })
+            .catch(A.fail);
+          return;
+        }
         if (act === 'ban-author') {
           var bu = actEl.dataset.user;
           A.openReasonModal('Причина и срок бана — ' + bu, function (reason, duration) {
             A.apiPost('/api/v1/admin/users/' + bu + '/ban/', { reason: reason, duration: duration })
               .then(function () { return A.apiPost('/api/v1/admin/reports/' + id + '/resolve/', {}); })
-              .then(afterAction).catch(function (err) { alert(err.message); });
+              .then(function () { A.notify(bu + ' заблокирован, жалоба закрыта.', 'ok'); afterAction(); })
+              .catch(A.fail);
           }, true);
           return;
         }

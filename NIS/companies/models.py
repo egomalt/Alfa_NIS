@@ -1,6 +1,8 @@
 from django.core.validators import FileExtensionValidator, RegexValidator
 from django.db import models
 
+from core.storage import private_storage
+
 
 class Company(models.Model):
     VERIF_NONE = 'none'
@@ -38,14 +40,16 @@ class Company(models.Model):
         blank=True,
         validators=[FileExtensionValidator(['jpg', 'jpeg', 'png', 'webp'])],
     )
+    # Приватное хранилище: документ не должен открываться по прямой ссылке,
+    # его отдаёт administration.verification.views под проверкой прав
     registration_document = models.FileField(
         upload_to='company_documents/',
         blank=True,
+        storage=private_storage,
         validators=[FileExtensionValidator(['pdf'])],
     )
-    # Раньше направлений было ровно четыре — четыре отдельных поля и четыре
-    # поля ввода в настройках. Список снимает потолок и хранится так же,
-    # как навыки в профиле кандидата.
+    # Направлений может быть сколько угодно: список хранится так же,
+    # как навыки в профиле кандидата
     directions = models.JSONField(default=list, blank=True)
     verification_status = models.CharField(max_length=20, choices=VERIF_CHOICES, default=VERIF_NONE, db_index=True)
     verification_reason = models.TextField(blank=True)

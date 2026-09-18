@@ -136,6 +136,53 @@
     });
   }
 
+  // ---- Модалка подтверждения ----
+  var confirmCb = null;
+
+  /* Свой диалог вместо window.confirm: тот выглядит как системное окно
+     браузера, не даёт назвать кнопку и в части браузеров блокируется. */
+  function openConfirm(options, cb) {
+    el('ap-confirm-title').textContent = options.title || 'Подтвердите действие';
+    el('ap-confirm-text').textContent = options.text || '';
+    el('ap-confirm-ok').textContent = options.confirmLabel || 'Подтвердить';
+    confirmCb = cb;
+    el('ap-confirm-modal').classList.add('ap-open');
+  }
+
+  function closeConfirm() {
+    el('ap-confirm-modal').classList.remove('ap-open');
+    confirmCb = null;
+  }
+
+  function setupConfirmModal() {
+    el('ap-confirm-cancel').addEventListener('click', closeConfirm);
+    el('ap-confirm-ok').addEventListener('click', function () {
+      var cb = confirmCb;
+      closeConfirm();
+      if (cb) cb();
+    });
+    el('ap-confirm-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeConfirm();
+    });
+  }
+
+  // ---- Сообщения ----
+  /* Ошибку показываем плашкой в углу, а не alert'ом: страница остаётся
+     видимой, и подряд идущие сообщения не выстраиваются в очередь окон. */
+  function notify(message, kind) {
+    var host = el('ap-toasts');
+    if (!host) return;
+    var box = document.createElement('div');
+    box.className = 'ap-toast' + (kind === 'ok' ? ' ap-toast-ok' : ' ap-toast-err');
+    box.textContent = message;
+    host.appendChild(box);
+    setTimeout(function () { box.remove(); }, 5000);
+    box.addEventListener('click', function () { box.remove(); });
+  }
+
+  // Обработчик ошибки запроса — одинаковый во всех разделах
+  function fail(err) { notify(err.message || 'Не удалось выполнить действие.'); }
+
   // ---- Модалка документа ----
   function openDocModal(name, url) {
     el('ap-doc-modal-name').textContent = name || 'Документ';
@@ -175,6 +222,7 @@
       if (e.key !== 'Escape') return;
       if (el('ap-doc-modal').classList.contains('ap-open')) closeDocModal();
       if (el('ap-reason-modal').classList.contains('ap-open')) closeReasonModal();
+      if (el('ap-confirm-modal').classList.contains('ap-open')) closeConfirm();
     });
   }
 
@@ -223,7 +271,10 @@
     registerSection: registerSection,
     showTab: showTab,
     openReasonModal: openReasonModal,
+    openConfirm: openConfirm,
     openDocModal: openDocModal,
+    notify: notify,
+    fail: fail,
     refreshBadges: refreshBadges,
     reloadOverview: function () { if (sections.overview && sections.overview.load) sections.overview.load(); },
   };
@@ -249,6 +300,7 @@
     setupTabs();
     setupLogout();
     setupReasonModal();
+    setupConfirmModal();
     setupDocModal();
     setupEscape();
     setupSidebarBurger();

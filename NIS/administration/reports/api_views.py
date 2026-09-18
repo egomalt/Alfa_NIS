@@ -1,4 +1,5 @@
 from django.db import IntegrityError, transaction
+from django.db.models import Case, IntegerField, Q, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
@@ -26,6 +27,30 @@ def _new_counts_by_target():
         key = (r['target_type'], r['target_id'])
         counts[key] = counts.get(key, 0) + 1
     return counts
+
+
+def escalated_keys(new_counts):
+    """Цели, набравшие порог эскалации: (тип, id)."""
+    return [key for key, count in new_counts.items() if count >= ESCALATION_THRESHOLD]
+
+
+def escalated_first(queryset, new_counts):
+    """Ставит эскалированные жалобы в начало очереди.
+
+    Порядок задаётся в самом запросе, а не после нарезки на страницы:
+    иначе приоритетная жалоба, попавшая на вторую страницу, так на ней
+    и останется — а искать её модератор будет на первой.
+    """
+    keys = escalated_keys(new_counts)
+    if not keys:
+        return queryset
+    priority = Q()
+    for target_type, target_id in keys:
+        priority |= Q(target_type=target_type, target_id=target_id)
+    return queryset.order_by(
+        Case(When(priority, then=0), default=1, output_field=IntegerField()),
+        '-created_at',
+    )
 
 
 def serialize_report(report, new_counts):
@@ -128,10 +153,9 @@ def api_reports(request):
     if status not in VALID_STATUSES:
         status = Report.STATUS_NEW
     new_counts = _new_counts_by_target()
-    reports, page_meta = paginate(request, Report.objects.filter(status=status), REPORTS_PER_PAGE)
+    qs = escalated_first(Report.objects.filter(status=status), new_counts)
+    reports, page_meta = paginate(request, qs, REPORTS_PER_PAGE)
     data = [serialize_report(r, new_counts) for r in reports]
-    # Эскалированные — выше
-    data.sort(key=lambda r: (not r['escalated'],))
     return JsonResponse({'ok': True, 'reports': data, 'threshold': ESCALATION_THRESHOLD, **page_meta})
 
 

@@ -207,13 +207,34 @@
       if (purgeBtn) purgeBtn.addEventListener('click', function () {
         var chosen = Array.prototype.map.call(m.querySelectorAll('.mb-cat:checked'), function (c) { return c.value; });
         if (!chosen.length) { flash(m, 'Отметьте, что удалить.'); return; }
-        if (!window.confirm('Удалить выбранный контент автора безвозвратно?')) return;
-        this.disabled = true; this.textContent = 'Удаление…';
-        jpost('/api/v1/admin/users/' + username + '/purge/', { categories: chosen })
-          .then(function () { flash(m, 'Контент удалён.', true); setTimeout(function () { window.location.reload(); }, 900); })
-          .catch(function (err) { flash(m, err.message); });
+        var names = cats.filter(function (c) { return chosen.indexOf(c[0]) !== -1; })
+          .map(function (c) { return c[1].toLowerCase() + ' — ' + c[2]; }).join(', ');
+        confirmPurge(username, names, chosen);
       });
-    }).catch(function () { alert('Не удалось загрузить данные автора.'); });
+    }).catch(function () {
+      openModal('<div class="mb-modal-title">Не удалось открыть</div>'
+        + '<div class="mb-modal-text">Данные автора не загрузились. Обновите страницу и попробуйте ещё раз.</div>'
+        + '<div class="mb-actions"><button class="mb-btn" data-close>Закрыть</button></div>');
+    });
+  }
+
+  /* Отдельный шаг подтверждения вместо window.confirm: тот выглядит как
+     системное окно браузера и не показывает, что именно будет удалено.
+     Модалка автора тут закрывается — после удаления страница всё равно
+     перезагружается. */
+  function confirmPurge(username, names, chosen) {
+    var m = openModal('<div class="mb-modal-title">Удалить контент автора?</div>'
+      + '<div class="mb-modal-text">Будет удалено безвозвратно: ' + esc(names) + '.'
+      + ' Автор: <b>@' + esc(username) + '</b>.</div>'
+      + '<div class="mb-flash" id="mb-flash"></div>'
+      + '<div class="mb-actions"><button class="mb-btn" data-close>Отмена</button>'
+      + '<button class="mb-btn mb-danger" id="mb-confirm-purge">Удалить</button></div>');
+    m.querySelector('#mb-confirm-purge').addEventListener('click', function () {
+      this.disabled = true; this.textContent = 'Удаление…';
+      jpost('/api/v1/admin/users/' + username + '/purge/', { categories: chosen })
+        .then(function () { flash(m, 'Контент удалён.', true); setTimeout(function () { window.location.reload(); }, 900); })
+        .catch(function (err) { flash(m, err.message); this.disabled = false; this.textContent = 'Удалить'; }.bind(this));
+    });
   }
 
   // Отдельная форма блокировки (для потока «удалить + заблокировать»)

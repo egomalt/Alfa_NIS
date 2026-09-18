@@ -85,7 +85,7 @@ TEMPLATES = [
 
 # Версия статики: подставляется ко всем ссылкам на CSS/JS как ?v=.
 # Поменял статику — подними значение (или задай ASSET_VERSION в окружении).
-ASSET_VERSION = os.getenv('ASSET_VERSION', '20260918-8')
+ASSET_VERSION = os.getenv('ASSET_VERSION', '20260918-9')
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
@@ -118,5 +118,9 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Файлы вне раздаваемой папки: доступ к ним даёт только вьюха с проверкой прав
+# (core.storage). Сюда складываются регистрационные документы компаний.
+PRIVATE_MEDIA_ROOT = BASE_DIR / 'private_media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

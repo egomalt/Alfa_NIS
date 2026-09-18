@@ -77,8 +77,11 @@ def _serialize_company(company, include_private=False):
         'rating_dist': rating_dist,
     }
     if include_private:
-        doc = company.registration_document
-        data['registration_document_url'] = doc.url if doc else ''
+        # Документ лежит вне media/ — ссылка ведёт во вьюху с проверкой прав
+        data['registration_document_url'] = (
+            f'/administration/verification/{company.username}/document/'
+            if company.registration_document else ''
+        )
     return data
 
 

@@ -85,10 +85,18 @@
       var username = t.dataset.user;
       var name = t.dataset.name || username;
       if (act === 'unban') {
-        A.apiPost('/api/v1/admin/users/' + username + '/unban/', {}).then(afterAction).catch(function (err) { alert(err.message); });
+        A.apiPost('/api/v1/admin/users/' + username + '/unban/', {})
+          .then(function () { A.notify('Блокировка с ' + name + ' снята.', 'ok'); afterAction(); })
+          .catch(A.fail);
       } else if (act === 'ban') {
         A.openReasonModal('Причина и срок бана — ' + name, function (reason, duration) {
-          A.apiPost('/api/v1/admin/users/' + username + '/ban/', { reason: reason, duration: duration }).then(afterAction).catch(function (err) { alert(err.message); });
+          A.apiPost('/api/v1/admin/users/' + username + '/ban/', { reason: reason, duration: duration })
+            .then(function (d) {
+              var extra = d.contests_removed ? ' Удалено конкурсов: ' + d.contests_removed + '.' : '';
+              A.notify(name + ' заблокирован.' + extra, 'ok');
+              afterAction();
+            })
+            .catch(A.fail);
         }, true);
       }
     });
