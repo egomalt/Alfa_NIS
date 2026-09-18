@@ -157,6 +157,24 @@
     /* ── Обработчики ────────────────────────────────────────────────── */
 
     document.addEventListener('DOMContentLoaded', () => {
+        /* Показ пароля. Делегированием, а не по кнопке на поле: полей три
+           на двух страницах, и обработчик один на все. Кнопка вне обхода
+           табом (tabindex=-1) — она не шаг формы, а подсказка себе. */
+        document.body.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-toggle-password]');
+            if (!button) return;
+            const input = document.getElementById(button.dataset.togglePassword);
+            if (!input) return;
+            const shown = input.type === 'text';
+            input.type = shown ? 'password' : 'text';
+            button.setAttribute('aria-pressed', String(!shown));
+            button.setAttribute('aria-label', shown ? 'Показать пароль' : 'Скрыть пароль');
+            // Курсор возвращаем в конец: смена type сбрасывает его в начало
+            input.focus();
+            const end = input.value.length;
+            input.setSelectionRange(end, end);
+        });
+
         document.body.addEventListener('submit', async (event) => {
             const form = event.target;
             if (!form.matches('[data-api-form]')) return;

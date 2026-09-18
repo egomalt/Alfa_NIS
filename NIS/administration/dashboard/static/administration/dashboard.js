@@ -148,14 +148,6 @@
     });
   }
 
-  function setModName() {
-    var name = (window.ALFA_ADMIN_BOOTSTRAP || {}).username || 'Admin';
-    var nameEl = el('ap-mod-name');
-    var avEl = el('ap-mod-avatar');
-    if (nameEl) nameEl.textContent = name;
-    if (avEl) avEl.textContent = (name || 'A')[0].toUpperCase();
-  }
-
   // Обновляет бейджи сайдбара по данным обзора
   function refreshBadges(stats) {
     var vb = el('ap-badge-verify');
@@ -203,7 +195,6 @@
     setupLogout();
     setupReasonModal();
     setupDocModal();
-    setModName();
     setupSidebarBurger();
 
     // Инициализируем все зарегистрированные разделы

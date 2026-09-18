@@ -5,8 +5,11 @@
   }
   function initial(name) { return (name || '?').trim()[0].toUpperCase(); }
 
-  async function mountUserChip(containerId) {
-    const el = document.getElementById(containerId);
+  /* Принимает и сам элемент, и его id. Раньше брала только id, а
+     автомонтирование передавало `el.id` — у контейнера без id это пустая
+     строка, getElementById('') отдаёт null, и чип молча не появлялся. */
+  async function mountUserChip(target) {
+    const el = typeof target === 'string' ? document.getElementById(target) : target;
     if (!el) return;
     try {
       const res = await fetch('/api/v1/auth/me/');
@@ -54,8 +57,8 @@
 
   window.careerMountUserChip = mountUserChip;
 
-  // Auto-mount for all elements with data-user-chip attribute
-  document.querySelectorAll('[data-user-chip]').forEach(el => mountUserChip(el.id));
+  // Сам элемент, а не его id: id у контейнера необязателен
+  document.querySelectorAll('[data-user-chip]').forEach(mountUserChip);
 
   /* ── Выход из аккаунта ───────────────────────────────────────────── */
   function csrfToken() {

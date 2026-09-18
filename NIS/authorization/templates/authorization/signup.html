@@ -71,15 +71,23 @@
 
         <div data-field="password">
           <div class="cr-auth-field-label">Пароль</div>
-          <input id="register-password" aria-describedby="err-password" name="password" type="password" placeholder="Минимум 8 символов"
+          <div class="cr-input-with-button">
+            <input id="register-password" aria-describedby="err-password" name="password" type="password" placeholder="Минимум 8 символов"
             class="cr-auth-input" required autocomplete="new-password">
+            <button type="button" class="cr-eye" data-toggle-password="register-password"
+              aria-label="Показать пароль" aria-pressed="false" tabindex="-1"><svg class="cr-eye-show" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="cr-eye-hide" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-3 3.8"/><path d="M6.6 6.8A18 18 0 0 0 1 12s4 7 11 7a9.9 9.9 0 0 0 4.5-1"/><path d="M2 2l20 20"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button>
+          </div>
           <ul class="errorlist" id="err-password" hidden></ul>
         </div>
 
         <div data-field="password_confirm">
           <div class="cr-auth-field-label">Повторите пароль</div>
-          <input id="register-password-confirm" aria-describedby="err-password_confirm" name="password_confirm" type="password" placeholder="••••••••"
+          <div class="cr-input-with-button">
+            <input id="register-password-confirm" aria-describedby="err-password_confirm" name="password_confirm" type="password" placeholder="••••••••"
             class="cr-auth-input" required autocomplete="new-password">
+            <button type="button" class="cr-eye" data-toggle-password="register-password-confirm"
+              aria-label="Показать пароль" aria-pressed="false" tabindex="-1"><svg class="cr-eye-show" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="cr-eye-hide" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-3 3.8"/><path d="M6.6 6.8A18 18 0 0 0 1 12s4 7 11 7a9.9 9.9 0 0 0 4.5-1"/><path d="M2 2l20 20"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button>
+          </div>
           <ul class="errorlist" id="err-password_confirm" hidden></ul>
         </div>
       </div>

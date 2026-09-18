@@ -11,10 +11,6 @@
 .ap-icon-sun { display: none; }
 :root[data-theme="dark"] .ap-icon-moon { display: none; }
 :root[data-theme="dark"] .ap-icon-sun { display: block; }
-.ap-user-chip { display: flex; align-items: center; gap: 9px; height: 36px; padding: 0 12px 0 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
-.ap-avatar { width: 24px; height: 24px; border-radius: 6px; background: var(--surface-3); color: var(--text-2); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-.ap-user-name { font-size: 13px; font-weight: 600; }
-.ap-user-role { font-size: 11px; color: var(--muted); }
 
 .ap-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 64px); }
 .ap-sidebar { border-right: 1px solid var(--line); background: var(--surface); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; }
@@ -140,8 +136,5 @@
   .ap-trow { min-width: 640px; }
   .ap-main { padding: 22px 16px 60px; }
   /* чип аккаунта → только аватар, размером как кнопки навбара */
-  .ap-user-chip { padding: 0; border: none; background: transparent; }
-  .ap-user-chip > div { display: none; }
-  .ap-avatar { width: 36px; height: 36px; border-radius: 9px; font-size: 14px; }
 }
 @media (max-width: 520px) { .ap-stats-row { grid-template-columns: 1fr; } }

@@ -8,4 +8,6 @@ from core.auth import page_login_required
 @ensure_csrf_cookie
 @page_login_required(ROLE_MODERATOR)
 def dashboard_shell(request):
-    return render(request, 'administration/dashboard.html', {'username': request.account.username})
+    # Имя модератора шаблону больше не нужно: чип в шапке рисует общий
+    # career.js по данным /api/v1/auth/me/, как на остальных страницах
+    return render(request, 'administration/dashboard.html')

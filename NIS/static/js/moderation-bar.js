@@ -2,6 +2,7 @@
    Страница объявляет цель через window.ALFA_MOD_TARGET:
      { type:'article', id, author, title }
      { type:'contest', id }                     // автора/заголовок добираем из API
+     { type:'test', id, author, title }         // страница прохождения теста
      { type:'user', username }                  // профиль кандидата
      { type:'company', username }               // профиль компании
    Панель и действия показываются только аккаунту с ролью moderator. */
@@ -45,6 +46,9 @@
     if (target.type === 'article') {
       return Promise.resolve({ author: target.author, authorRole: 'user', title: target.title || 'статья' });
     }
+    if (target.type === 'test') {
+      return Promise.resolve({ author: target.author, authorRole: null, title: target.title || 'тест' });
+    }
     if (target.type === 'contest') {
       return jget('/api/v1/contests/' + target.id + '/').then(function (d) {
         var c = (d && (d.contest || d)) || {};
@@ -63,7 +67,7 @@
 
   // Что именно мы сейчас модерируем — подпись рядом со значком
   var TARGET_LABEL = {
-    article: 'Статья', contest: 'Конкурс',
+    article: 'Статья', contest: 'Конкурс', test: 'Тест',
     user: 'Кандидат', company: 'Компания',
   };
 
@@ -76,6 +80,8 @@
       buttons = '<button class="mb-btn mb-danger" data-mb="del-article">Удалить статью</button>';
     } else if (target.type === 'contest') {
       buttons = '<button class="mb-btn mb-danger" data-mb="del-contest">Удалить конкурс</button>';
+    } else if (target.type === 'test') {
+      buttons = '<button class="mb-btn mb-danger" data-mb="del-test">Удалить тест</button>';
     }
     buttons += '<button class="mb-btn" data-mb="author">Действия</button>';
 
@@ -101,6 +107,7 @@
       var act = b.getAttribute('data-mb');
       if (act === 'del-article') confirmDeleteMaterial(ctx, 'article');
       else if (act === 'del-contest') confirmDeleteMaterial(ctx, 'contest');
+      else if (act === 'del-test') confirmDeleteMaterial(ctx, 'test');
       else if (act === 'author') openAuthorActions(ctx.author);
       else if (act === 'hide') {
         bar.remove();
@@ -111,7 +118,7 @@
 
   // ── Модалка удаления материала ───────────────────────────────
   function confirmDeleteMaterial(ctx, kind) {
-    var noun = kind === 'article' ? 'статью' : 'конкурс';
+    var noun = { article: 'статью', contest: 'конкурс', test: 'тест' }[kind];
     var body = '<div class="mb-modal-title">Удалить ' + noun + '?</div>'
       + '<div class="mb-modal-text">Материал «' + esc(ctx.title) + '» будет удалён безвозвратно.'
       + (ctx.author ? ' Автор: <b>@' + esc(ctx.author) + '</b>.' : '') + '</div>'
@@ -144,7 +151,7 @@
   }
 
   function gotoAfterDelete(kind) {
-    window.location.href = kind === 'article' ? '/articles/' : '/contests/';
+    window.location.href = { article: '/articles/', contest: '/contests/', test: '/tests/' }[kind];
   }
 
   // ── Модалка действий с автором (бан / варн / удаление контента) ─

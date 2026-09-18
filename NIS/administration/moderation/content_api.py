@@ -42,6 +42,21 @@ def api_delete_contest(request, contest_id):
     return JsonResponse({'ok': True, 'deleted': 'contest', 'title': title, 'author': author})
 
 
+@require_POST
+@moderator_required
+def api_delete_test(request, test_id):
+    """Тест — такой же материал, как статья и конкурс.
+
+    Удалить его можно было только скопом, через зачистку всего контента
+    автора: на самой странице теста у модератора не было ни кнопки, ни плашки.
+    """
+    test = get_object_or_404(Test, id=test_id)
+    author = test.owner_username
+    title = test.title or ('Тест #%d' % test.id)
+    test.delete()
+    return JsonResponse({'ok': True, 'deleted': 'test', 'title': title, 'author': author})
+
+
 def _content_counts(username):
     return {
         'articles': Article.objects.filter(author_username=username).count(),

@@ -101,6 +101,7 @@ urlpatterns = [
     path('admin/reports/<int:report_id>/dismiss/',       admin_reports_views.api_report_dismiss),
     path('admin/content/article/<int:article_id>/delete/', admin_content_views.api_delete_article),
     path('admin/content/contest/<int:contest_id>/delete/', admin_content_views.api_delete_contest),
+    path('admin/content/test/<int:test_id>/delete/',       admin_content_views.api_delete_test),
     path('admin/users/<slug:username>/content/',         admin_content_views.api_user_content),
     path('admin/users/<slug:username>/purge/',           admin_content_views.api_user_purge),
 ]

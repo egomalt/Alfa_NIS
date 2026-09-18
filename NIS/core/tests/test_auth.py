@@ -113,6 +113,29 @@ class LoginTests(BaseCase):
         self.assertNotEqual(before, after.value if after else None)
 
 
+class PasswordToggleTests(BaseCase):
+    """Кнопка «показать пароль» на формах входа и регистрации."""
+
+    def test_every_password_field_has_a_toggle(self):
+        pages = {
+            '/authorization/signin/': ['login-password'],
+            '/authorization/signup/': ['register-password', 'register-password-confirm'],
+        }
+        for url, fields in pages.items():
+            body = Client().get(url).content.decode()
+            for field in fields:
+                with self.subTest(url=url, field=field):
+                    self.assertIn(f'data-toggle-password="{field}"', body)
+                    self.assertIn(f'id="{field}"', body)
+
+    def test_fields_still_start_hidden(self):
+        """Переключатель не должен раскрывать пароль по умолчанию."""
+        body = Client().get('/authorization/signin/').content.decode()
+        self.assertIn('id="login-password"', body)
+        self.assertIn('type="password"', body)
+        self.assertIn('aria-pressed="false"', body)
+
+
 class BanTests(BaseCase):
     """Блокировка забирает право действовать, а не право видеть.
 

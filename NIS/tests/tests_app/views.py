@@ -41,6 +41,8 @@ def test_view_shell(request, test_id):
         'app_path': request.path,
         'test_id': test_id,
         'test_title': test.title,
+        # Автор нужен плашке модератора: с неё открываются действия над ним
+        'owner_username': test.owner_username,
         'is_preview': is_preview,
     })
 

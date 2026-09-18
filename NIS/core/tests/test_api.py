@@ -20,7 +20,7 @@ from contests.contests_cabinet.models import Contest, ContestSubmission
 from exports.company import build_company_pdf, contest_rows, test_rows
 from exports.pdf import fit_column_widths, plural
 from exports.user import build_user_pdf
-from tests.constructor.models import TestAttempt, TestPage
+from tests.constructor.models import Test, TestAttempt, TestPage
 from users.models import UserProfile
 
 from .base import PASSWORD, BaseCase
@@ -868,20 +868,37 @@ class CabinetSidebarTests(BaseCase):
                 self.assertNotIn('/warn/', path.read_text(encoding='utf-8'))
 
     def test_moderation_bar_is_on_every_moderatable_page(self):
-        """Профиль компании панели не имел: забанить её можно было только
-        из админки, хотя у кандидата кнопка была прямо на странице."""
+        """Панель стояла на четырёх страницах из восьми: на странице теста
+        и на публичных списках профиля её не было, и она пропадала на
+        первом же переходе с профиля."""
         root = Path(settings.BASE_DIR)
         pages = (
             'articles/articles_app/templates/articles_app/read.html',
             'contests/contests_app/templates/contests/contests_app/contest_view.html',
+            'tests/tests_app/templates/tests_app/test_view.html',
             'profiles/templates/profiles/user.html',
             'profiles/templates/profiles/company.html',
+            'profiles/templates/profiles/user_articles.html',
+            'profiles/templates/profiles/company_tests.html',
+            'profiles/templates/profiles/company_contests.html',
         )
         for page in pages:
             with self.subTest(page=page):
                 markup = (root / page).read_text(encoding='utf-8')
                 self.assertIn('ALFA_MOD_TARGET', markup)
                 self.assertIn('moderation-bar.js', markup)
+
+    def test_moderator_can_delete_a_test(self):
+        """Тест сносился только скопом, зачисткой всего контента автора."""
+        test = self.make_test(owner='kandidat', title='Плохой тест')
+        response = self.login('moder').post(f'/api/v1/admin/content/test/{test.id}/delete/')
+        self.assertEqual(response.json()['deleted'], 'test')
+        self.assertFalse(Test.objects.filter(id=test.id).exists())
+
+        # Обычному пользователю этот адрес недоступен
+        other = self.make_test(owner='kandidat')
+        self.assertEqual(
+            self.login('kandidat').post(f'/api/v1/admin/content/test/{other.id}/delete/').status_code, 403)
 
     def test_moderation_bar_says_actions_not_author_actions(self):
         source = (Path(settings.BASE_DIR) / 'static/js/moderation-bar.js').read_text(encoding='utf-8')
@@ -900,6 +917,44 @@ class CabinetSidebarTests(BaseCase):
             if 'cr-user-role' in path.read_text(encoding='utf-8'):
                 renderers.append(str(path.relative_to(root)))
         self.assertEqual(renderers, [], 'чип пользователя рисует только static/js/career.js')
+
+    def test_admin_panel_uses_the_shared_chip(self):
+        """У админки была своя плашка: серый аватар, логин вместо имени
+        и собственные размеры, которые совпадали с общими только вручную."""
+        body = self.login('moder').get('/administration/').content.decode()
+        self.assertIn('data-user-chip', body)
+        self.assertIn('js/career.js', body)
+        self.assertNotIn('ap-user-chip', body)
+
+        css = (Path(settings.BASE_DIR)
+               / 'administration/dashboard/static/administration/dashboard.css').read_text(encoding='utf-8')
+        for rule in ('.ap-user-chip', '.ap-avatar', '.ap-user-name', '.ap-user-role'):
+            with self.subTest(rule=rule):
+                self.assertNotIn(rule, css)
+
+    def test_chip_mounts_without_an_id(self):
+        """Автомонтирование передавало `el.id`, и у контейнера без id
+        получался getElementById('') — чип молча не появлялся. В админке
+        контейнер именно такой."""
+        source = (Path(settings.BASE_DIR) / 'static/js/career.js').read_text(encoding='utf-8')
+        self.assertNotIn('mountUserChip(el.id)', source)
+        self.assertIn('forEach(mountUserChip)', source)
+
+    def test_every_page_with_the_navbar_can_draw_the_chip(self):
+        """Шапка без career.js осталась бы с пустым местом вместо чипа."""
+        root = Path(settings.BASE_DIR)
+        checked = 0
+        for path in root.glob('**/templates/**/*.html'):
+            # Партиалы — вставки, скрипт подключает страница, которая их включает
+            if 'partials' in path.parts:
+                continue
+            markup = path.read_text(encoding='utf-8')
+            if 'data-user-chip' not in markup and 'partials/navbar.html' not in markup:
+                continue
+            checked += 1
+            with self.subTest(page=str(path.relative_to(root))):
+                self.assertIn('js/career.js', markup)
+        self.assertGreater(checked, 10, 'страницы с шапкой не нашлись — проверка ничего не проверила')
 
     def test_user_chip_knows_every_role(self):
         """Подписи те же, что в панели модерации и в шапке админки."""
