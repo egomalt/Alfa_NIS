@@ -3,11 +3,11 @@ from django.utils import timezone
 
 from administration.reports.api_views import _new_counts_by_target
 from administration.reports.models import ESCALATION_THRESHOLD, Report, TARGET_LABELS
-from authorization.models import Account, ROLE_LABELS, STATUS_BANNED
+from authorization import bans
+from authorization.models import Account, ROLE_LABELS
 from companies.models import Company
 
 from .pdf import ReportBuilder, fmt_date
-
 
 
 def build_admin_pdf():
@@ -18,7 +18,7 @@ def build_admin_pdf():
         1 for r in new_reports
         if new_counts.get((r.target_type, r.target_id), 0) >= ESCALATION_THRESHOLD
     )
-    banned = list(Account.objects.filter(status=STATUS_BANNED).order_by('-created_at'))
+    banned = list(Account.objects.filter(bans.active_ban_q()).order_by('-created_at'))
 
     r = ReportBuilder('Сводка модерации', 'Панель администратора')
 

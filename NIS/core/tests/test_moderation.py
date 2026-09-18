@@ -1,10 +1,17 @@
-"""Жалобы: создание, защита от накрутки, снятие материала."""
+"""Модерация: жалобы, баны, верификация компаний и зачистка контента."""
 import json
+from datetime import timedelta
+from pathlib import Path
 
+from django.conf import settings
 from django.test import Client
+from django.utils import timezone
 
+from administration.moderation.api_views import MAX_BAN_DAYS
 from administration.reports.models import ESCALATION_THRESHOLD, Report
 from articles.constructor.models import Article
+from authorization.models import Account, STATUS_ACTIVE, STATUS_BANNED
+from companies.models import Company
 
 from .base import BaseCase
 
@@ -64,7 +71,7 @@ class ReportCreationTests(BaseCase):
 
 
 class TakedownTests(BaseCase):
-    """Кнопка «Снять материал» раньше только закрывала жалобу."""
+    """«Снять материал» удаляет сам материал, а не только закрывает жалобу."""
 
     def _make_report(self, article):
         return Report.objects.create(
@@ -108,3 +115,128 @@ class TakedownTests(BaseCase):
         report = self._make_report(article)
         self.assertEqual(self.login('drugoy').post(f'/api/v1/admin/reports/{report.id}/takedown/').status_code, 403)
         self.assertTrue(Article.objects.filter(id=article.id).exists())
+
+
+class BanStateTests(BaseCase):
+    """Истёкший бан не должен считаться действующим.
+
+    Поле status снимается только при следующем входе пользователя, поэтому
+    в базе он так и лежит со status='banned' — списки и счётчики админки
+    обязаны смотреть на дату, а не на поле.
+    """
+
+    def _ban(self, username, until):
+        account = Account.objects.get(username=username)
+        account.status = STATUS_BANNED
+        account.ban_until = until
+        account.ban_reason = 'Нарушение правил'
+        account.save(update_fields=['status', 'ban_until', 'ban_reason'])
+        return account
+
+    def test_expired_ban_is_not_counted_in_overview(self):
+        self._ban('kandidat', timezone.now() - timedelta(days=1))
+        self._ban('drugoy', timezone.now() + timedelta(days=1))
+
+        data = self.login('moder').get('/api/v1/admin/overview/').json()
+        self.assertEqual(data['stats']['banned'], 1)
+
+    def test_expired_ban_drops_out_of_banned_filter(self):
+        self._ban('kandidat', timezone.now() - timedelta(days=1))
+        self._ban('drugoy', None)  # бессрочный
+
+        data = self.login('moder').get('/api/v1/admin/users/?filter=banned').json()
+        usernames = [u['username'] for u in data['users']]
+        self.assertEqual(usernames, ['drugoy'])
+
+    def test_expired_ban_shows_as_active_in_list(self):
+        self._ban('kandidat', timezone.now() - timedelta(days=1))
+
+        data = self.login('moder').get('/api/v1/admin/users/?q=kandidat').json()
+        row = next(u for u in data['users'] if u['username'] == 'kandidat')
+        self.assertEqual(row['status'], STATUS_ACTIVE)
+        self.assertEqual(row['ban_reason'], '')
+
+    def test_huge_ban_duration_does_not_crash(self):
+        """int из формы уходит в timedelta: без потолка это OverflowError и 500."""
+        response = self.login('moder').post(
+            '/api/v1/admin/users/kandidat/ban/',
+            json.dumps({'reason': 'Спам', 'duration': 10 ** 9}),
+            'application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        account = Account.objects.get(username='kandidat')
+        self.assertTrue(account.is_banned)
+        self.assertLess(account.ban_until, timezone.now() + timedelta(days=MAX_BAN_DAYS + 1))
+
+    def test_moderator_cannot_be_banned(self):
+        response = self.login('moder').post(
+            '/api/v1/admin/users/moder/ban/',
+            json.dumps({'reason': 'Проверка'}),
+            'application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Account.objects.get(username='moder').is_banned)
+
+
+class VerificationDecisionTests(BaseCase):
+    def test_decision_only_on_pending_application(self):
+        """Компания без поданной заявки не должна одобряться в один POST."""
+        client = self.login('moder')
+        self.assertEqual(client.post('/api/v1/admin/verifications/firma/approve/').status_code, 400)
+        self.assertEqual(client.post('/api/v1/admin/verifications/firma/reject/').status_code, 400)
+
+    def test_pending_application_can_be_decided(self):
+        company = Company.objects.get(username='firma')
+        company.verification_status = Company.VERIF_PENDING
+        company.submitted_at = timezone.now()
+        company.save(update_fields=['verification_status', 'submitted_at'])
+
+        response = self.login('moder').post('/api/v1/admin/verifications/firma/approve/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Company.objects.get(username='firma').is_verified)
+
+    def test_document_is_not_served_to_outsiders(self):
+        """Ссылка на документ ведёт во вьюху под проверкой роли, а не в /media/."""
+        company = Company.objects.get(username='firma')
+        company.registration_document.name = 'company_documents/ustav.pdf'
+        company.verification_status = Company.VERIF_PENDING
+        company.save(update_fields=['registration_document', 'verification_status'])
+
+        data = self.login('moder').get('/api/v1/admin/verifications/?status=pending').json()
+        url = data['verifications'][0]['document_url']
+        self.assertEqual(url, '/administration/verification/firma/document/')
+
+        # Посторонний уходит на форму входа, а не получает файл
+        self.assertEqual(self.login('drugoy').get(url).status_code, 302)
+
+
+class ContentPurgeTests(BaseCase):
+    def test_purge_reports_real_counts(self):
+        """delete() возвращает и связанные строки — счётчик должен быть по материалам."""
+        self.make_article(author='kandidat')
+        self.make_article(author='kandidat', title='Вторая')
+        test = self.make_test(owner='kandidat')  # вопросы и ответы тоже попадут в delete()
+        self.assertTrue(test.pages.exists())
+
+        response = self.login('moder').post(
+            '/api/v1/admin/users/kandidat/purge/',
+            json.dumps({'categories': ['articles', 'tests']}),
+            'application/json',
+        )
+        self.assertEqual(response.json()['removed'], {'articles': 2, 'tests': 1})
+        self.assertEqual(Article.objects.filter(author_username='kandidat').count(), 0)
+
+    def test_document_can_be_shown_in_admin_iframe(self):
+        """Предпросмотр в модалке — это iframe: DENY из middleware его гасит."""
+        media = Path(settings.MEDIA_ROOT) / 'company_documents'
+        media.mkdir(parents=True, exist_ok=True)
+        (media / 'ustav-test.pdf').write_bytes(b'%PDF-1.4 test')
+        self.addCleanup(lambda: (media / 'ustav-test.pdf').unlink(missing_ok=True))
+
+        company = Company.objects.get(username='firma')
+        company.registration_document.name = 'company_documents/ustav-test.pdf'
+        company.save(update_fields=['registration_document'])
+
+        response = self.login('moder').get('/administration/verification/firma/document/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers['X-Frame-Options'], 'SAMEORIGIN')

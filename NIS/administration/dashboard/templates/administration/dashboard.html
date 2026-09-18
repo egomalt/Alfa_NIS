@@ -16,11 +16,7 @@
 </head>
 <body>
 
-{% comment %}
-  Шапка общая с остальным сайтом: логотип, разделы, тема и чип аккаунта.
-  Своя была без единой ссылки — из панели нельзя было перейти никуда,
-  кроме главной по логотипу.
-{% endcomment %}
+{# Шапка общая с остальным сайтом: логотип, разделы, тема и чип аккаунта #}
 {% include 'partials/navbar.html' %}
 
 <button type="button" class="ap-burger" id="ap-sidebar-burger" aria-label="Разделы">
@@ -83,6 +79,7 @@
         <span class="ap-filter-count" id="ap-vf-count"></span>
       </div>
       <div id="ap-verify-list"></div>
+      <div class="cr-pager" id="ap-verify-pager"></div>
     </div>
 
     <!-- ПОЛЬЗОВАТЕЛИ -->
@@ -141,22 +138,14 @@
 
 <!-- Модалка просмотра документа -->
 <div class="ap-modal-backdrop" id="ap-doc-modal">
-  <div class="ap-modal" style="max-width:400px;">
+  <div class="ap-modal ap-modal-wide">
     <div class="ap-modal-title">Просмотр документа</div>
     <div class="ap-doc-preview-name">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       <span id="ap-doc-modal-name"></span>
     </div>
-    <div class="ap-doc-preview-page">
-      <div class="ap-l" style="width:60%;height:12px;margin-bottom:20px;"></div>
-      <div class="ap-l" style="width:90%;"></div>
-      <div class="ap-l" style="width:80%;"></div>
-      <div class="ap-l" style="width:85%;"></div>
-      <div class="ap-l" style="width:40%;margin-bottom:20px;"></div>
-      <div class="ap-l" style="width:70%;"></div>
-      <div class="ap-l" style="width:92%;"></div>
-      <div class="ap-l" style="width:55%;"></div>
-    </div>
+    <iframe class="ap-doc-frame" id="ap-doc-frame" title="Регистрационный документ"></iframe>
+    <div class="ap-doc-missing" id="ap-doc-missing" style="display:none;">Документ не загружен.</div>
     <div class="ap-modal-actions">
       <button class="ap-btn-secondary" id="ap-doc-close">Закрыть</button>
       <a class="ap-btn-primary" id="ap-doc-open" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none;">Открыть файл</a>

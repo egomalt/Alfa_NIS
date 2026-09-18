@@ -147,11 +147,7 @@ def api_report_resolve(request, report_id):
 @require_POST
 @moderator_required
 def api_report_takedown(request, report_id):
-    """Снимает материал и закрывает жалобу.
-
-    Раньше кнопка «Снять материал» только меняла статус жалобы — материал
-    оставался опубликованным, а модератор считал вопрос закрытым.
-    """
+    """Удаляет материал и закрывает все жалобы на него."""
     report = get_object_or_404(Report, id=report_id)
 
     models_by_type = {

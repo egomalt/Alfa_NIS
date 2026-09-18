@@ -85,8 +85,7 @@
     }
     buttons += '<button class="mb-btn" data-mb="author">Действия</button>';
 
-    // Кого модерируем: без этого на профиле было непонятно, к кому относятся
-    // действия, — плашка выглядела одинаково на любой странице
+    // Кого модерируем — иначе на профиле непонятно, к кому относятся действия
     var who = TARGET_LABEL[target.type] || '';
     if (ctx.author) who += ' · @' + esc(ctx.author);
 
@@ -154,7 +153,7 @@
     window.location.href = { article: '/articles/', contest: '/contests/', test: '/tests/' }[kind];
   }
 
-  // ── Модалка действий с автором (бан / варн / удаление контента) ─
+  // ── Модалка действий с автором (бан и удаление его контента) ─
   function openAuthorActions(username) {
     if (!username) return;
     jget('/api/v1/admin/users/' + username + '/content/').then(function (d) {

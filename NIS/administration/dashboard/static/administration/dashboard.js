@@ -16,9 +16,7 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  /* ДД.ММ.ГГГГ, как дедлайны и даты во всём остальном интерфейсе.
-     «18 сентября 2026 г.» не помещалось в колонку таблицы и ломалось
-     на две строки, а в плашке бана вылезало на соседнюю колонку. */
+  /* ДД.ММ.ГГГГ — короткий формат, который помещается в колонку таблицы */
   function fmtDate(iso) {
     if (!iso) return '';
     var d = new Date(iso);
@@ -51,24 +49,48 @@
     dismissed:{ label: 'Отклонена',   bg: 'var(--surface-2)',  color: 'var(--muted)' },
   };
 
+  // «1 жалоба», «2 жалобы», «5 жалоб» — иначе в плашке эскалации всегда «жалоб»
+  function plural(n, one, few, many) {
+    var mod100 = Math.abs(n) % 100;
+    var mod10 = mod100 % 10;
+    if (mod100 > 10 && mod100 < 20) return many;
+    if (mod10 === 1) return one;
+    if (mod10 >= 2 && mod10 <= 4) return few;
+    return many;
+  }
+
   function pill(status, labelOverride) {
     var m = STATUS_META[status] || { label: status, bg: 'var(--surface-2)', color: 'var(--muted)' };
     return '<span class="ap-status-pill" style="background:' + m.bg + ';color:' + m.color + ';">' + esc(labelOverride || m.label) + '</span>';
   }
 
   var sections = {};
+  var TABS = ['overview', 'verify', 'users', 'reports'];
+  var currentTab = 'overview';
 
   function registerSection(name, obj) { sections[name] = obj; }
 
-  function showTab(name) {
+  function showTab(name, skipHash) {
+    if (TABS.indexOf(name) === -1) name = 'overview';
+    currentTab = name;
     document.querySelectorAll('.ap-tab-panel').forEach(function (p) {
       p.classList.toggle('active', p.id === 'ap-panel-' + name);
     });
     document.querySelectorAll('.ap-side-link[data-tab]').forEach(function (b) {
       b.classList.toggle('active', b.dataset.tab === name);
     });
+    // Раздел держим в адресе: после F5 и по «назад» панель остаётся там же,
+    // а на конкретную очередь можно дать ссылку
+    if (!skipHash && window.location.hash.slice(1) !== name) {
+      window.location.hash = name;
+    }
     window.scrollTo(0, 0);
     if (sections[name] && sections[name].load) sections[name].load();
+  }
+
+  function tabFromHash() {
+    var name = window.location.hash.slice(1);
+    return TABS.indexOf(name) === -1 ? 'overview' : name;
   }
 
   // ---- Модалка причины ----
@@ -118,16 +140,41 @@
   function openDocModal(name, url) {
     el('ap-doc-modal-name').textContent = name || 'Документ';
     var openBtn = el('ap-doc-open');
-    if (url) { openBtn.href = url; openBtn.style.display = 'inline-flex'; }
-    else { openBtn.style.display = 'none'; }
+    var frame = el('ap-doc-frame');
+    var missing = el('ap-doc-missing');
+    if (url) {
+      openBtn.href = url;
+      openBtn.style.display = 'inline-flex';
+      frame.src = url;
+      frame.style.display = '';
+      missing.style.display = 'none';
+    } else {
+      openBtn.style.display = 'none';
+      frame.removeAttribute('src');
+      frame.style.display = 'none';
+      missing.style.display = '';
+    }
     el('ap-doc-modal').classList.add('ap-open');
   }
-  function closeDocModal() { el('ap-doc-modal').classList.remove('ap-open'); }
+
+  function closeDocModal() {
+    el('ap-doc-modal').classList.remove('ap-open');
+    // Снимаем src, иначе закрытая модалка продолжает держать PDF в памяти
+    el('ap-doc-frame').removeAttribute('src');
+  }
 
   function setupDocModal() {
     el('ap-doc-close').addEventListener('click', closeDocModal);
     el('ap-doc-modal').addEventListener('click', function (e) {
       if (e.target === this) closeDocModal();
+    });
+  }
+
+  function setupEscape() {
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (el('ap-doc-modal').classList.contains('ap-open')) closeDocModal();
+      if (el('ap-reason-modal').classList.contains('ap-open')) closeReasonModal();
     });
   }
 
@@ -138,6 +185,10 @@
     });
     document.querySelectorAll('[data-goto]').forEach(function (n) {
       n.addEventListener('click', function () { showTab(n.dataset.goto); });
+    });
+    window.addEventListener('hashchange', function () {
+      var name = tabFromHash();
+      if (name !== currentTab) showTab(name, true);
     });
   }
 
@@ -166,6 +217,7 @@
     fmtDate: fmtDate,
     apiGet: apiGet,
     apiPost: apiPost,
+    plural: plural,
     pill: pill,
     STATUS_META: STATUS_META,
     registerSection: registerSection,
@@ -198,14 +250,21 @@
     setupLogout();
     setupReasonModal();
     setupDocModal();
+    setupEscape();
     setupSidebarBurger();
 
     // Инициализируем все зарегистрированные разделы
     Object.keys(sections).forEach(function (name) {
       if (sections[name].init) sections[name].init();
     });
-    // Грузим активный раздел (обзор). Он же обновит бейджи.
-    if (sections.overview && sections.overview.load) sections.overview.load();
+
+    var start = tabFromHash();
+    showTab(start, true);
+    // Бейджи сайдбара живут в данных обзора — подтягиваем их даже тогда,
+    // когда открыт другой раздел
+    if (start !== 'overview' && sections.overview && sections.overview.load) {
+      sections.overview.load();
+    }
   }
 
   if (document.readyState === 'loading') {

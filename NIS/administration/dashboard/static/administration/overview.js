@@ -17,7 +17,9 @@
   }
 
   function reportRow(r) {
-    var escPill = r.escalated ? '<span class="ap-escalation-pill">⚠ ' + r.total_reports + ' жалоб</span>' : '';
+    var escPill = r.escalated
+      ? '<span class="ap-escalation-pill">⚠ ' + r.total_reports + ' ' + A.plural(r.total_reports, 'жалоба', 'жалобы', 'жалоб') + '</span>'
+      : '';
     return '<div class="ap-report-card' + (r.escalated ? ' ap-escalated' : '') + '" style="cursor:default;">'
       + '<div class="ap-report-top"><span class="ap-report-type">' + A.esc(r.target_type_label) + '</span><span class="ap-report-target">' + A.esc(r.target_title) + '</span>' + escPill + '</div>'
       + '<div class="ap-report-reason">' + A.esc(r.reason) + '</div>'

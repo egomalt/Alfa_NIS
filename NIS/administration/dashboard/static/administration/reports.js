@@ -4,7 +4,7 @@
   var A = window.AdminPanel;
   var filter = 'new';
   var expandedId = null;
-  var threshold = 3;
+  var loaded = [];   // последняя выданная сервером страница жалоб
 
   function detailHtml(r) {
     var isUserReport = r.target_type === 'user' || r.target_type === 'company';
@@ -14,20 +14,22 @@
       ? '<div class="ap-action-group"><div class="ap-action-group-title">Материал</div><div class="ap-report-actions">'
         + (r.target_url ? '<a class="ap-btn-secondary" href="' + A.esc(r.target_url) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none;" data-stop="1">Открыть материал</a>' : '')
         + '<button class="ap-btn-accept" data-act="takedown" data-id="' + r.id + '">Снять материал</button>'
-        + '<button class="ap-btn-reject" data-act="keep" data-id="' + r.id + '">Оставить как есть</button>'
         + '</div></div>'
       : '';
 
     var authorLink = r.author_username ? '/' + A.esc(r.author_username) + '/' : '';
-    var authorActions = isNew
+    // Без автора бан не по кому выдавать — кнопка ушла бы в запрос с пустым логином
+    var authorActions = (isNew && r.author_username)
       ? '<div class="ap-action-group"><div class="ap-action-group-title">' + (isUserReport ? 'Пользователь' : 'Автор') + '</div><div class="ap-report-actions">'
-        + (authorLink ? '<a class="ap-btn-secondary" href="' + authorLink + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none;" data-stop="1">Открыть профиль</a>' : '')
+        + '<a class="ap-btn-secondary" href="' + authorLink + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none;" data-stop="1">Открыть профиль</a>'
         + '<button class="ap-btn-mini ap-danger" data-act="ban-author" data-id="' + r.id + '" data-user="' + A.esc(r.author_username) + '">Забанить</button>'
         + '</div></div>'
       : '';
 
+    // Одна кнопка на отказ: «оставить материал» и «отклонить жалобу» —
+    // это одно и то же решение, и раздваивать его незачем
     var dismiss = isNew
-      ? '<div class="ap-report-actions" style="margin-top:14px;"><button class="ap-btn-reject" data-act="dismiss" data-id="' + r.id + '">Отклонить жалобу целиком</button></div>'
+      ? '<div class="ap-report-actions" style="margin-top:14px;"><button class="ap-btn-reject" data-act="dismiss" data-id="' + r.id + '">Отклонить жалобу</button></div>'
       : '<div class="ap-decided-note" style="margin-top:12px;">' + (r.status === 'resolved' ? 'Меры приняты' : 'Жалоба отклонена') + '</div>';
 
     var targetRow = r.target_url
@@ -49,7 +51,9 @@
 
   function cardHtml(r) {
     var isOpen = expandedId === r.id;
-    var escPill = r.escalated ? '<span class="ap-escalation-pill">⚠ ' + r.total_reports + ' жалоб — приоритет</span>' : '';
+    var escPill = r.escalated
+      ? '<span class="ap-escalation-pill">⚠ ' + r.total_reports + ' ' + A.plural(r.total_reports, 'жалоба', 'жалобы', 'жалоб') + ' — приоритет</span>'
+      : '';
     return '<div class="ap-report-card' + (isOpen ? ' ap-open' : '') + (r.escalated ? ' ap-escalated' : '') + '" data-id="' + r.id + '">'
       + '<div class="ap-report-top">'
       + '<span class="ap-report-type">' + A.esc(r.target_type_label) + '</span>'
@@ -64,7 +68,8 @@
       + '</div>';
   }
 
-  function render(list, total) {
+  function render(total) {
+    var list = loaded;
     var countEl = A.el('ap-r-count');
     if (countEl) countEl.textContent = (typeof total === 'number' ? total : list.length);
     var wrap = A.el('ap-reports-list');
@@ -76,12 +81,14 @@
   }
 
   var page = 1;
+  var total = 0;
 
   function load() {
     A.apiGet('/api/v1/admin/reports/?status=' + filter + '&page=' + page)
       .then(function (d) {
-        if (typeof d.threshold === 'number') threshold = d.threshold;
-        render(d.reports || [], d.total);
+        loaded = d.reports || [];
+        total = d.total;
+        render(total);
         window.AlfaPager.render(A.el('ap-reports-pager'), d, function (next) { page = next; load(); });
       })
       .catch(function (e) {
@@ -122,7 +129,7 @@
           A.apiPost('/api/v1/admin/reports/' + id + '/takedown/', {}).then(afterAction).catch(function (err) { alert(err.message); });
           return;
         }
-        if (act === 'keep' || act === 'dismiss') { A.apiPost('/api/v1/admin/reports/' + id + '/dismiss/', {}).then(afterAction).catch(function (err) { alert(err.message); }); return; }
+        if (act === 'dismiss') { A.apiPost('/api/v1/admin/reports/' + id + '/dismiss/', {}).then(afterAction).catch(function (err) { alert(err.message); }); return; }
         if (act === 'ban-author') {
           var bu = actEl.dataset.user;
           A.openReasonModal('Причина и срок бана — ' + bu, function (reason, duration) {
@@ -135,12 +142,13 @@
         return;
       }
 
-      // Клик по карточке — раскрыть/свернуть
+      // Клик по карточке — раскрыть/свернуть. Перерисовываем из того, что уже
+      // пришло: за новыми данными тут ходить не за чем
       var card = e.target.closest('.ap-report-card');
       if (card) {
         var cid = parseInt(card.dataset.id, 10);
         expandedId = (expandedId === cid) ? null : cid;
-        load();
+        render(total);
       }
     });
   }

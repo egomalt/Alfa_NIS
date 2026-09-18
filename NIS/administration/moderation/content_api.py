@@ -45,11 +45,6 @@ def api_delete_contest(request, contest_id):
 @require_POST
 @moderator_required
 def api_delete_test(request, test_id):
-    """Тест — такой же материал, как статья и конкурс.
-
-    Удалить его можно было только скопом, через зачистку всего контента
-    автора: на самой странице теста у модератора не было ни кнопки, ни плашки.
-    """
     test = get_object_or_404(Test, id=test_id)
     author = test.owner_username
     title = test.title or ('Тест #%d' % test.id)
@@ -82,12 +77,18 @@ def api_user_purge(request, username):
     valid = {'articles', 'contests', 'tests'}
     categories = [c for c in categories if c in valid]
 
+    # Считаем до удаления: delete() возвращает число всех задетых записей,
+    # включая вопросы теста, решения и вложения, — в ответе это выглядело бы
+    # завышенным («удалено 47 статей» вместо трёх)
+    querysets = {
+        'articles': Article.objects.filter(author_username=username),
+        'contests': Contest.objects.filter(company_username=username),
+        'tests': Test.objects.filter(owner_username=username),
+    }
     removed = {}
-    if 'articles' in categories:
-        removed['articles'] = Article.objects.filter(author_username=username).delete()[0]
-    if 'contests' in categories:
-        removed['contests'] = Contest.objects.filter(company_username=username).delete()[0]
-    if 'tests' in categories:
-        removed['tests'] = Test.objects.filter(owner_username=username).delete()[0]
+    for name in categories:
+        qs = querysets[name]
+        removed[name] = qs.count()
+        qs.delete()
 
     return JsonResponse({'ok': True, 'removed': removed, 'counts': _content_counts(username)})

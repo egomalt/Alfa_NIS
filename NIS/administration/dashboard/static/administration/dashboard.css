@@ -1,14 +1,11 @@
 /* ── Админ-панель. Токены и тема берутся из career.css ─────────────────── */
 
-/* Шапка — общий partials/navbar.html и его стили из career.css.
-   Здесь лежала своя: логотип, метка ADMIN, кнопка темы и чип, и ни одной
-   ссылки на разделы сайта. Высота та же, 64px, поэтому сдвиг панели
-   (top: 64px) остался прежним. */
+/* Шапка — общий partials/navbar.html со своими стилями из career.css.
+   Её высота, 64px, задаёт сдвиг боковой панели ниже по файлу. */
 
 .ap-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 64px); }
-/* Панель прилипает к шапке и живёт в высоту экрана, как в обоих кабинетах.
-   Без этого она тянулась вместе со страницей: на списке из сотни жалоб
-   до кнопки «Выйти» приходилось листать весь список до конца. */
+/* Панель прилипает к шапке и живёт в высоту экрана, как в обоих кабинетах:
+   иначе на списке из сотни жалоб до кнопки «Выйти» надо листать до конца */
 .ap-sidebar { border-right: 1px solid var(--line); background: var(--surface); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
 .ap-company-chip { display: flex; align-items: center; gap: 10px; padding: 10px 10px 18px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
 .ap-company-avatar { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background: var(--surface-3); color: var(--text-2); font-weight: 700; font-size: 16px; flex-shrink: 0; }
@@ -49,14 +46,14 @@
 
 /* очередь верификации */
 .ap-verify-card { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin-bottom: 10px; display: flex; gap: 14px; align-items: center; }
-/* Имя документа бывает длинным: без обрезки чип распирал карточку,
-   а на телефоне уезжал за экран */
+/* Имя документа бывает длинным — обрезаем, чтобы чип не распирал карточку */
 .ap-verify-doc { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface-2); font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: border-color .12s, color .12s; text-decoration: none; color: var(--text-2); max-width: 260px; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
 .ap-verify-doc svg { flex-shrink: 0; }
 .ap-verify-doc:hover { border-color: var(--brand); color: var(--brand-text); }
-.ap-doc-preview-page { width: 100%; aspect-ratio: 210/297; background: #fff; border: 1px solid var(--line-2); border-radius: 10px; padding: 26px 22px; margin-bottom: 16px; box-shadow: var(--shadow); }
-.ap-doc-preview-page .ap-l { height: 8px; border-radius: 3px; background: #E4E9F2; margin-bottom: 12px; }
-.ap-doc-preview-name { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); margin-bottom: 16px; }
+.ap-doc-preview-name { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); margin-bottom: 14px; }
+/* Сам PDF, а не его имитация: модератор должен прочитать документ, не скачивая */
+.ap-doc-frame { display: block; width: 100%; height: min(70vh, 760px); border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface-2); margin-bottom: 16px; }
+.ap-doc-missing { padding: 28px; text-align: center; font-size: 13px; color: var(--muted); border: 1px dashed var(--line-2); border-radius: 10px; margin-bottom: 16px; }
 .ap-verify-main { flex: 1; min-width: 0; }
 .ap-verify-title { font-size: 14px; font-weight: 700; overflow-wrap: break-word; }
 .ap-verify-meta { font-size: 12px; color: var(--muted); }
@@ -118,7 +115,9 @@
 
 .ap-modal-backdrop { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.45); align-items: center; justify-content: center; padding: 24px; }
 .ap-modal-backdrop.ap-open { display: flex; }
-.ap-modal { width: 100%; max-width: 440px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); padding: 26px; box-shadow: var(--shadow-lg); }
+.ap-modal { width: 100%; max-width: 440px; max-height: calc(100vh - 48px); overflow-y: auto; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); padding: 26px; box-shadow: var(--shadow-lg); }
+/* Модалка документа шире обычной: в 440px читать скан бесполезно */
+.ap-modal-wide { max-width: 760px; }
 .ap-modal-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
 .ap-modal textarea { width: 100%; height: 90px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); color: var(--text); font-size: 13.5px; resize: vertical; margin-bottom: 16px; font-family: inherit; }
 .ap-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
@@ -140,8 +139,8 @@
   .ap-stats-row { grid-template-columns: repeat(2,1fr); }
   /* широкие таблицы — горизонтальный скролл */
   .ap-table { overflow-x: auto; }
-  /* Фиксированные колонки занимают 546px — имени при 640 оставалось
-     меньше сотни, и оно обрезалось многоточием почти всегда */
+  /* Фиксированные колонки занимают 546px: при 720px имени остаётся
+     достаточно, чтобы не обрезаться многоточием на каждой строке */
   .ap-trow { min-width: 720px; }
   .ap-main { padding: 22px 16px 60px; }
   /* чип аккаунта → только аватар, размером как кнопки навбара */

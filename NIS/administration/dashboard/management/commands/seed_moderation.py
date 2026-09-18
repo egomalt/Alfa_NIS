@@ -13,6 +13,7 @@
     manage.py seed_moderation --clear    # удалить созданное этой командой
 """
 from datetime import timedelta
+from io import BytesIO
 
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
@@ -62,7 +63,45 @@ BANNED = [
     ('narushitel-2', 'Спам в жалобах', 14),
 ]
 
-PDF = b'%PDF-1.4\n% demo\n'
+
+def demo_document(company_name):
+    """Настоящий PDF на одну страницу — его открывает предпросмотр в панели.
+
+    Заглушки из пары байт тут мало: модалка показывает файл во фрейме,
+    и битый PDF выглядит как сломанная страница, а не как демо-данные.
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas as pdf_canvas
+
+    from exports.pdf import FONT, FONT_BOLD, _ensure_fonts
+
+    _ensure_fonts()
+    buffer = BytesIO()
+    page = pdf_canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    page.setFont(FONT_BOLD, 15)
+    page.drawString(56, height - 90, 'Выписка из ЕГРЮЛ')
+    page.setFont(FONT, 11)
+    lines = [
+        '',
+        f'Полное наименование: ООО «{company_name}»',
+        'ОГРН: 1234567890123',
+        'ИНН / КПП: 7701234567 / 770101001',
+        'Дата регистрации: 14.03.2021',
+        'Статус: действующее юридическое лицо',
+        '',
+        'Документ сформирован для демонстрации панели модератора',
+        'и не является юридически значимым.',
+    ]
+    y = height - 125
+    for line in lines:
+        page.drawString(56, y, line)
+        y -= 20
+
+    page.showPage()
+    page.save()
+    return buffer.getvalue()
 
 
 class Command(BaseCommand):
@@ -114,7 +153,7 @@ class Command(BaseCommand):
             )
             if with_document:
                 company.registration_document.save(
-                    f'{username}-egrul.pdf', ContentFile(PDF), save=True)
+                    f'{username}-egrul.pdf', ContentFile(demo_document(name)), save=True)
             created += 1
         return created
 
@@ -235,7 +274,14 @@ class Command(BaseCommand):
         usernames = [PREFIX + slug for slug, *_ in APPLICANTS] \
             + [PREFIX + slug for slug, *_ in BANNED] + COMPLAINERS
         reports = Report.objects.filter(evidence=MARK).delete()[0]
-        companies = Company.objects.filter(username__startswith=PREFIX).delete()[0]
+
+        # Файлы удаляем отдельно: delete() у модели убирает строку, а документ
+        # так и остаётся лежать в media/ и накапливается с каждым прогоном
+        company_qs = Company.objects.filter(username__startswith=PREFIX)
+        for company in company_qs:
+            if company.registration_document:
+                company.registration_document.delete(save=False)
+        companies = company_qs.delete()[0]
         UserProfile.objects.filter(username__in=usernames).delete()
         accounts = Account.objects.filter(username__in=usernames).delete()[0]
         self.stdout.write(self.style.SUCCESS(

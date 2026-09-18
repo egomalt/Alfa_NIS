@@ -38,9 +38,9 @@
       + '</div>';
   }
 
-  function render(list) {
+  function render(list, total) {
     var countEl = A.el('ap-vf-count');
-    if (countEl) countEl.textContent = list.length;
+    if (countEl) countEl.textContent = (typeof total === 'number' ? total : list.length);
     var wrap = A.el('ap-verify-list');
     if (!list.length) {
       wrap.innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Пусто</div><div class="ap-empty-sub">Заявок в этой категории нет</div></div>';
@@ -49,9 +49,14 @@
     wrap.innerHTML = list.map(cardHtml).join('');
   }
 
+  var page = 1;
+
   function load() {
-    A.apiGet('/api/v1/admin/verifications/?status=' + filter)
-      .then(function (d) { render(d.verifications || []); })
+    A.apiGet('/api/v1/admin/verifications/?status=' + filter + '&page=' + page)
+      .then(function (d) {
+        render(d.verifications || [], d.total);
+        window.AlfaPager.render(A.el('ap-verify-pager'), d, function (next) { page = next; load(); });
+      })
       .catch(function (e) {
         A.el('ap-verify-list').innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Ошибка</div><div class="ap-empty-sub">' + A.esc(e.message) + '</div></div>';
       });
@@ -67,6 +72,7 @@
       var btn = e.target.closest('[data-vf]');
       if (!btn) return;
       filter = btn.dataset.vf;
+      page = 1;
       this.querySelectorAll('[data-vf]').forEach(function (b) { b.classList.toggle('active', b.dataset.vf === filter); });
       load();
     });

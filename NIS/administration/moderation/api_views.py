@@ -10,6 +10,7 @@ from contests.contests_cabinet.models import Contest
 from core.auth import moderator_required
 from core.pagination import paginate
 from core.utils import load_json_body
+from authorization import bans
 from authorization.models import (
     Account, ROLE_LABELS, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER,
     STATUS_ACTIVE, STATUS_BANNED,
@@ -18,6 +19,9 @@ from authorization.models import (
 # Списки модерации могут вырасти, поэтому выдача постраничная.
 CATALOG_PER_PAGE = 100
 
+# Потолок срока бана в днях (10 лет). Без него int() из формы принимает любое
+# число, и timedelta с ним выбрасывает OverflowError — запрос падает с 500.
+MAX_BAN_DAYS = 3650
 
 
 def serialize_account(account):
@@ -28,9 +32,11 @@ def serialize_account(account):
         'role': account.role,
         'role_label': ROLE_LABELS.get(account.role, account.role),
         'joined_at': account.created_at.isoformat(),
-        'status': account.status,
-        'ban_until': account.ban_until.isoformat() if account.ban_until else None,
-        'ban_reason': account.ban_reason,
+        # Статус отдаём действующий: у истёкшего бана в базе так и остаётся
+        # status='banned', а в списке он уже обычный пользователь
+        'status': STATUS_BANNED if account.is_banned else STATUS_ACTIVE,
+        'ban_until': account.ban_until.isoformat() if account.is_banned and account.ban_until else None,
+        'ban_reason': account.ban_reason if account.is_banned else '',
     }
 
 
@@ -42,7 +48,7 @@ def api_users(request):
 
     qs = Account.objects.all()
     if flt == 'banned':
-        qs = qs.filter(status=STATUS_BANNED)
+        qs = qs.filter(bans.active_ban_q())
     elif flt in (ROLE_USER, ROLE_COMPANY, ROLE_MODERATOR):
         qs = qs.filter(role=flt)
     if q:
@@ -72,7 +78,8 @@ def api_user_ban(request, username):
             days = int(duration)
         except (ValueError, TypeError):
             days = 7
-        ban_until = timezone.now() + timedelta(days=max(1, days))
+        days = min(max(days, 1), MAX_BAN_DAYS)
+        ban_until = timezone.now() + timedelta(days=days)
 
     account.status = STATUS_BANNED
     account.ban_until = ban_until

@@ -6,8 +6,7 @@
  * Использование:
  *   AlfaPager.render(document.getElementById('users-pager'), meta, page => { ... });
  *
- * Блок сам прячется, когда страница всего одна, — на малых объёмах данных
- * интерфейс выглядит как раньше.
+ * Блок сам прячется, когда страница всего одна.
  */
 (() => {
   function button(label, page, disabled, title) {
