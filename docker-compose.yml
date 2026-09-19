@@ -1,3 +1,5 @@
+# Стенд для разработки и показа: DEBUG включён, пароли демонстрационные.
+# Настройки боевого запуска описаны в DEPLOY.md.
 services:
   db:
     image: postgres:16
@@ -25,12 +27,20 @@ services:
     volumes:
       - ./NIS:/app
       - media_data:/app/media
+      # Регистрационные документы компаний: лежат вне media, наружу их
+      # отдаёт только вьюха с проверкой прав
+      - private_media:/app/private_media
+      # Проверка задач на код запускает решение соседним контейнером.
+      # Доступ к сокету равносилен правам root на хосте, поэтому на боевом
+      # сервере исполнителя выносят на отдельную машину.
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       POSTGRES_DB: nis_db
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
+      DJANGO_DEBUG: "1"
     depends_on:
       db:
         condition: service_healthy
@@ -38,3 +48,4 @@ services:
 volumes:
   pg_data:
   media_data:
+  private_media:

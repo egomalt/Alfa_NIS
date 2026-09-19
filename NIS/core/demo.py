@@ -84,14 +84,42 @@ def make_attempts(test, finished, max_score):
         add(finished + i, now - timedelta(days=rng.randint(1, 45)), None, 0)
 
 
+PAGE_TYPES = {
+    'quiz': TestPage.TYPE_QUIZ,
+    'input': TestPage.TYPE_INPUT,
+    'code': TestPage.TYPE_CODE,
+    'text': TestPage.TYPE_TEXT,
+}
+
+
 def build_pages(test, questions):
-    """Страницы теста из компактного описания (тип, вопрос, варианты)."""
-    for order, (page_type, question, answers) in enumerate(questions):
+    """Страницы теста из компактного описания (тип, заголовок, содержимое).
+
+    Для quiz и input содержимое — список вариантов [(текст, верный)].
+    Для code — словарь: условие, язык, лимит времени и тест-кейсы.
+    """
+    for order, (page_type, title, payload) in enumerate(questions):
         page = TestPage.objects.create(
             test=test, order=order,
-            type=TestPage.TYPE_QUIZ if page_type == 'quiz' else TestPage.TYPE_INPUT,
-            title=question,
+            type=PAGE_TYPES.get(page_type, TestPage.TYPE_TEXT),
+            title=title,
+            content=payload.get('content', '') if isinstance(payload, dict) else '',
+            page_meta=_code_meta(payload) if page_type == 'code' else {},
         )
-        for answer_order, (text, is_correct) in enumerate(answers):
-            TestAnswer.objects.create(page=page, text=text,
-                                      is_correct=is_correct, order=answer_order)
+        if isinstance(payload, list):
+            for answer_order, (text, is_correct) in enumerate(payload):
+                TestAnswer.objects.create(page=page, text=text,
+                                          is_correct=is_correct, order=answer_order)
+
+
+def _code_meta(payload):
+    """page_meta задачи на код в том же виде, в каком его пишет конструктор."""
+    return {
+        'language': payload.get('language', 'python'),
+        'time_limit': payload.get('time_limit', 5),
+        'test_cases': [
+            {'input': case['input'], 'expected': case['expected'],
+             'is_sample': bool(case.get('is_sample'))}
+            for case in payload.get('test_cases', [])
+        ],
+    }
