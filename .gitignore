@@ -12,6 +12,7 @@ build/
 # Django
 *.log
 *.sqlite3
+*.sqlite3.*
 media/
 private_media/
 
@@ -28,6 +29,7 @@ Thumbs.db
 # Рабочие заметки
 TODO.md
 ЗАЩИТА.md
+DEPLOY.md
 
 # Локальные копии данных (в них хеши паролей — в репозиторий не кладём)
 backups/
