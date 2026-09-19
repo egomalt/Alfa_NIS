@@ -17,8 +17,7 @@ function escHtml(s) {
 
 function markDirty() { isDirty = true; }
 
-/* Ошибки сохранения и публикации раньше гасились молча: пользователь думал,
-   что статья ушла на сервер. Теперь любой сбой виден в шапке. */
+/* Любой сбой сохранения и публикации виден в шапке редактора. */
 function setStatus(message, kind = '') {
     const el = document.getElementById('status-msg');
     if (!el) return;
@@ -249,9 +248,8 @@ async function ensureArticleId() {
     return true;
 }
 
-/* Возвращает true, только если статья действительно сохранена.
-   Это важно для публикации: раньше она шла дальше даже после неудачного
-   сохранения и выкладывала в бой прошлую версию текста. */
+/* Возвращает true, только если статья действительно сохранена:
+   публикация не должна выкладывать прошлую версию текста. */
 async function doSave() {
     if (isSaving) return false;
     isSaving = true;
@@ -332,8 +330,7 @@ if (articleData) {
     }
     tags = articleData.tags || [];
     renderTags();
-    // Сохранённое «без обложки» (-1) раньше затиралось случайным градиентом:
-    // статью нельзя было оставить без обложки, она возвращалась при каждой правке
+    // -1 означает «без обложки» — случайный градиент тут не нужен
     if (articleData.cover_index >= 0) setCover(articleData.cover_index);
     else removeCover();
     if (articleData.status === 'published') {

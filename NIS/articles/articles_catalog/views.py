@@ -7,8 +7,7 @@ from articles.constructor.models import Article
 from articles.serializers import author_names_for, serialize_article
 from core.pagination import paginate
 
-# Каталоги фильтруются на стороне браузера, поэтому страница крупная:
-# ограничение защищает от выгрузки всей таблицы, но не режет текущий интерфейс.
+# Каталог фильтруется в браузере, поэтому страница крупная
 CATALOG_PER_PAGE = 100
 
 
@@ -18,8 +17,8 @@ def articles_catalog_shell(request):
 
 
 def api_articles_catalog(request):
-    # Материалы заблокированных не показываем, но и не удаляем: после
-    # разбана они вернутся сами, потому что фильтр считается на лету
+    # Материалы заблокированных скрываем фильтром, а не удалением:
+    # после разбана они возвращаются сами
     articles_qs = (Article.objects
                    .filter(status=Article.STATUS_PUBLISHED)
                    .exclude(author_username__in=bans.banned_usernames())
@@ -31,10 +30,10 @@ def api_articles_catalog(request):
 
 
 def api_user_articles(request, username):
-    articles_qs = Article.objects.filter(
-        author_username=username,
-        status=Article.STATUS_PUBLISHED,
-    ).order_by('-published_at')
+    articles_qs = (Article.objects
+                   .filter(author_username=username, status=Article.STATUS_PUBLISHED)
+                   .exclude(author_username__in=bans.banned_usernames())
+                   .order_by('-published_at'))
     articles, page_meta = paginate(request, articles_qs, CATALOG_PER_PAGE)
     names = author_names_for(articles)
     return JsonResponse({

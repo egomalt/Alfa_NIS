@@ -47,7 +47,7 @@
     var avEl = el('cp-sidebar-av');
     if (!avEl) return;
     if (company.avatar_url) {
-      avEl.innerHTML = '<img src="' + company.avatar_url + '" alt="avatar">';
+      avEl.innerHTML = '<img src="' + esc(company.avatar_url) + '" alt="avatar">';
     } else {
       avEl.textContent = (company.name || '?').charAt(0).toUpperCase();
     }
@@ -59,7 +59,7 @@
     var avEl = el('cp-hero-av');
     if (!avEl) return;
     if (company.avatar_url) {
-      avEl.innerHTML = '<img src="' + company.avatar_url + '" alt="avatar">';
+      avEl.innerHTML = '<img src="' + esc(company.avatar_url) + '" alt="avatar">';
     } else {
       avEl.textContent = (company.name || '?').charAt(0).toUpperCase();
     }
@@ -79,8 +79,7 @@
   }
 
   function renderProfileContent(company) {
-    // Страховка: элементы есть только на странице профиля. Раньше отсутствие
-    // проверки роняло всю цепочку init() на чужой странице
+    // Эти элементы есть только на странице профиля
     if (!el('cpstat-contests')) return;
     var contests = state.contests;
     var totalParticipants = contests.reduce(function (s, c) { return s + (c.participants_count || 0); }, 0);
@@ -306,9 +305,7 @@
   }
 
   // ---- Профиль компании: одна точка отправки ----
-  /* Форма на сервере частичная: что не прислали — то не меняется. Раньше она
-     связывалась целиком, поэтому смена аватара тащила с собой копии всех
-     остальных полей, а забытый в этом списке адрес компании затирался. */
+  /* Форма на сервере частичная: что не прислали — то не меняется. */
   function sendProfile(formData, onDone) {
     return apiFetchForm('/api/v1/companies/' + username + '/profile/', formData)
       .then(function (data) {

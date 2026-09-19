@@ -95,10 +95,6 @@
 
 <script src="{% static 'js/plural.js' %}?v={{ ASSET_V }}"></script>
 <script src="{% static 'profiles/company_tests.js' %}?v={{ ASSET_V }}"></script>
-{% comment %}
-  Плашка модератора. Рисуется только аккаунту с ролью moderator,
-  остальным скрипт не выводит ничего.
-{% endcomment %}
 <script>
   window.ALFA_MOD_TARGET = { type: 'company', username: "{{ username|escapejs }}" };
 </script>

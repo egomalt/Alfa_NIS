@@ -147,7 +147,7 @@ html, body { height: 100%; }
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"/></svg>
       <span id="ccon-name-display" style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Новый конкурс</span>
       <span id="ccon-badge" class="ccon-badge-draft">Черновик</span>
-      {# Сообщения о сохранении и ошибках. Раньше они шли через alert() #}
+      {# Сообщения о сохранении и ошибках #}
       <span id="ccon-status" class="ccon-status"></span>
     </div>
     <div style="display:flex;gap:8px;flex-shrink:0;margin-left:auto;">
@@ -231,10 +231,6 @@ html, body { height: 100%; }
             <div class="ccon-file-drop" id="ccon-file-drop" onclick="document.getElementById('ccon-attach-input').click()">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6M9 15l3 3 3-3"/></svg>
               <div style="font-size:13.5px;font-weight:600;margin-bottom:3px;">Нажмите или перетащите файлы</div>
-              {% comment %}
-                Значение приходит из core.uploads.MAX_DOCUMENT_SIZE: раньше здесь
-                было написано «до 100 МБ», а сервер отклонял всё крупнее 25 МБ.
-              {% endcomment %}
               <div style="font-size:12px;color:var(--muted);">Датасеты, шаблон проекта, ТЗ — до {{ max_attachment_mb }} МБ на файл</div>
             </div>
             <input type="file" id="ccon-attach-input" multiple style="display:none;">

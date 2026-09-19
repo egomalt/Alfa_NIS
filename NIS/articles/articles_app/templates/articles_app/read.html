@@ -118,10 +118,6 @@
       </button>
     </div>
 
-    {% comment %}
-      Вся карточка — ссылка на профиль автора. Если профиля нет (модератор,
-      удалённый аккаунт, непроверенная компания), остаётся обычный блок.
-    {% endcomment %}
     {% if author_url %}<a class="author-card is-link" href="{{ author_url }}">{% else %}<div class="author-card">{% endif %}
       <div class="author-card-top">
         <div class="author-card-av" style="background:{{ av_bg }};color:{{ av_fg }};">{{ initial }}</div>

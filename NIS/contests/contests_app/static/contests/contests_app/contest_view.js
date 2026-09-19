@@ -328,8 +328,6 @@ async function saveContact() {
   const errEl = document.getElementById('cv-contact-error');
   if (errEl) errEl.textContent = '';
   try {
-    // Раньше здесь стоял POST на PATCH-эндпоинт, а ошибка гасилась пустым catch —
-    // пользователь видел «сохранено», но email не сохранялся.
     await apiFetch(`/api/v1/candidates/${me.username}/update/`, {
       method: 'PATCH',
       body: JSON.stringify({ email, phone }),

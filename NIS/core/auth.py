@@ -1,15 +1,7 @@
-"""Единая проверка доступа для вьюх.
+"""Проверка доступа для вьюх.
 
-Собирает в одном месте проверку, которая иначе расходится по приложениям:
-
-    account = get_current_account(request)
-    if account is None or account.role != ROLE_X:
-        return ...
-
-Ответ определяется типом вьюхи: JSON-эндпоинты отдают 401/403,
-HTML-страницы уводят на форму входа.
-
-Прошедшая проверку вьюха может взять аккаунт из `request.account`.
+JSON-эндпоинты отдают 401/403, HTML-страницы уводят на форму входа.
+Прошедшая проверку вьюха берёт аккаунт из `request.account`.
 """
 from functools import wraps
 
@@ -25,10 +17,7 @@ SIGNIN_URL = '/authorization/signin/'
 def ban_block(account, method):
     """Ответ вместо действия, если аккаунт заблокирован. Иначе None.
 
-    Заблокированному оставлено чтение: он должен видеть свой кабинет и
-    причину бана. Всё, что меняет данные, отклоняем — и делаем это здесь,
-    а не в каждой вьюхе: через этот guard проходят все эндпоинты, кроме
-    входа, регистрации и отправки ответов на тест.
+    Чтение заблокированному оставлено: он должен увидеть причину бана.
     """
     if method in ('GET', 'HEAD', 'OPTIONS') or not account.is_banned:
         return None
@@ -39,11 +28,7 @@ def ban_block(account, method):
 
 
 def api_login_required(*roles):
-    """Guard для JSON-эндпоинтов: 401 без входа, 403 при неподходящей роли.
-
-    Без аргументов пускает любого вошедшего: @api_login_required()
-    С ролями — только перечисленные: @api_login_required(ROLE_COMPANY)
-    """
+    """401 без входа, 403 при неподходящей роли. Без ролей — любой вошедший."""
     def decorator(view):
         @wraps(view)
         def wrapper(request, *args, **kwargs):
@@ -76,5 +61,5 @@ def page_login_required(*roles, redirect_to=SIGNIN_URL):
 
 
 def moderator_required(view):
-    """Guard для JSON-API админки — короткое имя для самой частой проверки."""
+    """Доступ только модератору."""
     return api_login_required(ROLE_MODERATOR)(view)

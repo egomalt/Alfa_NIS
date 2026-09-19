@@ -1,11 +1,6 @@
-/* Кнопка «Пожаловаться» — общая для страниц статьи и конкурса.
- *
- * Разметка достаточно объявить так:
- *   <button data-report-type="article" data-report-id="12" data-report-author="ivan">…</button>
- *
- * Кнопка показывается только вошедшему и только на чужом материале: на своё
- * жаловаться нельзя, сервер такие запросы тоже отклоняет.
- */
+/* Кнопка «Пожаловаться». Разметка объявляет цель атрибутами:
+   <button data-report-type="article" data-report-id="12" data-report-author="ivan">
+   Показывается только вошедшему и только на чужом материале. */
 (() => {
   function csrfToken() {
     const cookie = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('csrftoken='));

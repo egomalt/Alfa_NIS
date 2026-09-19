@@ -73,10 +73,6 @@
   </main>
 </div>
 
-{% comment %}
-  Плашка модератора. Рисуется только аккаунту с ролью moderator,
-  остальным скрипт не выводит ничего.
-{% endcomment %}
 <script>
   window.ALFA_MOD_TARGET = { type: 'test', id: {{ test_id }}, author: "{{ owner_username|escapejs }}", title: "{{ test_title|escapejs }}" };
 </script>

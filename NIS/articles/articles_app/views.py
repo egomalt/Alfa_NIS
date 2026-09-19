@@ -30,11 +30,9 @@ def _av(username):
 
 
 def _author_link(username):
-    """Имя автора и ссылка на его профиль: (имя, ссылка или None).
+    """Имя автора и ссылка на профиль: (имя, ссылка или None).
 
-    Адрес /<username>/ отдаёт 404 модераторам, удалённым аккаунтам и компаниям
-    без верификации, поэтому ссылку ставим только там, где страница откроется.
-    Имя берём из аккаунта — в статье хранится один логин.
+    Ссылку ставим только туда, где страница действительно откроется.
     """
     if not username:
         return '', None
@@ -57,23 +55,22 @@ def article_read(request, article_id):
     article = Article.objects.filter(id=article_id, status=Article.STATUS_PUBLISHED).first()
     if not article:
         raise Http404
+
+    account = get_current_account(request)
     # Статья заблокированного автора пропадает вместе с ним, но не удаляется
-    if not bans.visible_to(get_current_account(request), article.author_username):
+    if not bans.visible_to(account, article.author_username):
         raise Http404
 
     Article.objects.filter(id=article_id).update(views=F('views') + 1)
     article.views += 1
 
-    account = get_current_account(request)
     user_vote = None
     if account:
         vote_obj = ArticleVote.objects.filter(article=article, voter_username=account.username).first()
         user_vote = vote_obj.direction if vote_obj else None
 
-    # Related: articles with overlapping tags, excluding current
-    # Раньше здесь перебиралась вся таблица опубликованных статей: на каждый
-    # просмотр в память поднимались все записи ради трёх похожих.
-    # Теперь пересечение тегов отбирается запросом, а в Python приходит максимум 60 строк.
+    # Похожие статьи: пересечение тегов отбирает запрос, в Python приходит
+    # не больше 60 строк — перебирать всю таблицу ради трёх карточек незачем
     related = []
     if article.tags:
         tag_filter = Q()
@@ -92,7 +89,6 @@ def article_read(request, article_id):
                 if len(related) >= 3:
                     break
 
-    # Author stats
     author_articles = Article.objects.filter(
         author_username=article.author_username,
         status=Article.STATUS_PUBLISHED,
@@ -148,12 +144,11 @@ def api_article_vote(request, article_id):
 
         if existing:
             if existing.direction == direction:
-                # Undo vote
+                # Повторный клик по тому же — снятие голоса
                 delta = -direction
                 existing.delete()
                 user_vote = None
             else:
-                # Switch direction
                 delta = direction - existing.direction
                 existing.direction = direction
                 existing.save(update_fields=['direction'])

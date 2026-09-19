@@ -41,7 +41,7 @@ def _daily(contest):
          'count': by_day.get(first + timedelta(days=offset), 0)}
         for offset in range(WINDOW_DAYS)
     ]
-    # Решения, присланные раньше окна, — чтобы сумма на графике не врала
+    # Решения, присланные до начала окна, — чтобы сумма на графике не врала
     before = sum(n for day, n in by_day.items() if day < first)
     return series, before
 

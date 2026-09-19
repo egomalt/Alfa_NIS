@@ -69,7 +69,7 @@ class PaginationTests(BaseCase):
 
 class QueryCountTests(BaseCase):
     def test_submissions_list_has_no_n_plus_one(self):
-        """Раньше карточка кандидата стоила 2 запроса на каждую заявку."""
+        """Карточки кандидатов собираются пачкой, а не по запросу на заявку."""
         contest = self.make_contest()
         for i in range(20):
             username = f'uch{i}'
@@ -627,9 +627,8 @@ class CandidateStatisticsTests(BaseCase):
     def test_cabinet_script_guards_on_ids_that_exist(self):
         """Скрипт кабинета выходит по проверке «моя ли это страница».
 
-        Один раз проверка осталась висеть на блоке, который переехал в JS,
-        и страница статистики молча опустела целиком. Теперь каждый такой
-        якорь обязан существовать хотя бы в одном шаблоне кабинета.
+        Каждый такой якорь обязан существовать хотя бы в одном шаблоне:
+        иначе раздел молча не отрисуется.
         """
         root = Path(settings.BASE_DIR)
         source = (root / 'cabinet/static/cabinet/user.js').read_text(encoding='utf-8')
@@ -731,11 +730,7 @@ class UserContestsSectionTests(BaseCase):
 
 
 class CabinetSidebarTests(BaseCase):
-    """Боковая панель кабинета должна быть одна и та же на всех страницах.
-
-    Раньше их было две: полная в /cabinet/company/* и урезанная копия
-    в разделах тестов и конкурсов — без «Статистики», выхода и замков.
-    """
+    """Боковая панель кабинета должна быть одна и та же на всех страницах."""
 
     def _company_pages(self):
         contest = self.make_contest(owner='firma')
@@ -849,8 +844,7 @@ class CabinetSidebarTests(BaseCase):
         self.assertEqual(row['text'], 'Решение')
 
     def test_warnings_are_gone_everywhere(self):
-        """Предупреждение сохранялось в аккаунт и жило только в админке —
-        до пользователя не доходило ничего. Механики больше нет."""
+        """Предупреждений в проекте нет — от аккаунта не должно остаться следов."""
         from authorization.models import Account as AccountModel
 
         fields = {f.name for f in AccountModel._meta.get_fields()}
@@ -1034,8 +1028,7 @@ class CabinetSidebarTests(BaseCase):
         self.assertNotIn('На главную', body)
 
     def test_assets_carry_a_single_version(self):
-        """Раньше версии проставлялись руками и разъезжались, а career.css
-        подключался вообще без версии — правки не доезжали до браузера."""
+        """Вся статика подключается с одной версией и ни одна — без неё."""
         body = self.login('firma').get('/cabinet/company/').content.decode()
         versions = set(re.findall(r'\?v=([^"\']+)', body))
         self.assertEqual(versions, {settings.ASSET_VERSION})
@@ -1072,11 +1065,7 @@ class CabinetSidebarTests(BaseCase):
         self.assertIn('id="tests-empty-title"', body)
 
     def test_lists_use_the_same_card(self):
-        """Списки тестов и конкурсов должны выглядеть одинаково.
-
-        Раньше у каждого была своя карточка со своими фоном и отступами,
-        и на телефоне они расходились.
-        """
+        """Списки тестов и конкурсов собраны из одной и той же карточки."""
         body = self.login('firma').get('/cabinet/company/tests/').content.decode()
         self.assertIn('class="list-card"', body)
         self.assertIn('class="list-card-header"', body)
@@ -1452,7 +1441,7 @@ class SmokeTests(BaseCase):
 
 
 class ContactDetailsTests(BaseCase):
-    """Телефон кандидата: раньше поле было в интерфейсе, но сервер его не знал."""
+    """Телефон кандидата сохраняется и показывается по тем же правилам, что почта."""
 
     def test_phone_is_saved_and_returned_to_owner(self):
         client = self.login('kandidat')
@@ -1502,7 +1491,7 @@ class ContestCountersTests(BaseCase):
 
 
 class AdminSearchTests(BaseCase):
-    """Поиск в админке раньше искал только по имени, хотя показывается логин."""
+    """Поиск в админке идёт и по имени, и по логину."""
 
     def test_search_by_username_and_name(self):
         client = self.login('moder')
@@ -1517,7 +1506,7 @@ class CompanyCatalogTests(BaseCase):
     """Каталог компаний: порядок и поля, которые читает страница."""
 
     def test_companies_sorted_by_published_tests(self):
-        """Раньше сортировка шла по дате регистрации — пустые карточки лезли наверх."""
+        """Каталог компаний сортируется по числу опубликованных тестов."""
         self.make_test(owner='firma', published=True)
         self.make_test(owner='firma', published=True)
         self.make_test(owner='konkurent', published=True)
@@ -1557,7 +1546,7 @@ class TestAttemptTests(BaseCase):
         self.assertIsNone(attempt.finished_at)
 
     def test_reload_does_not_create_a_second_attempt(self):
-        """Счётчик раньше накручивался повторной отправкой, попытки — перезагрузкой."""
+        """Повторная отправка и перезагрузка не должны накручивать счётчики."""
         test = self.make_test(owner='firma')
         client = self.login('kandidat')
         for _ in range(4):

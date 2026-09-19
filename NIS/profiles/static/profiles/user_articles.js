@@ -75,8 +75,7 @@
         + '<div class="ua-card-title">' + esc(a.title) + '</div>'
         + (a.excerpt ? '<div class="ua-card-excerpt">' + esc(a.excerpt) + '</div>' : '')
         + '<div class="ua-card-footer">'
-        // Время чтения показываем только если оно задано. Раньше здесь стояло
-        // `|| 5` — статье без него дорисовывались несуществующие «5 мин».
+        // Время чтения показываем, только если автор его задал
         + (a.read_time ? '<span class="ua-card-mono"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' + a.read_time + ' мин</span>' : '')
         + (dateStr ? (a.read_time ? '<span class="ua-card-dot">·</span>' : '') + '<span class="ua-card-meta">' + dateStr + '</span>' : '')
         + '<div class="ua-card-footer-right">'

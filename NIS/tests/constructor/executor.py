@@ -74,5 +74,6 @@ def run_in_docker(language, code, stdin_data='', time_limit=5):
             }
         except FileNotFoundError:
             return {'ok': False, 'error': 'Docker не найден на сервере'}
-        except Exception as e:
-            return {'ok': False, 'error': str(e)}
+        except OSError:
+            # Текст системной ошибки наружу не отдаём
+            return {'ok': False, 'error': 'Не удалось запустить проверку'}

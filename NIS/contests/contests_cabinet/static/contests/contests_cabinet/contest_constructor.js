@@ -19,8 +19,7 @@ let loadFailed = false;
 
 function markDirty() { isDirty = true; }
 
-/* Сообщения вместо alert(): ошибку сохранения раньше показывали модальным
-   окном браузера, а результат успешной загрузки — никак. */
+/* Сообщения в шапке вместо системного alert(). */
 function setStatus(message, kind = '') {
   const el = document.getElementById('ccon-status');
   if (!el) return;
@@ -259,8 +258,7 @@ window.addEventListener('beforeunload', event => {
 document.getElementById('ccon-attach-input').addEventListener('change', e => {
   const rejected = [];
   Array.from(e.target.files).forEach(f => {
-    // Сервер режет вложения на MAX_DOCUMENT_SIZE. Раньше подсказка обещала
-    // 100 МБ, файл спокойно добавлялся в список и отваливался уже при сохранении
+    // Тот же потолок, что проверяет сервер (core.uploads.MAX_DOCUMENT_SIZE)
     if (f.size > MAX_ATTACHMENT_BYTES) { rejected.push(f.name); return; }
     attachments.push({ name: f.name, size: (f.size / 1024 / 1024).toFixed(1) + ' МБ', file: f });
   });

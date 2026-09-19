@@ -14,8 +14,6 @@
         return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     };
 
-    // Раньше подпись не обновлялась никогда — кнопка навсегда оставалась
-    // на «Тёмная тема», даже когда тёмная уже включена.
     const syncToggles = (theme) => {
         const label = LABELS[theme] || LABELS.light;
         document.querySelectorAll('[data-theme-toggle]').forEach(button => {

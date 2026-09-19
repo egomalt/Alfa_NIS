@@ -1,4 +1,4 @@
-{% comment %} Сайдбар кабинета компании. Ожидает переменную `page`. Замки Тесты/Конкурсы снимает company.js после проверки верификации. {% endcomment %}
+{# Сайдбар кабинета компании. Ожидает `page`; замки снимает company.js после проверки верификации. #}
 <aside class="cp-sidebar">
   <div class="cp-chip">
     <span class="cp-chip-av" id="cp-sidebar-av">?</span>
@@ -6,8 +6,6 @@
       <div class="cp-chip-name" id="cp-sidebar-name">Загрузка…</div>
       <div class="cp-chip-role">Компания</div>
     </div>
-    {% comment %}Видна только на телефоне: панель выезжает поверх страницы,
-       и закрыть её иначе можно было только тычком мимо{% endcomment %}
     <button type="button" class="cab-close" data-sidebar-close aria-label="Закрыть разделы">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>

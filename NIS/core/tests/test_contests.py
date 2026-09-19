@@ -11,7 +11,7 @@ from .base import BaseCase
 
 class DeadlineTests(BaseCase):
     def test_submission_after_deadline_rejected(self):
-        """Раньше дедлайн не сравнивался с текущим временем нигде."""
+        """После дедлайна приём работ закрыт."""
         contest = self.make_contest(deadline='past', submission_type='text')
         response = self.login('kandidat').post(f'/api/v1/contests/{contest.id}/submit/', {'text': 'решение'})
         self.assertEqual(response.status_code, 400)
@@ -84,7 +84,7 @@ class PublishTests(BaseCase):
 
 
 class AttachmentTests(BaseCase):
-    """Стартовые файлы: раньше интерфейс показывал «сохранено», а файлы не уходили."""
+    """Стартовые файлы конкурса: загрузка, лимиты и удаление."""
 
     def _upload(self, client, contest, name='usloviya.pdf', content=b'%PDF-1.4'):
         return client.post(f'/api/v1/contests/{contest.id}/attachments/',
@@ -128,7 +128,7 @@ class AttachmentTests(BaseCase):
 
 
 class MalformedInputTests(BaseCase):
-    """Эти запросы раньше давали ошибку 500."""
+    """Некорректный ввод должен давать 400, а не падение."""
 
     def test_non_object_json_body(self):
         contest = self.make_contest()

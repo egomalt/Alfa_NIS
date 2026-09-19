@@ -69,7 +69,7 @@ class PasswordStorageTests(BaseCase):
 
 class LoginTests(BaseCase):
     def test_login_without_password_rejected(self):
-        """Главная дыра: раньше хватало одного имени пользователя."""
+        """Для входа обязателен пароль, одного логина мало."""
         response = Client().post('/api/v1/auth/signin/', {'username': 'kandidat'})
         self.assertEqual(response.status_code, 400)
 
@@ -139,11 +139,8 @@ class PasswordToggleTests(BaseCase):
 class BanTests(BaseCase):
     """Блокировка забирает право действовать, а не право видеть.
 
-    Раньше забаненного выбрасывало на любом запросе: `Account.is_active`
-    возвращал `not is_banned`. Причину он мог узнать только на форме входа,
-    куда попадал, лишь выйдя сам, — то есть обычно не узнавал вовсе.
-    Теперь он входит, видит в кабинете плашку с причиной и сроком, но любой
-    запрос, кроме чтения, отклоняется в core.auth.
+    Заблокированный входит и видит в кабинете плашку с причиной и сроком,
+    но любой запрос, кроме чтения, отклоняется в core.auth.
     """
 
     def test_ban_stops_actions_but_not_reading(self):

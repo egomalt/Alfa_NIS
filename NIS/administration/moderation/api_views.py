@@ -86,10 +86,8 @@ def api_user_ban(request, username):
     account.ban_reason = reason
     account.save(update_fields=['status', 'ban_until', 'ban_reason'])
 
-    # Конкурсы заблокированной компании удаляем, а не прячем: у конкурса
-    # есть дедлайн и присланные решения, и повисший приём работ, который
-    # никто не разберёт, хуже, чем его отсутствие. Остальной контент
-    # (статьи, тесты, профиль) только скрывается и вернётся после разбана.
+    # Конкурсы заблокированной компании удаляем, а не прячем: повисший
+    # приём работ, который никто не разберёт, хуже его отсутствия
     removed = 0
     if account.role == ROLE_COMPANY:
         contests = Contest.objects.filter(company_username=username)

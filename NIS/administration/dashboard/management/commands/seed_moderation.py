@@ -67,8 +67,7 @@ BANNED = [
 def demo_document(company_name):
     """Настоящий PDF на одну страницу — его открывает предпросмотр в панели.
 
-    Заглушки из пары байт тут мало: модалка показывает файл во фрейме,
-    и битый PDF выглядит как сломанная страница, а не как демо-данные.
+    Модалка показывает файл во фрейме, поэтому заглушки из пары байт мало.
     """
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfgen import canvas as pdf_canvas

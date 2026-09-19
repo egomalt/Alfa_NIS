@@ -14,9 +14,8 @@ from tests.constructor.views import public_code_meta
 def _get_visible_test(request, test_id):
     """Тест для прохождения и признак предпросмотра.
 
-    Предпросмотр (?preview=1) показывает неопубликованный тест, поэтому доступен только
-    владельцу: раньше по этому флагу любой желающий читал чужой черновик.
-    Возвращает (None, False), если теста нет или он недоступен запрашивающему.
+    Предпросмотр (?preview=1) показывает черновик, поэтому доступен
+    только владельцу. Возвращает (None, False), если тест недоступен.
     """
     test = Test.objects.filter(id=test_id).first()
     if test is None:
@@ -41,7 +40,6 @@ def test_view_shell(request, test_id):
         'app_path': request.path,
         'test_id': test_id,
         'test_title': test.title,
-        # Автор нужен плашке модератора: с неё открываются действия над ним
         'owner_username': test.owner_username,
         'is_preview': is_preview,
     })
@@ -70,13 +68,11 @@ def api_test_view(request, test_id):
         elif page.type == TestPage.TYPE_INPUT:
             page_data['answers'] = []
         elif page.type == TestPage.TYPE_CODE:
-            # Только безопасная часть: язык, лимит и примеры. Скрытые тест-кейсы
-            # остаются на сервере — иначе решение подбирается под ответы.
+            # Только язык, лимит и примеры: скрытые тест-кейсы остаются на сервере
             page_data['page_meta'] = public_code_meta(page)
         pages.append(page_data)
 
-    # Момент открытия теста: без него нельзя отличить брошенную попытку
-    # от непройденного теста. Предпросмотр автора в статистику не попадает.
+    # Без момента открытия не отличить брошенную попытку от непройденного теста
     if not is_preview:
         attempts.start(request, test)
 
@@ -144,8 +140,6 @@ def api_test_submit(request, test_id):
         results.append(result)
 
     if not is_preview:
-        # Счётчик в Test.stats больше не ведём: число прохождений считается
-        # по закрытым попыткам, поэтому перезагрузкой страницы его не накрутить
         attempts.finish(request, test, score, total)
 
     return JsonResponse({

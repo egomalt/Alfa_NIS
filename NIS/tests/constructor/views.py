@@ -13,11 +13,11 @@ from users import activity
 from .executor import LANGUAGES, run_in_docker
 from .models import Test, TestAnswer, TestPage
 
-# Тесты заводят и кандидаты, и компании — у каждой роли свой раздел «Мои тесты».
+# Тесты заводят и кандидаты, и компании
 TEST_OWNER_ROLES = (ROLE_USER, ROLE_COMPANY)
 
 # Потолки для запуска пользовательского кода: значения приходят из page_meta,
-# которую заполняет автор теста, поэтому доверять им без ограничений нельзя.
+# которую заполняет автор теста
 MAX_CODE_LENGTH = 100_000
 MAX_TEST_CASES = 50
 MAX_TIME_LIMIT = 10
@@ -25,7 +25,7 @@ DEFAULT_TIME_LIMIT = 5
 
 
 def _safe_time_limit(raw_value):
-    """Лимит времени из page_meta: не даём раздуть таймаут и не падаем на мусоре."""
+    """Лимит времени из page_meta, приведённый к допустимым границам."""
     try:
         seconds = int(raw_value)
     except (TypeError, ValueError):
@@ -36,9 +36,7 @@ def _safe_time_limit(raw_value):
 def public_code_meta(page):
     """Часть page_meta задачи на код, которую можно показать проходящему тест.
 
-    Скрытые тест-кейсы наружу не отдаём — видны только помеченные is_sample,
-    их автор пишет как примеры к условию. Язык здесь же: раньше страница
-    прохождения его не получала и всегда подставляла Python.
+    Скрытые тест-кейсы наружу не отдаём: видны только помеченные is_sample.
     """
     meta = page.page_meta or {}
     samples = [
@@ -56,7 +54,6 @@ def public_code_meta(page):
 @ensure_csrf_cookie
 @page_login_required(*TEST_OWNER_ROLES)
 def constructor_shell(request, test_id=None):
-    # Владельца берём из сессии, а не из ?owner= — иначе тест можно завести от чужого имени
     account = request.account
     back_url = '/cabinet/company/tests/' if account.role == ROLE_COMPANY else '/cabinet/user/tests/'
     return render(request, 'constructor/constructor.html', {
@@ -65,9 +62,7 @@ def constructor_shell(request, test_id=None):
         'owner_username': account.username,
         'is_authenticated': True,
         'back_url': back_url,
-        # Список языков берём из исполнителя, а не пишем в шаблоне руками:
-        # раньше там было семь вариантов при трёх работающих, и задача на Go
-        # сохранялась, но запуститься не могла никогда.
+        # Список языков — из исполнителя, чтобы в шаблоне не оказалось лишних
         'languages': [{'key': key, 'label': cfg['label']} for key, cfg in LANGUAGES.items()],
         'max_time_limit': MAX_TIME_LIMIT,
     })
@@ -82,8 +77,7 @@ def constructor_stats_shell(request, test_id):
     if test is None:
         raise Http404
 
-    # Страница лежит в кабинете, а кабинета два: тесты заводят и компании,
-    # и кандидаты. Базовый шаблон (и вместе с ним боковая панель) — по роли.
+    # Базовый шаблон и боковая панель — по роли автора
     is_company = account.role == ROLE_COMPANY
     return render(request, 'constructor/test_stats.html', {
         'base_template': 'cabinet/base_company.html' if is_company else 'cabinet/base_user.html',
@@ -91,7 +85,6 @@ def constructor_stats_shell(request, test_id):
         'test_id': test_id,
         'test_title': test.title,
         'page': 'tests',
-        # Панель рисует собственный скрипт страницы
         'panel': 'none',
         'back_url': '/cabinet/company/tests/' if is_company else '/cabinet/user/tests/',
     })
@@ -131,7 +124,7 @@ def _serialize_test(test, include_pages=False):
         'status': test.status,
         'level': stats.get('level', ''),
         'category': stats.get('category', ''),
-        'page_count': test.pages.count(),
+        'page_count': len(test.pages.all()),
         'submissions': attempts.count_for(test),
         'created_at': test.created_at.isoformat(),
         'updated_at': test.updated_at.isoformat(),
@@ -146,11 +139,7 @@ def _serialize_test(test, include_pages=False):
 @require_GET
 @api_login_required()
 def api_tests_list(request):
-    """Список СВОИХ тестов, включая черновики.
-
-    Параметр ?owner= намеренно игнорируется: раньше по нему можно было вытащить
-    чужие черновики. Публичные тесты компании отдаёт /api/v1/companies/<username>/tests/.
-    """
+    """Свои тесты, включая черновики. Публичные отдаёт каталог."""
     tests = (Test.objects
              .filter(owner_username=request.account.username)
              .prefetch_related('pages')
@@ -161,12 +150,7 @@ def api_tests_list(request):
 @require_GET
 @api_login_required()
 def api_my_attempts(request):
-    """Как текущий пользователь проходит тесты — для кабинета кандидата.
-
-    Заодно отдаём активность по дням и серии: карта в кабинете собирала
-    события в браузере, а серию считала там же, и с появлением огонька
-    в публичном профиле правило пришлось бы написать второй раз.
-    """
+    """Прохождения, активность по дням и серии — для кабинета кандидата."""
     username = request.account.username
     daily = activity.daily(username)
     return JsonResponse({
@@ -222,7 +206,6 @@ def _save_pages(test, pages_data):
 def api_tests_create(request):
     body = load_json_body(request)
 
-    # owner_username из тела запроса игнорируем: владелец — тот, кто вошёл
     owner_username = request.account.username
     title = (body.get('title') or '').strip()
     if not title:
@@ -246,8 +229,7 @@ def api_tests_create(request):
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 @api_login_required()
 def api_test_detail(request, test_id):
-    # Эндпоинт редактора: отдаёт страницы вместе с признаком правильного ответа,
-    # поэтому доступен только владельцу. Прохождение теста идёт через /tests/<id>/view/.
+    # Редактор отдаёт признак правильного ответа, поэтому только владельцу
     test, error = _owned_test_or_error(request, test_id)
     if error:
         return error
@@ -288,7 +270,7 @@ def api_test_publish(request, test_id):
     if error:
         return error
 
-    if test.pages.count() == 0:
+    if not test.pages.exists():
         return JsonResponse({'ok': False, 'message': 'Нельзя опубликовать тест без страниц.'}, status=400)
 
     test.status = Test.STATUS_PUBLISHED
@@ -299,9 +281,14 @@ def api_test_publish(request, test_id):
 @require_http_methods(['POST'])
 @api_login_required()
 def api_code_run(request, page_id):
-    try:
-        page = TestPage.objects.get(id=page_id, type=TestPage.TYPE_CODE)
-    except TestPage.DoesNotExist:
+    page = (TestPage.objects
+            .filter(id=page_id, type=TestPage.TYPE_CODE)
+            .select_related('test')
+            .first())
+    # Чужой черновик запускать нельзя: иначе по id страницы можно
+    # прощупать задачу из ещё не опубликованного теста
+    if page is None or (page.test.status != Test.STATUS_PUBLISHED
+                        and page.test.owner_username != request.account.username):
         return JsonResponse({'ok': False, 'message': 'Страница не найдена.'}, status=404)
 
     body = load_json_body(request)
@@ -315,9 +302,7 @@ def api_code_run(request, page_id):
         return JsonResponse({'ok': False, 'message': 'Код слишком длинный.'}, status=400)
 
     meta = page.page_meta or {}
-    # Язык задаёт автор задачи, а не тот, кто её решает. Раньше он приходил в теле
-    # запроса, и страница прохождения всегда слала 'python' — решение на C++
-    # запускалось питоном и гарантированно падало.
+    # Язык задаёт автор задачи, а не тот, кто её решает
     language = (meta.get('language') or '').strip()
     if language not in LANGUAGES:
         return JsonResponse({'ok': False, 'message': f'Неподдерживаемый язык задачи: {language}'}, status=400)
@@ -358,8 +343,8 @@ def api_code_run(request, page_id):
 
         results.append(tc_result)
 
-    # Полный прогон — это и есть отправка решения: запоминаем вердикт на сервере,
-    # чтобы при подведении итогов не верить числам от клиента.
+    # Полный прогон — отправка решения: вердикт запоминаем на сервере,
+    # чтобы при подведении итогов не верить числам от клиента
     if not sample_only:
         code_results.remember(request, page.id, passed, len(test_cases))
 

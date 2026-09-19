@@ -12,7 +12,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--password',
             default='',
-            help='Пароль. Если не указан — будет запрошен скрытым вводом (безопаснее: не попадёт в историю команд).',
+            help='Пароль. Без него будет запрошен скрытым вводом.',
         )
 
     def handle(self, *args, **options):
@@ -27,5 +27,5 @@ class Command(BaseCommand):
             raise CommandError(str(error)) from error
 
         account.set_password(raw_password)
-        account.save(update_fields=['password_hash'])
+        account.save(update_fields=['password'])
         self.stdout.write(self.style.SUCCESS(f'Пароль аккаунта «{account.username}» обновлён.'))

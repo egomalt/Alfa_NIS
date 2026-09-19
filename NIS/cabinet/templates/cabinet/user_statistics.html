@@ -2,15 +2,6 @@
 
 {% block title %}Статистика — Alfa Career{% endblock %}
 
-{% comment %}
-  Страница показывала только то, что кандидат создал сам: свои тесты, статьи
-  и участия. Прохождения чужих тестов — его основное занятие на площадке —
-  не учитывались нигде, даже в тепловой карте. Теперь этот блок первый.
-
-  Плашки .ud-stat-card остались только в верхней строке: внутри секций
-  они давали карточку в карточке, поэтому там лёгкие .ud-facts без рамок.
-{% endcomment %}
-
 {% block panel %}
 <div class="ud-tab-panel" id="panel-stats">
   <div class="ud-page-header">
@@ -38,12 +29,7 @@
     <div id="ud-attempts-recent"></div>
   </div>
 
-  {% comment %}
-    Две равные плашки: карта недель слева, серия справа. Одной широкой
-    плашкой карта не заполняла ширину и оставляла пустоту, а её сводка
-    выглядела приложенной сбоку.
-  {% endcomment %}
-  <div class="ud-activity-row">
+    <div class="ud-activity-row">
     <div class="ud-section">
       <div class="ud-card-head">
         <div>

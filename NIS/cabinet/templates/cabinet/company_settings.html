@@ -2,12 +2,6 @@
 
 {% block title %}Настройки компании — Alfa Career{% endblock %}
 
-{% comment %}
-  Раньше вся анкета лежала одной плашкой: девять полей подряд и четыре
-  поля ввода под направления работы. Теперь блоки разделены по смыслу,
-  логотип меняется здесь же, а направления стали списком без потолка в четыре.
-{% endcomment %}
-
 {% block panel %}
 <div class="cp-tab-panel" id="panel-settings">
   <div class="cp-page-header">
@@ -64,11 +58,7 @@
         <label class="cp-form-label" for="cp-f-city">Город</label>
         <input id="cp-f-city" class="cp-form-input" type="text" maxlength="100" placeholder="Москва">
       </div>
-      {% comment %}
-        Адрес есть в модели с самого начала, но поля для него не было —
-        а неполная форма его ещё и затирала при каждом сохранении.
-      {% endcomment %}
-      <div class="cp-form-field full">
+            <div class="cp-form-field full">
         <label class="cp-form-label" for="cp-f-address">Адрес <span class="label-note">— необязательно</span></label>
         <input id="cp-f-address" class="cp-form-input" type="text" maxlength="255" placeholder="улица, дом, офис">
       </div>

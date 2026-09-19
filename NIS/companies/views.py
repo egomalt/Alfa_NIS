@@ -19,38 +19,40 @@ from . import statistics
 from .forms import clean_directions, CompanyProfileForm, CompanyVerificationForm
 from .models import Company, CompanyRating, ensure_company
 
-# Каталоги фильтруются на стороне браузера, поэтому страница крупная:
-# ограничение защищает от выгрузки всей таблицы, но не режет текущий интерфейс.
+# Каталог фильтруется в браузере, поэтому страница крупная
 CATALOG_PER_PAGE = 100
+
+
+def _own_company_or_error(request, username):
+    """Компания текущего пользователя либо готовый JSON-ответ с отказом."""
+    if request.account.username != username:
+        return None, JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
+    return get_object_or_404(Company, username=username), None
 
 
 @ensure_csrf_cookie
 @page_login_required(ROLE_COMPANY)
 def company_tests_page(request):
-    """Раздел «Тесты» кабинета компании (страница в доменном приложении)."""
+    """Раздел «Тесты» кабинета компании."""
     account = request.account
     company = ensure_company(account)
     if not company.is_verified:
         return redirect('/cabinet/company/')
     return render(request, 'companies/tests.html', {
         'username': account.username,
-        # page подсвечивает пункт в сайдбаре, panel='none' говорит company.js
-        # не рисовать здесь профильную панель — у страницы свой скрипт
+        # page подсвечивает пункт сайдбара, panel='none' — у страницы свой скрипт
         'page': 'tests',
         'panel': 'none',
     })
 
 
 def _company_rating(company):
-    """Оценка компании для карточки. Считает statistics.rating() — там же,
-    откуда её берёт PDF-отчёт."""
     stars = statistics.rating(company)
     return stars['avg'], stars['count'], stars['dist']
 
 
 def _serialize_company(company, include_private=False):
-    """Карточка компании. Приватные поля (регистрационный документ) — только владельцу
-    и модератору: раньше ссылка на юрдокумент уходила в публичный ответ."""
+    """Карточка компании. Регистрационный документ — только владельцу."""
     avg_rating, rating_count, rating_dist = _company_rating(company)
     data = {
         'id': company.id,
@@ -88,10 +90,8 @@ def _serialize_company(company, include_private=False):
 
 @require_GET
 def api_companies_list(request):
-
-    # Сортируем по числу опубликованных тестов: каталог нужен кандидату, чтобы
-    # найти, где что порешать, — компании без единого теста внизу.
-    # Тесты связаны с компанией строкой owner_username, поэтому считаем подзапросом.
+    # Сортируем по числу опубликованных тестов: компании без тестов внизу.
+    # Тесты связаны с компанией строкой owner_username, поэтому подзапрос.
     published_tests = (
         Test.objects
         .filter(status=Test.STATUS_PUBLISHED, owner_username=OuterRef('username'))
@@ -150,9 +150,7 @@ def api_company_detail(request, username):
 def _profile_form_data(request, company):
     """POST, дополненный текущими значениями для непереданных полей.
 
-    Форма связывается целиком, и пропущенное поле означало «очистить»:
-    загрузка аватара слала лишь часть полей и молча стирала адрес компании.
-    Теперь запрос может менять только то, что в нём есть.
+    Форма связывается целиком, поэтому пропущенное поле означало бы «очистить».
     """
     data = request.POST.copy()
     for name in CompanyProfileForm.Meta.fields:
@@ -165,9 +163,9 @@ def _profile_form_data(request, company):
 @require_http_methods(['POST'])
 @api_login_required(ROLE_COMPANY)
 def api_company_profile(request, username):
-    company = get_object_or_404(Company, username=username)
-    if request.account.username != username:
-        return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
+    company, error = _own_company_or_error(request, username)
+    if error:
+        return error
     form = CompanyProfileForm(_profile_form_data(request, company), request.FILES, instance=company)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
@@ -185,13 +183,17 @@ def api_company_profile(request, username):
 @require_http_methods(['POST'])
 @api_login_required(ROLE_COMPANY)
 def api_company_verification(request, username):
-    company = get_object_or_404(Company, username=username)
-    if request.account.username != username:
-        return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
+    company, error = _own_company_or_error(request, username)
+    if error:
+        return error
+    previous = company.registration_document.name if company.registration_document else ''
     form = CompanyVerificationForm(request.POST, request.FILES, instance=company)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
     company = form.save(commit=False)
+    # Прежний документ убираем с диска, иначе он останется лежать навсегда
+    if previous and company.registration_document.name != previous:
+        company.registration_document.storage.delete(previous)
     # Загрузка документа отправляет компанию на ручную модерацию
     company.verification_status = Company.VERIF_PENDING
     company.verification_reason = ''
@@ -207,7 +209,6 @@ def api_company_verification(request, username):
 
 @require_GET
 def api_company_tests(request, username):
-
     company = get_object_or_404(Company, username=username)
     current = get_current_account(request)
     is_owner = current is not None and current.username == username
@@ -222,15 +223,14 @@ def api_company_tests(request, username):
             status=403,
         )
 
-    # Эндпоинт открыт всем: черновики с их названиями и ссылками в конструктор
-    # видит только владелец, остальным отдаём опубликованные.
+    # Черновики видит только владелец, остальным — опубликованные
     tests = Test.objects.filter(owner_username=username)
     if not is_owner:
         tests = tests.filter(status=Test.STATUS_PUBLISHED)
-    tests = tests.annotate(page_total=Count('pages', distinct=True),
-                           finished_attempts=attempts.finished_count())
+    tests = list(tests.annotate(page_total=Count('pages', distinct=True),
+                                finished_attempts=attempts.finished_count()))
 
-    total = tests.count()
+    total = len(tests)
     active = sum(1 for t in tests if t.status == Test.STATUS_PUBLISHED)
     submissions = sum(t.finished_attempts for t in tests)
 
@@ -239,7 +239,6 @@ def api_company_tests(request, username):
             'id': t.id,
             'title': t.title,
             'status': t.status,
-            # Уровень и категория нужны публичной странице тестов компании
             'level': t.stats.get('level', ''),
             'category': t.stats.get('category', ''),
             'page_count': t.page_total,
@@ -260,7 +259,7 @@ def api_company_tests(request, username):
             'total_tests': total,
             'active_tests': active,
             'submissions': submissions,
-            'completion_rate': round(active / total * 100) if total else 0,
+            'active_rate': round(active / total * 100) if total else 0,
         },
     })
 
@@ -268,11 +267,10 @@ def api_company_tests(request, username):
 @require_GET
 @api_login_required(ROLE_COMPANY)
 def api_company_statistics(request, username):
-    """Сводка для страницы «Статистика» в кабинете. Только своя компания:
-    сюда попадают числа по черновикам и непроверенным решениям."""
-    if request.account.username != username:
-        return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
-    company = get_object_or_404(Company, username=username)
+    """Сводка для кабинета: в ней есть черновики и непроверенные решения."""
+    company, error = _own_company_or_error(request, username)
+    if error:
+        return error
     return JsonResponse({'ok': True, **statistics.collect(company)})
 
 
@@ -295,9 +293,6 @@ def api_my_company_ratings(request):
 @require_http_methods(['POST'])
 @api_login_required(ROLE_USER)
 def api_company_rate(request, username):
-
-    account = request.account
-
     try:
         rating = int(load_json_body(request).get('rating', 0))
     except (ValueError, TypeError):
@@ -309,7 +304,7 @@ def api_company_rate(request, username):
     company = get_object_or_404(Company, username=username)
     CompanyRating.objects.update_or_create(
         company=company,
-        user_username=account.username,
+        user_username=request.account.username,
         defaults={'rating': rating},
     )
 

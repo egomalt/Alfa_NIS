@@ -13,7 +13,7 @@ from .models import ContestSubmission
 @ensure_csrf_cookie
 @page_login_required(ROLE_USER)
 def my_contests_user(request):
-    """Раздел «Конкурсы» кабинета кандидата — история участия (единый сайдбарный вид)."""
+    """Раздел «Конкурсы» кабинета кандидата — история участия."""
     return render(request, 'contests/contests_cabinet/my_contests_user.html',
                   {'username': request.account.username, 'page': 'contests'})
 
@@ -21,11 +21,7 @@ def my_contests_user(request):
 @ensure_csrf_cookie
 @page_login_required(ROLE_USER)
 def my_contest_submission(request, sub_id):
-    """Одно своё решение: что отправили и чем ответила компания.
-
-    Страницу проверяем здесь же, а не только в API: чужой адрес должен
-    отдавать 404 сразу, а не пустую оболочку с ошибкой внутри.
-    """
+    """Одно своё решение. Чужой адрес отдаёт 404 сразу, а не пустую оболочку."""
     submission = (
         ContestSubmission.objects
         .filter(id=sub_id, candidate_username=request.account.username)
@@ -37,8 +33,6 @@ def my_contest_submission(request, sub_id):
     return render(request, 'contests/contests_cabinet/user_submission.html', {
         'username': request.account.username,
         'page': 'contests',
-        # Панель рисует собственный скрипт страницы: четыре списочных
-        # запроса кабинета здесь не нужны
         'panel': 'none',
         'submission_id': submission.id,
         'contest_title': submission.contest.title,
@@ -48,14 +42,12 @@ def my_contest_submission(request, sub_id):
 @ensure_csrf_cookie
 @page_login_required(ROLE_COMPANY)
 def company_contests(request):
-    # Как и раздел тестов: неподтверждённой компании тут делать нечего —
-    # в сайдбаре на этом пункте висит замок, страница должна вести себя так же
+    # Неподтверждённой компании раздел закрыт — в сайдбаре на нём висит замок
     if not ensure_company(request.account).is_verified:
         return redirect('/cabinet/company/')
     return render(request, 'contests/contests_cabinet/company_contests.html', {
         'username': request.account.username,
-        # page подсвечивает пункт сайдбара, panel='none' — у страницы свой скрипт,
-        # профильную панель кабинета рисовать не нужно
+        # page подсвечивает пункт сайдбара, panel='none' — у страницы свой скрипт
         'page': 'contests',
         'panel': 'none',
     })
@@ -64,11 +56,12 @@ def company_contests(request):
 @ensure_csrf_cookie
 @page_login_required(ROLE_COMPANY)
 def contest_constructor(request, contest_id=None):
+    if not ensure_company(request.account).is_verified:
+        return redirect('/cabinet/company/')
     return render(request, 'contests/contests_cabinet/contest_constructor.html', {
         'username': request.account.username,
         'contest_id': contest_id,
-        # Лимит берём из того же места, где его проверяет сервер, — иначе
-        # подсказка в интерфейсе снова разойдётся с реальным ограничением
+        # Лимит берём оттуда же, где его проверяет сервер
         'max_attachment_mb': MAX_DOCUMENT_SIZE // (1024 * 1024),
     })
 

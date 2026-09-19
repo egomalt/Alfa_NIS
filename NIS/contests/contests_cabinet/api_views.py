@@ -22,19 +22,41 @@ from .models import Contest, ContestAttachment, ContestSubmission
 
 MAX_ATTACHMENTS = 10
 CATALOG_PER_PAGE = 100
-MAX_SUBMISSION_ATTEMPTS = 1   # столько же показывает страница конкурса
+MAX_SUBMISSION_ATTEMPTS = 1
 MAX_TEXT_LENGTH = 20000
 MAX_COMMENT_LENGTH = 2000
 
+PUBLIC_STATUSES = [Contest.STATUS_ACTIVE, Contest.STATUS_FINISHED, Contest.STATUS_REVIEW]
+
+EDITABLE_FIELDS = (
+    'title', 'excerpt', 'case_text', 'rules', 'category',
+    'level', 'prize', 'submission_type', 'submission_hint',
+)
+
+
+def _not_found(message='Конкурс не найден'):
+    return JsonResponse({'ok': False, 'message': message}, status=404)
+
 
 def _parse_deadline(raw_value):
-    """Дата из запроса. parse_datetime кидает ValueError на «2024-13-45» — ловим."""
     if not raw_value:
         return None
     try:
         return parse_datetime(raw_value)
     except ValueError:
         return None
+
+
+def _apply_fields(contest, body):
+    for field in EDITABLE_FIELDS:
+        if field in body:
+            setattr(contest, field, str(body[field] or ''))
+    if 'deadline' in body:
+        contest.deadline = _parse_deadline(body['deadline'])
+
+
+def _with_counts(queryset):
+    return queryset.annotate(subs=Count('submissions'))
 
 
 def _attachment_to_dict(attachment):
@@ -48,11 +70,6 @@ def _attachment_to_dict(attachment):
 
 
 def _contest_to_dict(c, full=False, submissions_count=None):
-    """Карточка конкурса.
-
-    submissions_count интерфейс читает в трёх местах, а сервер его не отдавал —
-    везде показывался ноль. Считаем одним запросом на список, а не в цикле.
-    """
     d = {
         'id': c.id,
         'title': c.title,
@@ -79,17 +96,13 @@ def _contest_to_dict(c, full=False, submissions_count=None):
 
 
 def _candidate_cards(usernames):
-    """Карточки кандидатов одним запросом на модель.
-
-    Раньше _sub_to_dict ходил в базу дважды на каждую заявку: 50 работ — 101 запрос.
-    """
+    """Карточки кандидатов одним запросом на модель."""
     usernames = list({u for u in usernames if u})
     emails = dict(Account.objects.filter(username__in=usernames).values_list('username', 'email'))
     profiles = {
         p.username: p for p in UserProfile.objects.filter(username__in=usernames)
     }
-    # Решение скрыть нельзя — компания должна видеть присланную работу, —
-    # поэтому у заблокированного прячем только личность и контакты
+    # У заблокированного прячем личность и контакты, но не саму работу
     hidden = bans.banned_usernames()
     cards = {}
     for username in usernames:
@@ -115,8 +128,6 @@ def _sub_to_dict(s, cards=None):
     banned = card.get('banned', False)
     return {
         'id': s.id,
-        # Имя и логин заблокированного заменяем подписью: работа остаётся
-        # на месте, автор перестаёт быть ссылкой на скрытый профиль
         'candidate_username': '' if banned else s.candidate_username,
         'candidate_name': bans.BANNED_LABEL if banned else s.candidate_name,
         'candidate_banned': banned,
@@ -143,7 +154,6 @@ def api_company_contests(request):
     account = request.account
     qs = Contest.objects.filter(company_username=account.username)
 
-    # Пять счётчиков одним запросом вместо пяти отдельных COUNT(*)
     by_status = dict(qs.values_list('status').annotate(n=Count('id')))
     stats = {
         'total': sum(by_status.values()),
@@ -153,7 +163,7 @@ def api_company_contests(request):
         'draft': by_status.get(Contest.STATUS_DRAFT, 0),
     }
 
-    contests = qs.annotate(subs=Count('submissions'))
+    contests = _with_counts(qs)
     return JsonResponse({
         'ok': True,
         'contests': [_contest_to_dict(c, submissions_count=c.subs) for c in contests],
@@ -168,35 +178,27 @@ def api_contest_create(request):
     body = load_json_body(request)
 
     c = Contest(company_username=account.username)
-    for field in ('title', 'excerpt', 'case_text', 'rules', 'category', 'level', 'prize', 'submission_type', 'submission_hint'):
-        if field in body:
-            setattr(c, field, body[field])
-    if body.get('deadline'):
-        c.deadline = _parse_deadline(body['deadline'])
+    _apply_fields(c, body)
     c.save()
     return JsonResponse({'ok': True, 'contest': _contest_to_dict(c)}, status=201)
 
 
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 def api_contest_detail(request, contest_id):
-    try:
-        c = Contest.objects.get(id=contest_id)
-    except Contest.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Конкурс не найден'}, status=404)
+    c = Contest.objects.filter(id=contest_id).first()
+    if c is None:
+        return _not_found()
 
     if request.method == 'GET':
         # Черновик виден только владельцу: иначе перебором id читаются условия
         # ещё не стартовавших конкурсов
-        if c.status == 'draft':
+        if c.status == Contest.STATUS_DRAFT:
             account = get_current_account(request)
             if account is None or account.username != c.company_username:
-                return JsonResponse({'ok': False, 'message': 'Конкурс не найден'}, status=404)
+                return _not_found()
+        company = Company.objects.filter(username=c.company_username).first()
         data = _contest_to_dict(c, full=True)
-        try:
-            co = Company.objects.get(username=c.company_username)
-            data['company_name'] = co.name or c.company_username
-        except Company.DoesNotExist:
-            data['company_name'] = c.company_username
+        data['company_name'] = (company.name if company else '') or c.company_username
         return JsonResponse({'ok': True, 'contest': data})
 
     account = get_current_account(request)
@@ -204,8 +206,7 @@ def api_contest_detail(request, contest_id):
         return JsonResponse({'ok': False, 'message': 'Требуется вход.'}, status=401)
     if c.company_username != account.username:
         return JsonResponse({'ok': False, 'message': 'Нет доступа'}, status=403)
-    # Единственная пишущая вьюха с собственной проверкой доступа —
-    # общий guard её не оборачивает, поэтому бан сверяем здесь же
+    # Вьюха проверяет доступ сама, поэтому и бан сверяет сама
     blocked = ban_block(account, request.method)
     if blocked is not None:
         return blocked
@@ -214,13 +215,7 @@ def api_contest_detail(request, contest_id):
         c.delete()
         return JsonResponse({'ok': True})
 
-    body = load_json_body(request)
-
-    for field in ('title', 'excerpt', 'case_text', 'rules', 'category', 'level', 'prize', 'submission_type', 'submission_hint'):
-        if field in body:
-            setattr(c, field, body[field])
-    if 'deadline' in body:
-        c.deadline = _parse_deadline(body['deadline'])
+    _apply_fields(c, load_json_body(request))
     c.save()
     return JsonResponse({'ok': True, 'contest': _contest_to_dict(c)})
 
@@ -229,17 +224,18 @@ def _own_contest_or_none(request, contest_id):
     return Contest.objects.filter(id=contest_id, company_username=request.account.username).first()
 
 
+def _own_submission_or_none(request, contest_id, sub_id):
+    return ContestSubmission.objects.filter(
+        id=sub_id, contest__id=contest_id, contest__company_username=request.account.username
+    ).first()
+
+
 @require_http_methods(['POST'])
 @api_login_required(ROLE_COMPANY)
 def api_contest_attachment_upload(request, contest_id):
-    """Загрузка стартового файла конкурса.
-
-    Раньше интерфейс собирал файлы в список на странице, но отправлял конкурс
-    JSON-ом, поэтому файлы не доходили до сервера вообще.
-    """
     contest = _own_contest_or_none(request, contest_id)
     if contest is None:
-        return JsonResponse({'ok': False, 'message': 'Конкурс не найден'}, status=404)
+        return _not_found()
 
     if contest.attachments.count() >= MAX_ATTACHMENTS:
         return JsonResponse(
@@ -265,11 +261,11 @@ def api_contest_attachment_upload(request, contest_id):
 def api_contest_attachment_delete(request, contest_id, attachment_id):
     contest = _own_contest_or_none(request, contest_id)
     if contest is None:
-        return JsonResponse({'ok': False, 'message': 'Конкурс не найден'}, status=404)
+        return _not_found()
 
     attachment = contest.attachments.filter(id=attachment_id).first()
     if attachment is None:
-        return JsonResponse({'ok': False, 'message': 'Файл не найден'}, status=404)
+        return _not_found('Файл не найден')
 
     attachment.file.delete(save=False)
     attachment.delete()
@@ -281,13 +277,19 @@ def api_contest_attachment_delete(request, contest_id, attachment_id):
 def api_contest_publish(request, contest_id):
     c = _own_contest_or_none(request, contest_id)
     if c is None:
-        return JsonResponse({'ok': False, 'message': 'Конкурс не найден'}, status=404)
+        return _not_found()
+
+    # Публикует только подтверждённая компания — как и в разделе тестов
+    company = Company.objects.filter(username=request.account.username).first()
+    if company is None or not company.is_verified:
+        return JsonResponse(
+            {'ok': False, 'message': 'Сначала подтвердите компанию.'}, status=403
+        )
 
     # Завершённый конкурс не воскрешаем: иначе он снова начнёт принимать работы
     if c.status == Contest.STATUS_FINISHED:
         return JsonResponse({'ok': False, 'message': 'Завершённый конкурс нельзя опубликовать заново.'}, status=400)
 
-    # Раньше публиковалось что угодно — хоть пустой конкурс без срока
     missing = []
     if not (c.title or '').strip():
         missing.append('название')
@@ -310,11 +312,9 @@ def api_contest_publish(request, contest_id):
 @require_http_methods(['GET'])
 @api_login_required(ROLE_COMPANY)
 def api_contest_submissions(request, contest_id):
-    account = request.account
-    try:
-        c = Contest.objects.get(id=contest_id, company_username=account.username)
-    except Contest.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Не найден'}, status=404)
+    c = _own_contest_or_none(request, contest_id)
+    if c is None:
+        return _not_found()
     subs = list(c.submissions.all())
     cards = _candidate_cards(s.candidate_username for s in subs)
     return JsonResponse({'ok': True, 'submissions': [_sub_to_dict(s, cards) for s in subs]})
@@ -324,72 +324,58 @@ def api_contest_submissions(request, contest_id):
 @api_login_required(ROLE_COMPANY)
 def api_contest_statistics(request, contest_id):
     """Воронка и подача решений по дням — только владельцу конкурса."""
-    try:
-        contest = Contest.objects.get(id=contest_id, company_username=request.account.username)
-    except Contest.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Не найден'}, status=404)
+    contest = _own_contest_or_none(request, contest_id)
+    if contest is None:
+        return _not_found()
     return JsonResponse({'ok': True, **statistics.collect(contest)})
 
 
 @require_http_methods(['PATCH'])
 @api_login_required(ROLE_COMPANY)
 def api_submission_update(request, contest_id, sub_id):
-    account = request.account
-    try:
-        s = ContestSubmission.objects.get(
-            id=sub_id, contest__id=contest_id, contest__company_username=account.username
-        )
-    except ContestSubmission.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Не найдено'}, status=404)
+    s = _own_submission_or_none(request, contest_id, sub_id)
+    if s is None:
+        return _not_found('Решение не найдено')
     body = load_json_body(request)
     if body.get('status') in ('pending', 'accepted', 'rejected'):
         s.status = body['status']
-        s.save()
+        s.save(update_fields=['status'])
     return JsonResponse({'ok': True, 'submission': _sub_to_dict(s)})
 
 
 @require_http_methods(['POST'])
 @api_login_required(ROLE_COMPANY)
 def api_submission_like(request, contest_id, sub_id):
-    account = request.account
-    try:
-        s = ContestSubmission.objects.get(
-            id=sub_id, contest__id=contest_id, contest__company_username=account.username
-        )
-    except ContestSubmission.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Не найдено'}, status=404)
+    s = _own_submission_or_none(request, contest_id, sub_id)
+    if s is None:
+        return _not_found('Решение не найдено')
     s.liked = not s.liked
-    s.save()
+    s.save(update_fields=['liked'])
     return JsonResponse({'ok': True, 'liked': s.liked})
 
 
 @require_http_methods(['POST'])
 @api_login_required(ROLE_COMPANY)
 def api_submission_winner(request, contest_id, sub_id):
-    account = request.account
-    try:
-        s = ContestSubmission.objects.get(
-            id=sub_id, contest__id=contest_id, contest__company_username=account.username
-        )
-    except ContestSubmission.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Не найдено'}, status=404)
+    s = _own_submission_or_none(request, contest_id, sub_id)
+    if s is None:
+        return _not_found('Решение не найдено')
     s.winner = not s.winner
-    s.save()
+    s.save(update_fields=['winner'])
     return JsonResponse({'ok': True, 'winner': s.winner})
 
 
 @require_http_methods(['GET'])
 def api_contests_catalog(request):
     qs = (Contest.objects
-          .filter(status__in=['active', 'finished', 'review'])
+          .filter(status__in=PUBLIC_STATUSES)
           .exclude(company_username__in=bans.banned_usernames()))
     if request.GET.get('status'):
         qs = qs.filter(status=request.GET['status'])
     if request.GET.get('category'):
         qs = qs.filter(category__iexact=request.GET['category'])
 
-    qs = qs.order_by('-created_at')
-    contests, page_meta = paginate(request, qs, CATALOG_PER_PAGE)
+    contests, page_meta = paginate(request, _with_counts(qs).order_by('-created_at'), CATALOG_PER_PAGE)
 
     company_names = {
         co.username: co.name or co.username
@@ -398,7 +384,7 @@ def api_contests_catalog(request):
 
     result = []
     for c in contests:
-        d = _contest_to_dict(c)
+        d = _contest_to_dict(c, submissions_count=c.subs)
         d['company_name'] = company_names.get(c.company_username, c.company_username)
         result.append(d)
     return JsonResponse({'ok': True, 'contests': result, **page_meta})
@@ -408,12 +394,10 @@ def api_contests_catalog(request):
 @api_login_required(ROLE_USER)
 def api_contest_submit(request, contest_id):
     account = request.account
-    try:
-        c = Contest.objects.get(id=contest_id, status=Contest.STATUS_ACTIVE)
-    except Contest.DoesNotExist:
-        return JsonResponse({'ok': False, 'message': 'Конкурс не найден или не активен'}, status=404)
+    c = Contest.objects.filter(id=contest_id, status=Contest.STATUS_ACTIVE).first()
+    if c is None:
+        return _not_found('Конкурс не найден или не активен')
 
-    # Дедлайн раньше не проверялся нигде — работу можно было сдать хоть через год
     if c.deadline and timezone.now() > c.deadline:
         return JsonResponse({'ok': False, 'message': 'Приём работ завершён: срок вышел.'}, status=400)
 
@@ -443,8 +427,8 @@ def api_contest_submit(request, contest_id):
             return JsonResponse({'ok': False, 'message': 'Текст решения обязателен.'}, status=400)
         sub.text = text[:MAX_TEXT_LENGTH]
 
-    # Номер попытки и лимит считаем под блокировкой конкурса: иначе два
-    # одновременных запроса получат одинаковый номер и обойдут лимит
+    # Номер попытки считаем под блокировкой: иначе два одновременных
+    # запроса получат одинаковый номер и обойдут лимит
     with transaction.atomic():
         locked = Contest.objects.select_for_update().get(id=c.id)
         used = ContestSubmission.objects.filter(contest=locked, candidate_username=account.username).count()
@@ -484,8 +468,6 @@ def api_user_contest_history(request):
         .select_related('contest')
         .order_by('-created_at')
     )
-    # Имена компаний — одним запросом на весь список, а не по строке:
-    # в таблице участий раньше показывался логин вместо названия
     names = dict(
         Company.objects
         .filter(username__in={s.contest.company_username for s in subs})
@@ -512,13 +494,7 @@ def api_user_contest_history(request):
 @require_http_methods(['GET'])
 @api_login_required()
 def api_user_submission(request, sub_id):
-    """Одно своё решение целиком: что отправили и чем ответила компания.
-
-    Кандидат видел только строку в списке участий — ни файла, ни ссылки,
-    ни собственного комментария к работе. Чужое решение отдавать нельзя:
-    внутри и файл, и контакты, поэтому фильтруем по автору, а не проверяем
-    после выборки.
-    """
+    """Одно своё решение целиком: что отправили и чем ответила компания."""
     submission = (
         ContestSubmission.objects
         .filter(id=sub_id, candidate_username=request.account.username)
@@ -585,8 +561,10 @@ def api_user_public_contests(request, username):
 
 @require_http_methods(['GET'])
 def api_company_public_contests(request, username):
-    qs = Contest.objects.filter(
-        company_username=username,
-        status__in=[Contest.STATUS_ACTIVE, Contest.STATUS_FINISHED, Contest.STATUS_REVIEW],
+    qs = _with_counts(
+        Contest.objects.filter(company_username=username, status__in=PUBLIC_STATUSES)
     ).order_by('-created_at')
-    return JsonResponse({'ok': True, 'contests': [_contest_to_dict(c) for c in qs]})
+    return JsonResponse({
+        'ok': True,
+        'contests': [_contest_to_dict(c, submissions_count=c.subs) for c in qs],
+    })

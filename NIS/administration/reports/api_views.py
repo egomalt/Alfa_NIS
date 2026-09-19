@@ -128,8 +128,8 @@ def api_report_create(request):
         return JsonResponse({'ok': False, 'message': 'Нельзя пожаловаться на свой материал.'}, status=400)
 
     try:
-        # Вставку оборачиваем в свой atomic: иначе пойманная IntegrityError оставляет
-        # внешнюю транзакцию в сломанном состоянии, и следующий запрос к БД падает.
+        # Свой atomic на вставку: пойманная IntegrityError иначе оставит
+        # внешнюю транзакцию непригодной для следующих запросов.
         with transaction.atomic():
             Report.objects.create(
                 target_type=target_type,

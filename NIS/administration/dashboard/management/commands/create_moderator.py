@@ -13,7 +13,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--password',
             default='',
-            help='Пароль. Если не указан — будет запрошен скрытым вводом (безопаснее: не попадёт в историю команд).',
+            help='Пароль. Без него будет запрошен скрытым вводом.',
         )
 
     def handle(self, *args, **options):
@@ -29,7 +29,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(
                 f'Аккаунт «{existing.username}» повышен до модератора. Вход: /authorization/signin/'
             ))
-            if not existing.password_hash:
+            if not existing.password:
                 self.stdout.write(self.style.WARNING(
                     'У аккаунта не задан пароль — войти не получится. '
                     f'Задайте его: manage.py set_password {existing.username}'

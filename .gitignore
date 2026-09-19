@@ -13,6 +13,7 @@ build/
 *.log
 *.sqlite3
 media/
+private_media/
 
 # IDE
 .vscode/

@@ -5,9 +5,7 @@
   }
   function initial(name) { return (name || '?').trim()[0].toUpperCase(); }
 
-  /* Принимает и сам элемент, и его id. Раньше брала только id, а
-     автомонтирование передавало `el.id` — у контейнера без id это пустая
-     строка, getElementById('') отдаёт null, и чип молча не появлялся. */
+  /* Принимает и сам элемент, и его id: у контейнера может не быть id. */
   async function mountUserChip(target) {
     const el = typeof target === 'string' ? document.getElementById(target) : target;
     if (!el) return;
@@ -37,9 +35,7 @@
     } catch(_) {}
   }
 
-  /* Плашка блокировки. Заблокированный теперь входит в кабинет — иначе он
-     не узнал бы ни причину, ни срок: раньше единственным местом, где это
-     писалось, была форма входа, а на неё он попадал только выйдя сам. */
+  /* Плашка блокировки: иначе заблокированный не узнает ни причину, ни срок. */
   function showBanNotice(account) {
     if (document.querySelector('.cr-ban-notice')) return;
     const until = account.ban_until

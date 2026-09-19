@@ -1,9 +1,13 @@
 """Права доступа: кто что может, и закрытые дыры."""
 import json
+from io import StringIO
 
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import Client
 
 from articles.constructor.models import Article
+from authorization.models import ROLE_MODERATOR, STATUS_BANNED
 from companies.models import Company
 from tests.constructor.models import Test, TestPage
 
@@ -39,7 +43,7 @@ class ApiGuardTests(BaseCase):
                 self.assertEqual(self.login('moder').get(url).status_code, 200)
 
     def test_silent_denial_replaced_with_explicit(self):
-        """Три эндпоинта раньше отдавали 200 с пустым списком вместо отказа."""
+        """Отказ должен быть явным, а не пустым списком с кодом 200."""
         self.assertEqual(Client().get('/api/v1/companies/my-ratings/').status_code, 401)
         self.assertEqual(Client().get('/api/v1/contests/user-history/').status_code, 401)
 
@@ -91,7 +95,7 @@ class TestsCrudHoleTests(BaseCase):
         self.assertEqual(Test.objects.get(id=draft.id).status, Test.STATUS_DRAFT)
 
     def test_owner_is_taken_from_session_not_request(self):
-        """Раньше owner_username приходил из тела запроса."""
+        """Владелец берётся из сессии, а не из тела запроса."""
         response = self.login('konkurent').post(
             '/api/v1/tests/create/',
             json.dumps({'owner_username': 'firma', 'title': 'Подделка'}), 'application/json')
@@ -123,7 +127,7 @@ class LeakTests(BaseCase):
         self.assertEqual(self.login('firma').get(f'/api/v1/tests/{draft.id}/view/?preview=1').status_code, 200)
 
     def test_company_tests_endpoint_hides_drafts(self):
-        """Эндпоинт открыт всем и раньше отдавал названия чужих черновиков."""
+        """Эндпоинт открыт всем, поэтому черновики видит только владелец."""
         self.make_test(owner='firma', published=True, title='Открытый тест')
         self.make_test(owner='firma', published=False, title='СЕКРЕТНЫЙ ЧЕРНОВИК')
 
@@ -177,7 +181,69 @@ class LeakTests(BaseCase):
         self.assertEqual(response.json()['contest']['case_text'], 'СЕКРЕТ')
 
     def test_company_verification_requires_owner(self):
-        """Раньше аноним снимал верификацию любой компании одним запросом."""
+        """Снять верификацию может только сама компания."""
         self.assertEqual(Client().post('/api/v1/companies/firma/verification/', {}).status_code, 401)
         self.assertEqual(self.login('kandidat').post('/api/v1/companies/firma/verification/', {}).status_code, 403)
         self.assertEqual(self.login('konkurent').post('/api/v1/companies/firma/verification/', {}).status_code, 403)
+
+
+class VisibilityGapTests(BaseCase):
+    """Дыры, через которые закрытые данные утекали в обход страницы."""
+
+    def test_banned_candidate_card_is_hidden_from_api(self):
+        """Страница профиля отдаёт 404, а карточка кандидата отдавалась всем."""
+        self.candidate.status = STATUS_BANNED
+        self.candidate.ban_reason = 'Нарушение'
+        self.candidate.save(update_fields=['status', 'ban_reason'])
+
+        self.assertEqual(Client().get('/api/v1/candidates/kandidat/').status_code, 404)
+        self.assertEqual(self.login('drugoy').get('/api/v1/candidates/kandidat/').status_code, 404)
+        # Себя и модератор, и сам заблокированный видят
+        self.assertEqual(self.login('kandidat').get('/api/v1/candidates/kandidat/').status_code, 200)
+        self.assertEqual(self.login('moder').get('/api/v1/candidates/kandidat/').status_code, 200)
+
+    def test_draft_test_code_page_cannot_be_run_by_strangers(self):
+        """По id страницы можно было прощупать задачу из чужого черновика."""
+        test = self.make_test(owner='firma', published=False, with_quiz=False)
+        page = TestPage.objects.create(
+            test=test, order=0, type=TestPage.TYPE_CODE, title='Задача',
+            page_meta={'language': 'python', 'test_cases': [{'input': '1', 'expected': '1', 'is_sample': True}]},
+        )
+        body = json.dumps({'code': 'print(1)'})
+        self.assertEqual(
+            self.login('kandidat').post(f'/api/v1/tests/pages/{page.id}/run/', body, 'application/json').status_code,
+            404,
+        )
+
+    def test_unverified_company_cannot_publish_a_contest(self):
+        Company.objects.filter(username='firma').update(verification_status=Company.VERIF_NONE)
+        contest = self.make_contest(owner='firma', status='draft')
+        response = self.login('firma').post(f'/api/v1/contests/{contest.id}/publish/')
+        self.assertEqual(response.status_code, 403)
+        contest.refresh_from_db()
+        self.assertEqual(contest.status, 'draft')
+
+    def test_empty_article_cannot_be_published(self):
+        article = self.make_article(author='kandidat', published=False, title='', content='')
+        response = self.login('kandidat').post(f'/api/v1/articles/{article.id}/publish/')
+        self.assertEqual(response.status_code, 400)
+        article.refresh_from_db()
+        self.assertEqual(article.status, Article.STATUS_DRAFT)
+
+
+class ManagementCommandTests(BaseCase):
+    """Команды ломаются молча: их никто не зовёт из тестов приложения."""
+
+    def test_set_password_updates_the_account(self):
+        call_command('set_password', 'kandidat', password='Novyy-Parol-99', stdout=StringIO())
+        self.candidate.refresh_from_db()
+        self.assertTrue(self.candidate.check_password('Novyy-Parol-99'))
+
+    def test_create_moderator_promotes_existing_account(self):
+        call_command('create_moderator', 'drugoy', stdout=StringIO())
+        self.other.refresh_from_db()
+        self.assertEqual(self.other.role, ROLE_MODERATOR)
+
+    def test_create_moderator_refuses_to_duplicate(self):
+        with self.assertRaises(CommandError):
+            call_command('create_moderator', 'moder', stdout=StringIO())

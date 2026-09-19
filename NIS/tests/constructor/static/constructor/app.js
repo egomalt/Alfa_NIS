@@ -184,8 +184,7 @@
     }
 
     function syncBackLink() {
-        // Кабинет зависит от роли: раньше компанию уводило в кабинет кандидата,
-        // откуда её разворачивало на страницу регистрации
+        // Кабинет зависит от роли автора
         const href = BOOTSTRAP.backUrl || '/cabinet/user/tests/';
         const back = document.getElementById('cst-back');
         const backTests = document.getElementById('cst-back-tests');

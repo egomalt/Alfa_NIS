@@ -10,15 +10,13 @@ from articles.constructor.models import Article
 from articles.serializers import serialize_article
 from core.pagination import paginate
 
-# Каталоги фильтруются на стороне браузера, поэтому страница крупная:
-# ограничение защищает от выгрузки всей таблицы, но не режет текущий интерфейс.
 CATALOG_PER_PAGE = 100
 
 
 @ensure_csrf_cookie
 @page_login_required(ROLE_USER)
 def my_articles(request):
-    """Раздел «Мои статьи» кабинета кандидата (единый сайдбарный вид)."""
+    """Раздел «Мои статьи» кабинета кандидата."""
     return render(request, 'articles_cabinet/my_articles.html',
                   {'username': request.account.username, 'page': 'articles'})
 
@@ -28,4 +26,8 @@ def my_articles(request):
 def api_my_articles(request):
     articles_qs = Article.objects.filter(author_username=request.account.username).order_by('-created_at')
     articles, page_meta = paginate(request, articles_qs, CATALOG_PER_PAGE)
-    return JsonResponse({'ok': True, 'articles': [serialize_article(a, with_author=False, with_status=True) for a in articles], **page_meta})
+    return JsonResponse({
+        'ok': True,
+        'articles': [serialize_article(a, with_author=False, with_status=True) for a in articles],
+        **page_meta,
+    })

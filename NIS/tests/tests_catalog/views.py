@@ -10,8 +10,7 @@ from authorization import bans
 from authorization.models import Account
 from core.pagination import paginate
 
-# Каталоги фильтруются на стороне браузера, поэтому страница крупная:
-# ограничение защищает от выгрузки всей таблицы, но не режет текущий интерфейс.
+# Каталог фильтруется в браузере, поэтому страница крупная
 CATALOG_PER_PAGE = 100
 
 
@@ -22,7 +21,6 @@ def tests_catalog_shell(request):
 
 @require_GET
 def api_tests_catalog(request):
-    owner_names = {a.username: a.name for a in Account.objects.all()}
     tests_qs = (Test.objects
                 .filter(status=Test.STATUS_PUBLISHED)
                 .exclude(owner_username__in=bans.banned_usernames())
@@ -30,6 +28,13 @@ def api_tests_catalog(request):
                           finished_attempts=attempts.finished_count())
                 .order_by('-created_at'))
     tests, page_meta = paginate(request, tests_qs, CATALOG_PER_PAGE)
+    # Имена авторов — одним запросом по владельцам этой страницы,
+    # а не выгрузкой всей таблицы аккаунтов
+    owner_names = dict(
+        Account.objects
+        .filter(username__in={t.owner_username for t in tests})
+        .values_list('username', 'name')
+    )
     result = []
     for test in tests:
         stats = test.stats or {}
@@ -42,8 +47,6 @@ def api_tests_catalog(request):
             'level': stats.get('level', ''),
             'category': stats.get('category', ''),
             'page_count': test.page_total,
-            # Число прохождений — признак «этот тест стоит внимания».
-            # Раньше в каталог не попадало, хотя считается при сдаче.
             'submissions': test.finished_attempts,
             'url': f'/tests/{test.id}/',
         })

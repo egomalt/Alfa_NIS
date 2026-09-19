@@ -1,11 +1,5 @@
 /* Раздел «Тесты» кабинета компании.
- *
- * Файл подключается только из companies/templates/companies/tests.html.
- * Раньше здесь лежала вторая половина — страница профиля компании с формами,
- * верификацией и модалками (около 360 строк). Она не исполнялась никогда:
- * ветка выбиралась по BOOTSTRAP.page, а шаблон всегда передаёт "tests".
- * Работающий профиль компании живёт в cabinet/static/cabinet/company.js.
- */
+   Профиль компании живёт отдельно — в cabinet/static/cabinet/company.js. */
 (() => {
     const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
 
@@ -192,7 +186,7 @@
         setText('stat-total-tests', String(stats?.total_tests ?? 0));
         setText('stat-active-tests', String(stats?.active_tests ?? 0));
         setText('stat-submissions', String(stats?.submissions ?? 0));
-        setText('stat-completion-rate', `${stats?.completion_rate ?? 0}%`);
+        setText('stat-completion-rate', `${stats?.active_rate ?? 0}%`);
         renderTable();
     }
 

@@ -1,13 +1,6 @@
 /* Перелистывание страниц для списков.
- *
- * Списочные эндпоинты отдают метаданные вместе с данными:
- *   {"ok": true, "users": [...], "page": 2, "per_page": 100, "total": 137, "pages": 2}
- *
- * Использование:
- *   AlfaPager.render(document.getElementById('users-pager'), meta, page => { ... });
- *
- * Блок сам прячется, когда страница всего одна.
- */
+   AlfaPager.render(container, meta, page => { ... });
+   Блок сам прячется, когда страница всего одна. */
 (() => {
   function button(label, page, disabled, title) {
     const attrs = [

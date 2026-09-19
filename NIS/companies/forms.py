@@ -41,9 +41,7 @@ class PDFValidationMixin:
 class CompanyProfileForm(PDFValidationMixin, forms.ModelForm):
     class Meta:
         model = Company
-        # directions в форме нет намеренно: JSONField отрендерился бы текстовым
-        # полем с JSON внутри. Список приходит отдельными значениями формы и
-        # разбирается clean_directions() во вьюхе.
+        # directions сюда не входит: список разбирает clean_directions() во вьюхе
         fields = [
             'username', 'name', 'description', 'contact_email', 'phone', 'website',
             'address', 'city', 'company_size', 'industry', 'avatar', 'registration_document',

@@ -1,12 +1,6 @@
 {% extends 'cabinet/base_user.html' %}
 {% load static %}
 
-{% comment %}
-  Одно отправленное решение: что ушло в компанию и чем она ответила.
-  Раньше кандидат видел только строку в списке участий и не мог ни перечитать
-  свой текст, ни скачать отправленный файл.
-{% endcomment %}
-
 {% block title %}{{ contest_title|default:"Решение" }} — Alfa Career{% endblock %}
 
 {% block head_extra %}

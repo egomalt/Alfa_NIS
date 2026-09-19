@@ -1,12 +1,6 @@
 {% extends base_template %}
 {% load static %}
 
-{% comment %}
-  Страница «Как проходят тест». Тесты заводят и компании, и кандидаты,
-  поэтому базовый шаблон (а с ним и боковая панель) выбирается по роли автора
-  во вьюхе constructor_stats_shell.
-{% endcomment %}
-
 {% block title %}{{ test_title|default:"Тест" }} — статистика — Career{% endblock %}
 
 {% block head_extra %}

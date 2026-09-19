@@ -57,10 +57,6 @@
         <path d="M5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/>
       </svg>
       <input id="cst-title" class="test-name" type="text" placeholder="Название теста" maxlength="255" autocomplete="off">
-      {% comment %}
-        Сюда пишет setStatus(): сохранение, загрузка, публикация и их ошибки.
-        Элемента раньше не было, и все 12 сообщений уходили в никуда.
-      {% endcomment %}
       <span id="cst-save-status" class="save-status"></span>
     </div>
 
@@ -81,10 +77,6 @@
       <button class="btn-publish" id="cst-publish-btn" disabled>Опубликовать</button>
     </div>
 
-    {% comment %}
-      Переключатель темы стоит рядом с действиями, но не внутри них: на телефоне
-      действия уезжают в отдельную строку сеткой, а тема остаётся в первой.
-    {% endcomment %}
     <button class="btn-theme" id="cst-theme-btn" data-theme-toggle>
       <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <path d="M20 14.5A8 8 0 1 1 9.5 4a6.3 6.3 0 0 0 10.5 10.5Z"/>

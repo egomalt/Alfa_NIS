@@ -519,8 +519,6 @@
       }
     }
 
-    // Своё авторство: тесты и статьи в одном блоке — раньше два раздела
-    // повторяли плашки, которые стояли прямо над ними
     const authoredEl = document.getElementById('ud-authored-facts');
     if (authoredEl) {
       const passes = tests.reduce((sum, t) => sum + (t.submissions || 0), 0);

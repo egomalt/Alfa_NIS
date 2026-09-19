@@ -3,6 +3,7 @@ from django.core.validators import validate_email
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
+from authorization import bans
 from authorization.models import Account, ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
 from companies.models import Company
@@ -19,13 +20,7 @@ MAX_SKILLS = 20
 
 
 def _sees_contacts(viewer, account):
-    """Кому показывать почту и телефон кандидата.
-
-    Владельцу — всегда. Подтверждённой компании — потому что иначе профиль
-    не работает как профиль: посмотреть человека можно, а позвать нельзя.
-    Всем остальным, включая анонимов и неподтверждённые компании, — нет:
-    иначе адреса собираются обходом каталога.
-    """
+    """Контакты видит владелец и подтверждённая компания — больше никто."""
     if viewer is None:
         return False
     if viewer.username == account.username:
@@ -36,20 +31,35 @@ def _sees_contacts(viewer, account):
     return bool(company and company.is_verified)
 
 
+def _candidate_or_error(username):
+    account = Account.objects.filter(username__iexact=username, role=ROLE_USER).first()
+    if account is None:
+        return None, JsonResponse({'ok': False, 'message': 'Кандидат не найден'}, status=404)
+    return account, None
+
+
+def _own_candidate_or_error(request, username):
+    if request.account.username != username:
+        return None, JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
+    return _candidate_or_error(username)
+
+
 @require_GET
 def api_candidate_detail(request, username):
-    account = Account.objects.filter(username__iexact=username, role=ROLE_USER).first()
-    if not account:
+    account, error = _candidate_or_error(username)
+    if error:
+        return error
+
+    current = get_current_account(request)
+    # Заблокированный виден только себе и модератору — как и его страница
+    if not bans.visible_to(current, account.username):
         return JsonResponse({'ok': False, 'message': 'Кандидат не найден'}, status=404)
 
     profile = UserProfile.objects.filter(username=account.username).first()
-    current = get_current_account(request)
     is_owner = current is not None and current.username == account.username
 
     candidate = _serialize_candidate(
         account, profile, include_private=_sees_contacts(current, account))
-    # Подтверждение навыков делом и признак живого профиля — то, ради чего
-    # компания вообще открывает страницу
     candidate['strengths'] = statistics.strengths(account.username)
     candidate['streak'] = activity.streaks(activity.daily(account.username))
 
@@ -63,12 +73,9 @@ def api_candidate_detail(request, username):
 @require_http_methods(['PATCH'])
 @api_login_required()
 def api_candidate_update(request, username):
-    if request.account.username != username:
-        return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
-
-    account = Account.objects.filter(username=username, role=ROLE_USER).first()
-    if not account:
-        return JsonResponse({'ok': False, 'message': 'Кандидат не найден'}, status=404)
+    account, error = _own_candidate_or_error(request, username)
+    if error:
+        return error
 
     body = load_json_body(request)
 
@@ -92,9 +99,9 @@ def api_candidate_update(request, username):
     if changed_fields:
         account.save(update_fields=changed_fields)
 
-    profile, _ = UserProfile.objects.get_or_create(username=username)
     # Меняем только присланное: запрос на удаление фото не должен заодно
-    # стирать «О себе» просто потому, что это поле в него не положили
+    # стирать «О себе» просто потому, что этого поля в нём нет
+    profile, _ = UserProfile.objects.get_or_create(username=username)
     updated = []
     if 'bio' in body:
         profile.bio = bio
@@ -102,7 +109,7 @@ def api_candidate_update(request, username):
     if phone is not None:
         profile.phone = str(phone).strip()[:32]
         updated.append('phone')
-    if skills_raw is not None:
+    if isinstance(skills_raw, list):
         profile.skills = [s.strip() for s in skills_raw if isinstance(s, str) and s.strip()][:MAX_SKILLS]
         updated.append('skills')
     if 'links' in body:
@@ -120,21 +127,19 @@ def api_candidate_update(request, username):
 @require_POST
 @api_login_required()
 def api_candidate_avatar(request, username):
-    if request.account.username != username:
-        return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
+    account, error = _own_candidate_or_error(request, username)
+    if error:
+        return error
 
-    account = Account.objects.filter(username=username, role=ROLE_USER).first()
-    if not account:
-        return JsonResponse({'ok': False, 'message': 'Кандидат не найден'}, status=404)
-
-    # Файл кладётся в поле напрямую, минуя форму, поэтому валидаторы ImageField
-    # не срабатывают — проверяем сами
+    # Файл кладётся в поле напрямую, минуя форму, поэтому проверяем сами
     try:
         avatar = validate_image(request.FILES.get('avatar'))
-    except UploadError as error:
-        return JsonResponse({'ok': False, 'message': str(error)}, status=400)
+    except UploadError as upload_error:
+        return JsonResponse({'ok': False, 'message': str(upload_error)}, status=400)
 
     profile, _ = UserProfile.objects.get_or_create(username=username)
+    # Прежнее фото убираем с диска, иначе оно останется лежать навсегда
+    profile.avatar.delete(save=False)
     profile.avatar = avatar
     profile.save(update_fields=['avatar'])
 
@@ -142,9 +147,7 @@ def api_candidate_avatar(request, username):
 
 
 def _serialize_candidate(account, profile, include_private=False):
-    """Карточка кандидата. Контакты — только владельцу и подтверждённой
-    компании: раньше почту мог собрать любой аноним, обойдя
-    /api/v1/candidates/<username>/."""
+    """Карточка кандидата для профиля и кабинета."""
     data = {
         'username': account.username,
         'name': account.name,

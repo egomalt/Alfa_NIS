@@ -10,10 +10,6 @@ from authorization.models import Account
 from contests.contests_cabinet.models import Contest
 from tests.constructor.models import Test
 
-# Автор материала → аккаунт, который можно заблокировать
-#   статья  → author_username (кандидат)
-#   конкурс → company_username (компания)
-
 
 def _account_brief(username):
     acc = Account.objects.filter(username=username).first()

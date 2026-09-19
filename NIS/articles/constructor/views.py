@@ -53,26 +53,30 @@ def api_article_create(request):
     return JsonResponse({'ok': True, 'article_id': article.id})
 
 
+def _own_article(request, article_id):
+    return Article.objects.filter(id=article_id, author_username=request.account.username).first()
+
+
+def _article_not_found():
+    return JsonResponse({'ok': False, 'message': 'Статья не найдена'}, status=404)
+
+
 @require_http_methods(['PATCH'])
 @api_login_required()
 def api_article_update(request, article_id):
-    article = Article.objects.filter(id=article_id, author_username=request.account.username).first()
+    article = _own_article(request, article_id)
     if not article:
-        return JsonResponse({'ok': False, 'message': 'Статья не найдена'}, status=404)
+        return _article_not_found()
 
     body = load_json_body(request)
 
-    # Раньше значения клали в модель как есть: cover_index: "abc" валил сохранение
-    # с ошибкой 500, а длина title и размер content ничем не ограничивались.
     fields = []
     for field, limit in (('title', MAX_TITLE_LENGTH), ('excerpt', MAX_EXCERPT_LENGTH)):
         if field in body:
             setattr(article, field, str(body[field] or '')[:limit])
             fields.append(field)
 
-    # Тело статьи — HTML-строка из редактора, а не список. Раньше здесь стояла
-    # проверка «должно быть списком», из-за чего сохранение падало с ошибкой 400.
-    # Пропускаем через очистку: шаблон выводит тело без экранирования.
+    # Шаблон выводит тело без экранирования, поэтому чистим его здесь
     if 'content' in body:
         article.content = clean_article_html(body['content'])
         fields.append('content')
@@ -101,9 +105,13 @@ def api_article_update(request, article_id):
 @require_http_methods(['POST'])
 @api_login_required()
 def api_article_publish(request, article_id):
-    article = Article.objects.filter(id=article_id, author_username=request.account.username).first()
+    article = _own_article(request, article_id)
     if not article:
-        return JsonResponse({'ok': False, 'message': 'Статья не найдена'}, status=404)
+        return _article_not_found()
+    if not (article.title or '').strip():
+        return JsonResponse({'ok': False, 'message': 'Укажите название статьи.'}, status=400)
+    if not (article.content or '').strip():
+        return JsonResponse({'ok': False, 'message': 'Статья пустая — нечего публиковать.'}, status=400)
     article.status = Article.STATUS_PUBLISHED
     article.published_at = article.published_at or timezone.now()
     article.save(update_fields=['status', 'published_at'])
@@ -113,9 +121,9 @@ def api_article_publish(request, article_id):
 @require_http_methods(['DELETE'])
 @api_login_required()
 def api_article_delete(request, article_id):
-    article = Article.objects.filter(id=article_id, author_username=request.account.username).first()
+    article = _own_article(request, article_id)
     if not article:
-        return JsonResponse({'ok': False, 'message': 'Статья не найдена'}, status=404)
+        return _article_not_found()
     article.delete()
     return JsonResponse({'ok': True})
 
@@ -123,7 +131,7 @@ def api_article_delete(request, article_id):
 @ensure_csrf_cookie
 @page_login_required(ROLE_USER)
 def article_preview(request, article_id):
-    article = Article.objects.filter(id=article_id, author_username=request.account.username).first()
+    article = _own_article(request, article_id)
     if not article:
         raise Http404
     return render(request, 'articles_constructor/preview.html', {

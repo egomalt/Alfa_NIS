@@ -44,8 +44,7 @@
       : '';
 
     var metaParts = [];
-    // Отрасль и город приходят от компании и попадают прямо в разметку —
-    // раньше они вставлялись без экранирования
+    // Отрасль и город попадают прямо в разметку — экранируем
     if (company.industry) metaParts.push(esc(company.industry));
     if (company.city) metaParts.push(esc(company.city));
     var ratingStr = company.avg_rating ? '★ ' + company.avg_rating : '';
