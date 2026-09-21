@@ -1,3 +1,5 @@
+import time
+
 from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import render
@@ -22,6 +24,11 @@ MAX_CODE_LENGTH = 100_000
 MAX_TEST_CASES = 50
 MAX_TIME_LIMIT = 10
 DEFAULT_TIME_LIMIT = 5
+
+# Потолок на весь прогон. Без него полсотни тест-кейсов по десять секунд
+# держат соединение больше восьми минут, и запрос обрывается по таймауту
+# веб-сервера — человек не получает ни результата, ни объяснения.
+MAX_TOTAL_RUN_SECONDS = 60
 
 
 def _safe_time_limit(raw_value):
@@ -318,8 +325,20 @@ def api_code_run(request, page_id):
 
     results = []
     passed = 0
+    deadline = time.monotonic() + MAX_TOTAL_RUN_SECONDS
+    interrupted = False
+
     for i, tc in enumerate(test_cases):
-        run_result = run_in_docker(language, code, stdin_data=tc.get('input', ''), time_limit=time_limit)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            interrupted = True
+            break
+
+        run_result = run_in_docker(
+            language, code,
+            stdin_data=tc.get('input', ''),
+            time_limit=max(1, min(time_limit, int(remaining))),
+        )
         if not run_result['ok']:
             return JsonResponse({'ok': False, 'message': run_result['error']})
 
@@ -344,8 +363,22 @@ def api_code_run(request, page_id):
         results.append(tc_result)
 
     # Полный прогон — отправка решения: вердикт запоминаем на сервере,
-    # чтобы при подведении итогов не верить числам от клиента
+    # чтобы при подведении итогов не верить числам от клиента. Прерванный
+    # прогон записывается как есть: непроверенные кейсы не засчитываются.
     if not sample_only:
         code_results.remember(request, page.id, passed, len(test_cases))
 
-    return JsonResponse({'ok': True, 'passed': passed, 'total': len(test_cases), 'results': results})
+    response = {
+        'ok': True,
+        'passed': passed,
+        'total': len(test_cases),
+        'checked': len(results),
+        'interrupted': interrupted,
+        'results': results,
+    }
+    if interrupted:
+        response['message'] = (
+            f'Проверка остановлена: на неё отводится {MAX_TOTAL_RUN_SECONDS} секунд. '
+            'Ускорьте решение — оставшиеся тесты не проверялись.'
+        )
+    return JsonResponse(response)

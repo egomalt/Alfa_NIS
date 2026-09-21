@@ -114,6 +114,35 @@ class TakedownTests(BaseCase):
         self.login('moder').post(f'/api/v1/admin/reports/{report.id}/takedown/')
         self.assertEqual(Report.objects.filter(target_type='contest', status=Report.STATUS_NEW).count(), 1)
 
+    def test_dismiss_closes_every_report_on_the_same_target(self):
+        """Решение принимается о материале: разбирать пять одинаковых жалоб незачем."""
+        article = self.make_article(author='kandidat')
+        report = self._make_report(article)
+        for reporter in ('firma', 'konkurent'):
+            Report.objects.create(
+                target_type='article', target_id=str(article.id), target_title=article.title,
+                author_username='kandidat', reporter_username=reporter, reason='ещё одна',
+            )
+
+        response = self.login('moder').post(f'/api/v1/admin/reports/{report.id}/dismiss/')
+        self.assertEqual(response.json()['closed'], 3)
+        self.assertEqual(Report.objects.filter(status=Report.STATUS_NEW).count(), 0)
+        self.assertEqual(Report.objects.filter(status=Report.STATUS_DISMISSED).count(), 3)
+        # Материал при этом остаётся на месте
+        self.assertTrue(Article.objects.filter(id=article.id).exists())
+
+    def test_decided_report_cannot_be_decided_again(self):
+        article = self.make_article(author='kandidat')
+        report = self._make_report(article)
+        client = self.login('moder')
+
+        self.assertEqual(client.post(f'/api/v1/admin/reports/{report.id}/dismiss/').status_code, 200)
+        for action in ('dismiss', 'resolve', 'takedown'):
+            with self.subTest(action=action):
+                self.assertEqual(
+                    client.post(f'/api/v1/admin/reports/{report.id}/{action}/').status_code, 400)
+        self.assertTrue(Article.objects.filter(id=article.id).exists())
+
     def test_takedown_is_moderator_only(self):
         article = self.make_article(author='kandidat')
         report = self._make_report(article)

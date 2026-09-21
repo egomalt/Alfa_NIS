@@ -399,12 +399,19 @@
             return `<div class="tv-code-result-item ${r.passed ? 'pass' : 'fail'}">${icon} Тест ${r.index}${detail}</div>`;
         }).join('');
 
+        // Прерванный по времени прогон — это не «есть ошибки»: часть тестов
+        // просто не успела отработать, и говорить надо именно об этом
+        const verdict = data.interrupted
+            ? '<span class="tv-code-verdict fail">Не уложилось по времени</span>'
+            : `<span class="tv-code-verdict ${data.passed === data.total ? 'pass' : 'fail'}">${data.passed === data.total ? 'Принято' : 'Есть ошибки'}</span>`;
+
         el_.innerHTML = `
             <div class="tv-code-results-wrap">
                 <div class="tv-code-results-header">
                     <span><strong>${data.passed} / ${data.total}</strong> тестов пройдено</span>
-                    ${!sampleOnly ? `<span class="tv-code-verdict ${data.passed === data.total ? 'pass' : 'fail'}">${data.passed === data.total ? 'Принято' : 'Есть ошибки'}</span>` : ''}
+                    ${!sampleOnly ? verdict : ''}
                 </div>
+                ${data.interrupted && data.message ? `<div class="tv-code-note">${escHtml(data.message)}</div>` : ''}
                 <div class="tv-code-result-list">${items}</div>
             </div>`;
     }

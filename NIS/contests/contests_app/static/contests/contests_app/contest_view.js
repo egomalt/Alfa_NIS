@@ -302,18 +302,31 @@ function openRatingModal(companyUsername) {
   });
 
   modal.querySelector('#cv-rating-skip').addEventListener('click', () => modal.remove());
+  const error = document.createElement('div');
+  error.style.cssText = 'font-size:13px;color:var(--red-text);margin-top:12px;display:none;';
+  modal.querySelector('div').appendChild(error);
+
   submitBtn.addEventListener('click', async () => {
     if (!selected) return;
     submitBtn.disabled = true;
     submitBtn.textContent = '…';
+    error.style.display = 'none';
     try {
-      await fetch(`/api/v1/companies/${companyUsername}/rate/`, {
+      const res = await fetch(`/api/v1/companies/${companyUsername}/rate/`, {
         method: 'POST',
         headers: { 'X-CSRFToken': csrf(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating: selected }),
       });
-    } catch (_) {}
-    modal.remove();
+      const data = await res.json().catch(() => ({}));
+      if (!data.ok) throw new Error(data.message || 'Не удалось сохранить оценку');
+      modal.remove();
+    } catch (err) {
+      // Молча закрывать окно нельзя: человек решит, что оценка учтена
+      error.textContent = err.message;
+      error.style.display = '';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Отправить';
+    }
   });
 }
 

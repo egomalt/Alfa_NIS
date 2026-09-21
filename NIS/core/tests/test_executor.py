@@ -1,10 +1,16 @@
 """Запуск решений задач на код в одноразовом контейнере."""
+import json
 import shutil
 import subprocess
+from unittest import mock
 
 from django.test import SimpleTestCase
 
+from tests.constructor import views
 from tests.constructor.executor import LANGUAGES, run_in_docker
+from tests.constructor.models import TestPage
+
+from .base import BaseCase
 
 class CodeExecutorTests(SimpleTestCase):
     """Запуск решения в контейнере. Без Docker тесты пропускаются."""
@@ -65,3 +71,70 @@ class CodeExecutorTests(SimpleTestCase):
         for key, cfg in LANGUAGES.items():
             with self.subTest(language=key):
                 self.assertTrue(cfg['label'] and cfg['image'] and cfg['run'])
+
+
+class CodeRunBudgetTests(BaseCase):
+    """Общий потолок времени на прогон: полсотни медленных кейсов не должны
+    держать соединение до таймаута веб-сервера."""
+
+    def _code_page(self, cases):
+        test = self.make_test(owner='firma', with_quiz=False)
+        return TestPage.objects.create(
+            test=test, order=0, type=TestPage.TYPE_CODE, title='Задача',
+            page_meta={'language': 'python', 'time_limit': 10, 'test_cases': cases},
+        )
+
+    def _run(self, page, sample_only=False):
+        return self.login('kandidat').post(
+            f'/api/v1/tests/pages/{page.id}/run/',
+            json.dumps({'code': 'print(1)', 'sample_only': sample_only}),
+            'application/json',
+        ).json()
+
+    def test_run_stops_when_the_budget_is_spent(self):
+        page = self._code_page([{'input': '', 'expected': '1', 'is_sample': False}] * 5)
+
+        # Каждый запуск «съедает» весь бюджет: до второго кейса дело не дойдёт
+        def slow_run(*args, **kwargs):
+            slow_run.clock[0] += views.MAX_TOTAL_RUN_SECONDS + 1
+            return {'ok': True, 'stdout': '1', 'stderr': '', 'exit_code': 0, 'timed_out': False}
+        slow_run.clock = [0.0]
+
+        with mock.patch.object(views, 'run_in_docker', slow_run), \
+             mock.patch.object(views.time, 'monotonic', lambda: slow_run.clock[0]):
+            data = self._run(page)
+
+        self.assertTrue(data['ok'])
+        self.assertTrue(data['interrupted'])
+        self.assertEqual(data['checked'], 1)
+        self.assertEqual(data['total'], 5)
+        self.assertIn('остановлена', data['message'])
+
+    def test_full_run_is_not_marked_interrupted(self):
+        page = self._code_page([{'input': '', 'expected': '1', 'is_sample': True}] * 3)
+
+        with mock.patch.object(views, 'run_in_docker', return_value={
+                'ok': True, 'stdout': '1', 'stderr': '', 'exit_code': 0, 'timed_out': False}):
+            data = self._run(page, sample_only=True)
+
+        self.assertFalse(data['interrupted'])
+        self.assertEqual((data['passed'], data['total'], data['checked']), (3, 3, 3))
+
+    def test_interrupted_run_does_not_count_as_solved(self):
+        """Непроверенные кейсы не должны давать полный балл при сдаче теста."""
+        page = self._code_page([{'input': '', 'expected': '1', 'is_sample': False}] * 4)
+
+        def slow_run(*args, **kwargs):
+            slow_run.clock[0] += views.MAX_TOTAL_RUN_SECONDS + 1
+            return {'ok': True, 'stdout': '1', 'stderr': '', 'exit_code': 0, 'timed_out': False}
+        slow_run.clock = [0.0]
+
+        client = self.login('kandidat')
+        with mock.patch.object(views, 'run_in_docker', slow_run), \
+             mock.patch.object(views.time, 'monotonic', lambda: slow_run.clock[0]):
+            client.post(f'/api/v1/tests/pages/{page.id}/run/',
+                        json.dumps({'code': 'print(1)', 'sample_only': False}), 'application/json')
+
+        result = client.post(f'/api/v1/tests/{page.test.id}/submit/',
+                             json.dumps({'answers': {}}), 'application/json').json()
+        self.assertEqual(result['score'], 0)

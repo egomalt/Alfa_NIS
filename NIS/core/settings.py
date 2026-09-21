@@ -115,7 +115,7 @@ TEMPLATES = [
 
 # Версия статики: подставляется ко всем ссылкам на CSS/JS как ?v=.
 # Поменял статику — подними значение (или задай ASSET_VERSION в окружении).
-ASSET_VERSION = os.getenv('ASSET_VERSION', '20260919-1')
+ASSET_VERSION = os.getenv('ASSET_VERSION', '20260919-2')
 
 WSGI_APPLICATION = 'core.wsgi.application'
 

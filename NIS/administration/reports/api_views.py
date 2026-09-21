@@ -159,20 +159,45 @@ def api_reports(request):
     return JsonResponse({'ok': True, 'reports': data, 'threshold': ESCALATION_THRESHOLD, **page_meta})
 
 
+def _new_report_or_error(report_id):
+    """Новая жалоба либо отказ: по рассмотренной решение не принимают повторно."""
+    report = get_object_or_404(Report, id=report_id)
+    if report.status != Report.STATUS_NEW:
+        return None, JsonResponse({'ok': False, 'message': 'Жалоба уже рассмотрена.'}, status=400)
+    return report, None
+
+
+def _close_target(report, status):
+    """Закрывает все новые жалобы на ту же цель и возвращает их число.
+
+    Решение принимается о материале, а не об отдельном обращении: если на
+    статью пожаловались пятеро, разбирать одно и то же пять раз незачем,
+    да и порог эскалации иначе остаётся набранным после разбора.
+    """
+    return Report.objects.filter(
+        target_type=report.target_type,
+        target_id=report.target_id,
+        status=Report.STATUS_NEW,
+    ).update(status=status)
+
+
 @require_POST
 @moderator_required
 def api_report_resolve(request, report_id):
-    report = get_object_or_404(Report, id=report_id)
-    report.status = Report.STATUS_RESOLVED
-    report.save(update_fields=['status'])
-    return JsonResponse({'ok': True})
+    report, error = _new_report_or_error(report_id)
+    if error:
+        return error
+    closed = _close_target(report, Report.STATUS_RESOLVED)
+    return JsonResponse({'ok': True, 'closed': closed})
 
 
 @require_POST
 @moderator_required
 def api_report_takedown(request, report_id):
     """Удаляет материал и закрывает все жалобы на него."""
-    report = get_object_or_404(Report, id=report_id)
+    report, error = _new_report_or_error(report_id)
+    if error:
+        return error
 
     models_by_type = {
         Report.TARGET_ARTICLE: Article,
@@ -189,19 +214,15 @@ def api_report_takedown(request, report_id):
         return JsonResponse({'ok': False, 'message': 'Некорректная ссылка на материал.'}, status=400)
 
     deleted, _ = model.objects.filter(id=int(report.target_id)).delete()
-
-    # Закрываем все жалобы на этот материал, а не только текущую
-    Report.objects.filter(
-        target_type=report.target_type, target_id=report.target_id, status=Report.STATUS_NEW
-    ).update(status=Report.STATUS_RESOLVED)
-
-    return JsonResponse({'ok': True, 'deleted': bool(deleted)})
+    closed = _close_target(report, Report.STATUS_RESOLVED)
+    return JsonResponse({'ok': True, 'deleted': bool(deleted), 'closed': closed})
 
 
 @require_POST
 @moderator_required
 def api_report_dismiss(request, report_id):
-    report = get_object_or_404(Report, id=report_id)
-    report.status = Report.STATUS_DISMISSED
-    report.save(update_fields=['status'])
-    return JsonResponse({'ok': True})
+    report, error = _new_report_or_error(report_id)
+    if error:
+        return error
+    closed = _close_target(report, Report.STATUS_DISMISSED)
+    return JsonResponse({'ok': True, 'closed': closed})

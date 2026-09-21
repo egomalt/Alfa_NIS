@@ -132,14 +132,21 @@
             confirmLabel: 'Удалить',
           }, function () {
             A.apiPost('/api/v1/admin/reports/' + id + '/takedown/', {})
-              .then(function () { A.notify('Материал удалён, жалобы закрыты.', 'ok'); afterAction(); })
+              .then(function (d) {
+                A.notify('Материал удалён. Закрыто жалоб: ' + (d.closed || 1) + '.', 'ok');
+                afterAction();
+              })
               .catch(A.fail);
           });
           return;
         }
         if (act === 'dismiss') {
           A.apiPost('/api/v1/admin/reports/' + id + '/dismiss/', {})
-            .then(function () { A.notify('Жалоба отклонена.', 'ok'); afterAction(); })
+            .then(function (d) {
+              var n = d.closed || 1;
+              A.notify(n > 1 ? 'Отклонено жалоб на этот материал: ' + n + '.' : 'Жалоба отклонена.', 'ok');
+              afterAction();
+            })
             .catch(A.fail);
           return;
         }
