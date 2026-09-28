@@ -180,6 +180,9 @@ input, textarea, select {
 [data-theme="dark"] .icon-moon { display: none; }
 [data-theme="light"] .icon-sun { display: none; }
 
+/* Контейнер чипа: кнопки «Войти» и «Регистрация» не должны складываться в столбик */
+[data-user-chip] { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
 .cr-user-chip {
   display: flex;
   align-items: center;
@@ -1870,6 +1873,7 @@ input, textarea, select {
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
+  white-space: nowrap;
   transition: color .15s;
 }
 .mini-link-button:hover { color: var(--text); }
@@ -1937,7 +1941,9 @@ h1, h2, h3, h4,
 }
 .cr-burger:hover { color: var(--text); }
 
-@media (max-width: 860px) {
+/* Меню сворачивается в бургер, пока шесть разделов и кнопки аккаунта
+   не помещаются в одну строку */
+@media (max-width: 1000px) {
   .cr-navbar { padding: 0 16px; gap: 6px; }
   .cr-brand { margin-right: 6px; }
   .cr-brand-name { display: none; }   /* оставляем только иконку */
@@ -1958,6 +1964,12 @@ h1, h2, h3, h4,
   .cr-user-chip > :not(.cr-user-avatar) { display: none; }
   .cr-user-chip { padding: 0; border: none; background: transparent; height: auto; }
   .cr-user-avatar { width: 36px; height: 36px; border-radius: 9px; font-size: 14px; }
+}
+
+@media (max-width: 400px) {
+  .cr-navbar { padding: 0 12px; gap: 4px; }
+  .cr-brand { margin-right: 2px; }
+  .mini-link-button { padding: 0 10px; }
 }
 
 /* ── Адаптив контентных сеток публичных страниц ───────────────────── */
@@ -2053,25 +2065,23 @@ h1, h2, h3, h4,
 /* ── Переключатель темы на страницах входа ────────────────────────── */
 
 /* Закреплён в правом верхнем углу, чтобы не занимать место под формой. */
-.cr-theme-float {
+.cr-float-actions {
   position: fixed;
   top: 20px;
   right: 20px;
   z-index: 10;
-  box-shadow: var(--shadow);
+  display: flex;
+  gap: 8px;
 }
-.cr-theme-float svg { flex-shrink: 0; }
+.cr-float-actions > .theme-toggle { box-shadow: var(--shadow); text-decoration: none; }
+.cr-float-actions svg { flex-shrink: 0; }
 
-/* На узком экране оставляем только иконку — подпись съедала бы полширины */
+/* На узком экране оставляем только иконки — подписи съедали бы полширины */
 @media (max-width: 560px) {
-  .cr-theme-float {
-    top: 12px;
-    right: 12px;
-    width: 34px;
-    padding: 0;
-    justify-content: center;
-  }
-  .cr-theme-float [data-theme-label] { display: none; }
+  .cr-float-actions { top: 12px; right: 12px; }
+  .cr-float-actions > .theme-toggle { width: 34px; padding: 0; justify-content: center; }
+  .cr-float-actions [data-theme-label],
+  .cr-float-actions [data-float-label] { display: none; }
 }
 
 /* ── Ошибки и уведомления в формах ────────────────────────────────── */

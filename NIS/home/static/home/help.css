@@ -1,0 +1,74 @@
+/* Страница помощи: карта сайта, путь кандидата и компании, частые вопросы */
+
+html { scroll-behavior: smooth; }
+.hp-page { padding-bottom: 32px; }
+
+.hp-hero { max-width: 1080px; margin: 0 auto; padding: 64px 32px 32px; text-align: center; }
+.hp-hero h1 { font-size: clamp(30px, 4vw, 42px); line-height: 1.1; font-weight: 800; letter-spacing: -.025em; margin: 0 0 14px; text-wrap: balance; }
+.hp-hero p { font-size: 17px; line-height: 1.55; color: var(--muted); max-width: 560px; margin: 0 auto 26px; text-wrap: pretty; }
+.hp-anchors { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.hp-anchors .cr-chip { text-decoration: none; }
+
+.hp-section { max-width: 1080px; margin: 0 auto; padding: 24px 32px 16px; scroll-margin-top: 80px; }
+.hp-section-last { padding-bottom: 48px; }
+.hp-section > .cr-section-sub { margin-bottom: 18px; }
+
+/* Подсказка для вошедшего: с чего начать именно ему */
+.hp-hint { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 22px; border: 1px solid var(--line); border-left: 3px solid var(--brand); border-radius: 14px; background: var(--surface); }
+.hp-hint-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+.hp-hint-text { font-size: 14px; line-height: 1.5; color: var(--muted); }
+.hp-hint-btn { flex-shrink: 0; display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+
+/* Карта сайта */
+.hp-group + .hp-group { margin-top: 26px; }
+.hp-group-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 12px; }
+.hp-group-title { font-size: 16px; font-weight: 700; margin: 0; }
+.hp-group-sub { font-size: 13px; color: var(--faint); }
+
+.hp-map { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.hp-map-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+a.hp-map-card:hover { border-color: var(--line-2); box-shadow: var(--shadow); }
+.hp-map-card-static { background: var(--surface-2); }
+/* Плашка доступа уходит на следующую строку, если не помещается рядом с названием */
+.hp-map-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 10px; }
+.hp-map-title { font-size: 15px; font-weight: 700; }
+.hp-map-text { font-size: 13.5px; line-height: 1.5; color: var(--muted); flex: 1; }
+.hp-map-path { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.hp-access { flex-shrink: 0; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.hp-access-all { background: var(--green-soft); color: var(--green-text); }
+.hp-access-user { background: var(--brand-soft); color: var(--brand-text); }
+.hp-access-company { background: var(--surface-2); color: var(--text-2); }
+.hp-access-verified { background: var(--amber-soft); color: var(--amber-text); }
+
+/* Путь кандидата и компании */
+.hp-steps { list-style: none; counter-reset: hp-step; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; }
+.hp-step { counter-increment: hp-step; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.hp-step::before { content: counter(hp-step, decimal-leading-zero); display: block; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: var(--brand-text); margin-bottom: 10px; }
+.hp-step-title { font-size: 15.5px; font-weight: 700; margin-bottom: 6px; }
+.hp-step-text { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+
+/* Частые вопросы */
+.hp-faq { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.hp-faq-item + .hp-faq-item { border-top: 1px solid var(--line); }
+.hp-faq-item summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 20px; font-size: 15px; font-weight: 600; cursor: pointer; list-style: none; }
+.hp-faq-item summary::-webkit-details-marker { display: none; }
+.hp-faq-item summary::after { content: '+'; flex-shrink: 0; font-size: 20px; font-weight: 400; line-height: 1; color: var(--faint); transition: transform .15s; }
+.hp-faq-item[open] summary::after { transform: rotate(45deg); color: var(--brand-text); }
+.hp-faq-item summary:hover { background: var(--surface-2); }
+.hp-faq-item p { margin: 0; padding: 0 20px 18px; font-size: 14px; line-height: 1.6; color: var(--text-2); }
+
+@media (max-width: 860px) {
+  .hp-map, .hp-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .hp-hero { padding: 40px 16px 20px; }
+  .hp-hero p { font-size: 15.5px; }
+  .hp-section { padding: 20px 16px 12px; }
+  .hp-map, .hp-steps { grid-template-columns: minmax(0, 1fr); }
+  .hp-hint { flex-direction: column; align-items: stretch; }
+  .hp-hint-btn { justify-content: center; }
+  .hp-faq-item summary { padding: 14px 16px; font-size: 14.5px; }
+  .hp-faq-item p { padding: 0 16px 16px; }
+}

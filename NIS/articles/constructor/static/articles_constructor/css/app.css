@@ -38,8 +38,9 @@ input, textarea, select, button { font-family: inherit; }
 .badge-draft { font-size: 11.5px; color: var(--amber-text); padding: 3px 9px; border: 1px solid var(--amber-text); border-radius: 999px; background: var(--amber-soft); white-space: nowrap; opacity: .8; }
 .badge-published { font-size: 11.5px; color: var(--green-text); padding: 3px 9px; border: 1px solid var(--green-text); border-radius: 999px; background: var(--green-soft); white-space: nowrap; opacity: .8; }
 .topbar-meta { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--faint); white-space: nowrap; }
-.topbar-actions { display: flex; align-items: center; gap: 8px; }
-.btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 13px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.topbar-tools { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; height: 32px; padding: 0 13px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
 .btn:hover { color: var(--text); }
 .btn-save { height: 32px; padding: 0 13px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
 .btn-save.saved { border-color: var(--green-text); color: var(--green-text); background: var(--green-soft); }
@@ -47,6 +48,7 @@ input, textarea, select, button { font-family: inherit; }
 .btn-publish:hover { background: var(--brand-strong); }
 .btn-theme { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text-2); cursor: pointer; transition: border-color .15s, color .15s; }
 .btn-theme:hover { border-color: var(--line-2); color: var(--text); }
+.btn-help { text-decoration: none; }
 [data-theme="dark"] .icon-moon { display: none; }
 [data-theme="light"] .icon-sun { display: none; }
 
@@ -130,7 +132,7 @@ input, textarea, select, button { font-family: inherit; }
 .danger-btn:hover { border-color: var(--red-text); color: var(--red-text); background: var(--red-soft); }
 
 /* Сообщение о результате сохранения/публикации */
-.status-msg { font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.status-msg { font-size: 12.5px; font-weight: 600; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .status-msg.error { color: var(--red-text); }
 .status-msg.warn { color: var(--amber-text); }
 .status-msg.ok { color: var(--green-text); }
@@ -159,10 +161,21 @@ input, textarea, select, button { font-family: inherit; }
   .sp-stats { grid-template-columns: repeat(4, 1fr); }
 }
 
+/* Когда кнопки не помещаются рядом с названием, шапка становится
+   двухстрочной: наверху «Назад», название, помощь и тема, ниже — действия.
+   Центрирование снимаем: при нехватке места оно выталкивало заголовок
+   и плашку статуса в обе стороны — поверх «Назад» */
+@media (max-width: 1100px) {
+  .topbar { height: auto; flex-wrap: wrap; gap: 8px 12px; padding: 10px 20px; }
+  .topbar-center { justify-content: flex-start; }
+  .topbar-actions { order: 3; flex-basis: 100%; justify-content: flex-end; }
+}
+
+/* На телефоне: «Назад» и значки, ниже название, ещё ниже действия */
 @media (max-width: 760px) {
-  .topbar { height: auto; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
-  .topbar-center { order: 3; flex-basis: 100%; justify-content: flex-start; }
-  .topbar-actions { margin-left: auto; }
+  .topbar { gap: 8px; padding: 10px 14px; }
+  .topbar-center { order: 2; flex-basis: 100%; }
+  .topbar-tools { margin-left: auto; }
   .divider-v { display: none; }
   /* Слово «Career» рядом с кнопкой «Назад» — лишний расход ширины */
   .logo-text { display: none; }
@@ -178,7 +191,9 @@ input, textarea, select, button { font-family: inherit; }
 }
 
 @media (max-width: 460px) {
-  .topbar-actions { flex-wrap: wrap; }
+  .topbar-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .topbar-actions > * { justify-content: center; }
+  .topbar-actions .btn-publish { grid-column: 1 / -1; }
   .topbar-meta { display: none; }
   .title-input { font-size: 23px; }
   .editor-area { padding: 20px 14px 48px; }

@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 RESERVED_USERNAMES = {
     'admin', 'administration', 'api', 'articles', 'auth', 'authorization',
     'cabinet', 'candidates', 'companies', 'constructor', 'contests',
-    'django-admin', 'export', 'media', 'profiles', 'reports', 'static', 'tests',
+    'django-admin', 'export', 'help', 'media', 'profiles', 'reports', 'static', 'tests',
 }
 
 
