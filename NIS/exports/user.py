@@ -58,7 +58,7 @@ def build_user_pdf(account):
         r.note('О себе: ' + profile.bio)
     r.spacer(4)
 
-    # KPI
+    # Ключевые показатели крупными цифрами
     r.kpi(
         [
             (taking['passed'], 'Тестов пройдено'),

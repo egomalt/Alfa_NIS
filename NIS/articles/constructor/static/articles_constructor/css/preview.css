@@ -25,8 +25,6 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
-
-/* Topbar */
 .topbar {
   height: 52px;
   display: flex;
@@ -98,8 +96,6 @@ body {
 [data-theme='light'] .icon-sun {
   display: none;
 }
-
-/* Article */
 .article-wrap {
   max-width: 720px;
   margin: 0 auto;

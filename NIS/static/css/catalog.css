@@ -31,8 +31,6 @@ main {
   margin: 0 auto;
   padding: 44px 32px 100px;
 }
-
-/* Hero */
 .hero {
   text-align: center;
   margin-bottom: 48px;
@@ -125,8 +123,6 @@ main {
 .btn-write:hover {
   background: var(--brand-strong);
 }
-
-/* Featured */
 .featured {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -293,8 +289,6 @@ main {
 .cr-filters {
   margin-bottom: 36px;
 }
-
-/* Layout */
 .content-cols {
   display: grid;
   grid-template-columns: 1fr 280px;
@@ -326,8 +320,6 @@ main {
   font-size: 13px;
   color: var(--faint);
 }
-
-/* Grid */
 .art-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -347,8 +339,6 @@ main {
     grid-template-columns: 1fr;
   }
 }
-
-/* Card */
 .card {
   display: flex;
   flex-direction: column;
@@ -485,8 +475,6 @@ main {
 .stat-pill svg {
   flex-shrink: 0;
 }
-
-/* Load more */
 .load-more-row {
   display: flex;
   justify-content: center;
@@ -509,8 +497,6 @@ main {
   color: var(--brand-text);
   background: var(--brand-soft);
 }
-
-/* Sidebar */
 .aside {
   display: flex;
   flex-direction: column;
@@ -580,8 +566,6 @@ main {
   color: var(--muted);
   margin-top: 3px;
 }
-
-/* Empty / Loading */
 .state-msg {
   grid-column: 1/-1;
   padding: 80px 20px;

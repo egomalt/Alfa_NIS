@@ -19,7 +19,6 @@ button {
   flex-direction: column;
   height: 100vh;
 }
-/* Topbar */
 .topbar {
   height: 56px;
   display: flex;
@@ -209,14 +208,12 @@ button {
 [data-theme='light'] .icon-sun {
   display: none;
 }
-/* Body split */
 .body {
   display: flex;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
-/* Editor area */
 .editor-area {
   flex: 1;
   overflow-y: auto;
@@ -226,7 +223,6 @@ button {
   max-width: 680px;
   margin: 0 auto;
 }
-/* Cover zone */
 .cover-zone {
   position: relative;
   margin-bottom: 36px;
@@ -324,7 +320,6 @@ button {
 .cover-remove-btn:hover {
   background: rgba(200, 30, 45, 0.7);
 }
-/* Title */
 .title-input {
   width: 100%;
   border: none;
@@ -344,7 +339,6 @@ button {
 .title-input::placeholder {
   color: var(--faint);
 }
-/* Lead */
 .lead-input {
   width: 100%;
   border: none;
@@ -362,7 +356,6 @@ button {
 .lead-input::placeholder {
   color: var(--faint);
 }
-/* Divider */
 .divider {
   display: flex;
   align-items: center;
@@ -377,7 +370,6 @@ button {
 .divider-icon {
   color: var(--faint);
 }
-/* Body editor */
 .body-editor {
   outline: none;
   font-size: 16.5px;
@@ -456,7 +448,6 @@ button {
 .body-editor li {
   margin-bottom: 0.35em;
 }
-/* Floating toolbar */
 .floating-toolbar {
   position: fixed;
   display: none;
@@ -511,7 +502,6 @@ button {
   border: 5px solid transparent;
   border-top-color: #1a1e26;
 }
-/* Settings panel */
 .settings {
   width: 280px;
   flex-shrink: 0;
@@ -627,7 +617,6 @@ button {
 .status-msg.ok {
   color: var(--green-text);
 }
-/* Scrollbar */
 * {
   box-sizing: border-box;
   margin: 0;

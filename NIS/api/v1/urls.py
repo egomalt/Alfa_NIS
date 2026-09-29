@@ -18,18 +18,18 @@ import tests.tests_catalog.views as tests_catalog_views
 import users.views as user_views
 
 urlpatterns = [
-    # Auth
+    # Вход и регистрация
     path('auth/signup/', auth_views.api_register, name='v1_api_signup'),
     path('auth/signin/', auth_views.api_login, name='v1_api_signin'),
     path('auth/signout/', auth_views.api_logout, name='v1_api_signout'),
     path('auth/me/', auth_views.api_me, name='v1_api_me'),
-    # Candidates
+    # Кандидаты
     path('candidates/<slug:username>/update/', user_views.api_candidate_update, name='v1_api_candidate_update'),
     path('candidates/<slug:username>/avatar/', user_views.api_candidate_avatar, name='v1_api_candidate_avatar'),
     path('candidates/<slug:username>/articles/', article_catalog_views.api_user_articles),
     path('candidates/<slug:username>/contests/', contest_views.api_user_public_contests),
     path('candidates/<slug:username>/', user_views.api_candidate_detail, name='v1_api_candidate_detail'),
-    # Articles
+    # Статьи
     path('articles/catalog/', article_catalog_views.api_articles_catalog),
     path('articles/<int:article_id>/vote/', article_read_views.api_article_vote),
     path('articles/my/', article_cabinet_views.api_my_articles),
@@ -39,7 +39,7 @@ urlpatterns = [
     path('articles/<int:article_id>/delete/', article_constructor_views.api_article_delete),
     # Жалобы (создаёт любой вошедший; очередь модерации — в /admin/reports/)
     path('reports/', admin_reports_views.api_report_create, name='v1_api_report_create'),
-    # Companies
+    # Компании
     path('companies/', company_views.api_companies_list),
     path('companies/my-ratings/', company_views.api_my_company_ratings),
     path('companies/<slug:username>/', company_views.api_company_detail),
@@ -49,7 +49,7 @@ urlpatterns = [
     path('companies/<slug:username>/statistics/', company_views.api_company_statistics),
     path('companies/<slug:username>/rate/', company_views.api_company_rate),
     path('companies/<slug:username>/contests/', contest_views.api_company_public_contests),
-    # Tests — constructor (CRUD)
+    # Тесты: конструктор
     path('tests/', constructor_views.api_tests_list),
     path('tests/create/', constructor_views.api_tests_create),
     path('tests/catalog/', tests_catalog_views.api_tests_catalog),
@@ -58,10 +58,10 @@ urlpatterns = [
     path('tests/<int:test_id>/publish/', constructor_views.api_test_publish),
     path('tests/<int:test_id>/statistics/', constructor_views.api_test_statistics),
     path('tests/pages/<int:page_id>/run/', constructor_views.api_code_run),
-    # Tests — taking (view & submit)
+    # Тесты: прохождение
     path('tests/<int:test_id>/view/', test_views.api_test_view),
     path('tests/<int:test_id>/submit/', test_views.api_test_submit),
-    # Contests — company cabinet
+    # Конкурсы: кабинет компании
     path('contests/company/', contest_views.api_company_contests),
     path('contests/', contest_views.api_contest_create),
     path('contests/catalog/', contest_views.api_contests_catalog),
@@ -76,10 +76,10 @@ urlpatterns = [
     path('contests/<int:contest_id>/submissions/<int:sub_id>/like/', contest_views.api_submission_like),
     path('contests/<int:contest_id>/submissions/<int:sub_id>/winner/', contest_views.api_submission_winner),
     path('contests/<int:contest_id>/statistics/', contest_views.api_contest_statistics),
-    # Contests — public / candidate
+    # Конкурсы: публичные страницы и кандидат
     path('contests/<int:contest_id>/submit/', contest_views.api_contest_submit),
     path('contests/<int:contest_id>/my-submissions/', contest_views.api_my_submissions),
-    # Administration — только для модераторов
+    # Модерация — только для модераторов
     path('admin/overview/', admin_overview_views.api_overview),
     path('admin/verifications/', admin_verification_views.api_verifications),
     path('admin/verifications/<slug:username>/approve/', admin_verification_views.api_verification_approve),

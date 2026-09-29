@@ -726,7 +726,6 @@ select {
   align-items: center;
   gap: 12px;
 }
-/* Company tests page */
 /* Карточка со списком: таблица прижата к её краям, поэтому у самой карточки
    отступов нет, а отступают ячейки. Одна и та же для тестов и конкурсов. */
 .list-card {
@@ -1065,8 +1064,6 @@ select {
   padding-top: 20px;
   border-top: 1px solid var(--line);
 }
-/* Form grids in modal */
-/* Form fields (auth + modal) */
 .field {
   margin-bottom: 16px;
 }
@@ -1131,7 +1128,6 @@ select {
   flex-shrink: 0;
   white-space: nowrap;
 }
-/* Misc */
 .mini-link-button {
   display: inline-flex;
   align-items: center;
@@ -1178,7 +1174,6 @@ select {
 .theme-toggle:hover {
   color: var(--text);
 }
-/* Scrollbar */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line-2) transparent;

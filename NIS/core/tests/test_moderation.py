@@ -356,3 +356,15 @@ class PanelMarkupTests(BaseCase):
         )
         self.assertNotIn('ap-doc-preview-page', markup)
         self.assertIn('ap-doc-frame', markup)
+
+
+class AdminSearchTests(BaseCase):
+    """Поиск в админке идёт и по имени, и по логину."""
+
+    def test_search_by_username_and_name(self):
+        client = self.login('moder')
+        by_login = client.get('/api/v1/admin/users/?q=kandidat').json()['users']
+        self.assertTrue(any(u['username'] == 'kandidat' for u in by_login))
+
+        by_name = client.get('/api/v1/admin/users/?q=Фирма').json()['users']
+        self.assertTrue(any(u['username'] == 'firma' for u in by_name))

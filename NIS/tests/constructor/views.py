@@ -260,7 +260,7 @@ def api_test_detail(request, test_id):
         test.delete()
         return JsonResponse({'ok': True})
 
-    # PUT — full replace
+    # PUT — тест заменяется целиком
     body = load_json_body(request)
 
     title = (body.get('title') or '').strip()

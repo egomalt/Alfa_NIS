@@ -235,3 +235,28 @@ class ArticleContentTests(BaseCase):
 
         article = Article.objects.get(id=response.json()['article_id'])
         self.assertEqual(article.content, '')
+
+
+class ContestCountersTests(BaseCase):
+    """«Решений прислано» всегда показывалось нулём — сервер не отдавал поле."""
+
+    def test_submissions_count_is_returned(self):
+        contest = self.make_contest(submission_type='text')
+        self.login('kandidat').post(f'/api/v1/contests/{contest.id}/submit/', {'text': 'решение'})
+
+        public = Client().get(f'/api/v1/contests/{contest.id}/').json()['contest']
+        self.assertEqual(public['submissions_count'], 1)
+
+        cabinet = self.login('firma').get('/api/v1/contests/company/').json()
+        target = next(c for c in cabinet['contests'] if c['id'] == contest.id)
+        self.assertEqual(target['submissions_count'], 1)
+
+    def test_company_contest_list_stats_are_correct(self):
+        self.make_contest(status='draft')
+        self.make_contest(status='active')
+        self.make_contest(status='finished')
+        stats = self.login('firma').get('/api/v1/contests/company/').json()['stats']
+        self.assertEqual(stats['total'], 3)
+        self.assertEqual(stats['draft'], 1)
+        self.assertEqual(stats['active'], 1)
+        self.assertEqual(stats['finished'], 1)

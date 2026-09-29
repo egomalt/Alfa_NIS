@@ -17,14 +17,12 @@ button {
 textarea {
   resize: vertical;
 }
-/* Layout */
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
 }
-/* Topbar */
 .topbar {
   height: 56px;
   display: flex;
@@ -204,7 +202,6 @@ textarea {
 .btn-help + .btn-theme {
   margin-left: 0;
 }
-/* Body */
 .body {
   display: grid;
   grid-template-columns: 268px 1fr;
@@ -212,7 +209,6 @@ textarea {
   min-height: 0;
   overflow: hidden;
 }
-/* Sidebar */
 .sidebar {
   border-right: 1px solid var(--line);
   background: var(--surface);
@@ -302,7 +298,6 @@ textarea {
   border-color: var(--brand);
   color: var(--brand-text);
 }
-/* Editor */
 .editor {
   display: flex;
   flex-direction: column;
@@ -359,7 +354,6 @@ textarea {
   flex-direction: column;
   gap: 18px;
 }
-/* Fields */
 .field-label {
   font-size: 12px;
   font-weight: 600;
@@ -445,7 +439,6 @@ textarea {
   flex-direction: column;
   gap: 18px;
 }
-/* Choice options */
 .options-list {
   display: flex;
   flex-direction: column;
@@ -495,7 +488,6 @@ textarea {
 .opt-input.correct {
   background: var(--brand-soft);
 }
-/* Test cases */
 .test-cases-header {
   display: flex;
   align-items: center;
@@ -666,7 +658,6 @@ textarea {
   font-size: 13px;
   color: var(--faint);
 }
-/* Panels */
 [data-panel] {
   display: none;
   flex-direction: column;
@@ -675,14 +666,12 @@ textarea {
 [data-panel].active {
   display: flex;
 }
-/* Theme button icon toggle */
 [data-theme='dark'] .icon-moon {
   display: none;
 }
 [data-theme='light'] .icon-sun {
   display: none;
 }
-/* Scrollbar */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -701,7 +690,6 @@ textarea {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-/* Info page toggles */
 .toggle-group {
   display: flex;
   flex-wrap: wrap;
@@ -728,7 +716,6 @@ textarea {
   border-color: var(--brand);
   color: var(--on-brand);
 }
-/* Info page locked badge */
 .info-locked {
   display: inline-flex;
   align-items: center;

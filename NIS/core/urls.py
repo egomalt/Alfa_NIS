@@ -25,7 +25,7 @@ urlpatterns = [
     path('', include('cabinet.urls')),
     path('', include('administration.dashboard.urls')),
     path('', include('exports.urls')),
-    # profiles must come last — catches /<username>/
+    # Профили — последними: шаблон /<логин>/ перехватил бы любой адрес выше
     path('', include('profiles.urls')),
 ]
 

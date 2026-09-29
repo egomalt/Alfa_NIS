@@ -299,8 +299,6 @@
   font-size: 12.5px;
   color: var(--muted);
 }
-
-/* Verify gate */
 .cp-verify-gate {
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -379,8 +377,6 @@
   margin-bottom: 18px;
   font-size: 13px;
 }
-
-/* Buttons */
 .cp-btn-primary {
   display: inline-flex;
   align-items: center;
