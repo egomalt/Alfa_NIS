@@ -1,5 +1,3 @@
-import json
-
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -8,7 +6,7 @@ from django.views.decorators.http import require_http_methods
 
 from authorization.models import ROLE_USER
 from articles.sanitize import clean_article_html
-from articles.serializers import cover_gradient
+from articles.serializers import COVERS, cover_gradient
 from core.auth import api_login_required, page_login_required
 from core.utils import load_json_body
 
@@ -42,7 +40,8 @@ def article_constructor(request, article_id=None):
     return render(request, 'articles_constructor/constructor.html', {
         'username': account.username,
         'article_id': article_id,
-        'article_json': json.dumps(article_data),
+        'article_data': article_data,
+        'covers': COVERS,
     })
 
 

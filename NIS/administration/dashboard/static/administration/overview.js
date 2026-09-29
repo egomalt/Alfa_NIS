@@ -1,64 +1,55 @@
 /* Раздел «Обзор»: сводные счётчики и последние элементы очередей. */
-(function () {
-  'use strict';
-  var A = window.AdminPanel;
+import { api, byId as el, countOf, esc, formatDate, WORDS } from 'alfa/core';
+import { emptyState, pill, refreshBadges, registerSection } from 'alfa/admin';
 
-  function verifyRow(v) {
-    var parts = [];
-    if (v.industry) parts.push(v.industry);
-    if (v.city) parts.push(v.city);
-    var line = parts.join(' · ');
-    if (v.submitted_at) line += (line ? ' · ' : '') + 'подано ' + A.fmtDate(v.submitted_at);
-    return '<div class="ap-verify-card">'
-      + '<span class="ap-company-avatar">' + A.esc(v.letter) + '</span>'
-      + '<div class="ap-verify-main"><div class="ap-verify-title">' + A.esc(v.name) + '</div><div class="ap-verify-meta">' + A.esc(line) + '</div></div>'
-      + A.pill(v.status)
-      + '</div>';
+const metaLine = (item) =>
+  [item.industry, item.city, item.submitted_at && `подано ${formatDate(item.submitted_at)}`]
+    .filter(Boolean)
+    .join(' · ');
+
+const verifyRow = (item) => `
+  <div class="ap-verify-card">
+    <span class="ap-company-avatar">${esc(item.letter)}</span>
+    <div class="ap-verify-main">
+      <div class="ap-verify-title">${esc(item.name)}</div>
+      <div class="ap-verify-meta">${esc(metaLine(item))}</div>
+    </div>
+    ${pill(item.status)}
+  </div>`;
+
+const reportRow = (report) => `
+  <div class="ap-report-card ap-report-static ${report.escalated ? 'ap-escalated' : ''}">
+    <div class="ap-report-top">
+      <span class="ap-report-type">${esc(report.target_type_label)}</span>
+      <span class="ap-report-target">${esc(report.target_title)}</span>
+      ${report.escalated ? `<span class="ap-escalation-pill">⚠ ${esc(countOf(report.total_reports, WORDS.reports))}</span>` : ''}
+    </div>
+    <div class="ap-report-reason">${esc(report.reason)}</div>
+    <div class="ap-report-meta">от ${esc(report.reporter_username || '—')} · ${esc(formatDate(report.created_at))}</div>
+  </div>`;
+
+function render({ stats = {}, recent_verifications: verifications = [], recent_reports: reports = [] }) {
+  el('ap-ov-verify').textContent = stats.verify_pending || 0;
+  el('ap-ov-reports').textContent = stats.reports_new || 0;
+  el('ap-ov-escalated').textContent = stats.reports_escalated || 0;
+  el('ap-ov-users').textContent = stats.users_total || 0;
+  el('ap-ov-banned').textContent = stats.banned || 0;
+  refreshBadges(stats);
+
+  el('ap-overview-verify').innerHTML = verifications.length
+    ? verifications.map(verifyRow).join('')
+    : emptyState('Нет заявок', 'Очередь верификации пуста');
+  el('ap-overview-reports').innerHTML = reports.length
+    ? reports.map(reportRow).join('')
+    : emptyState('Нет новых жалоб', 'Очередь жалоб пуста');
+}
+
+async function load() {
+  try {
+    render(await api.get('/api/v1/admin/overview/'));
+  } catch (error) {
+    el('ap-overview-verify').innerHTML = emptyState('Ошибка', error.message);
   }
+}
 
-  function reportRow(r) {
-    var escPill = r.escalated
-      ? '<span class="ap-escalation-pill">⚠ ' + r.total_reports + ' ' + A.plural(r.total_reports, 'жалоба', 'жалобы', 'жалоб') + '</span>'
-      : '';
-    return '<div class="ap-report-card' + (r.escalated ? ' ap-escalated' : '') + '" style="cursor:default;">'
-      + '<div class="ap-report-top"><span class="ap-report-type">' + A.esc(r.target_type_label) + '</span><span class="ap-report-target">' + A.esc(r.target_title) + '</span>' + escPill + '</div>'
-      + '<div class="ap-report-reason">' + A.esc(r.reason) + '</div>'
-      + '<div class="ap-report-meta">от ' + A.esc(r.reporter_username || '—') + ' · ' + A.esc(A.fmtDate(r.created_at)) + '</div>'
-      + '</div>';
-  }
-
-  function render(data) {
-    var s = data.stats || {};
-    A.el('ap-ov-verify').textContent = s.verify_pending || 0;
-    A.el('ap-ov-reports').textContent = s.reports_new || 0;
-    A.el('ap-ov-escalated').textContent = s.reports_escalated || 0;
-    A.el('ap-ov-users').textContent = s.users_total || 0;
-    A.el('ap-ov-banned').textContent = s.banned || 0;
-    A.refreshBadges(s);
-
-    var vWrap = A.el('ap-overview-verify');
-    var verifs = data.recent_verifications || [];
-    vWrap.innerHTML = verifs.length
-      ? verifs.map(verifyRow).join('')
-      : '<div class="ap-empty"><div class="ap-empty-title">Нет заявок</div><div class="ap-empty-sub">Очередь верификации пуста</div></div>';
-
-    var rWrap = A.el('ap-overview-reports');
-    var reps = data.recent_reports || [];
-    rWrap.innerHTML = reps.length
-      ? reps.map(reportRow).join('')
-      : '<div class="ap-empty"><div class="ap-empty-title">Нет новых жалоб</div><div class="ap-empty-sub">Очередь жалоб пуста</div></div>';
-  }
-
-  function load() {
-    A.apiGet('/api/v1/admin/overview/')
-      .then(render)
-      .catch(function (e) {
-        var vWrap = A.el('ap-overview-verify');
-        if (vWrap) vWrap.innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Ошибка</div><div class="ap-empty-sub">' + A.esc(e.message) + '</div></div>';
-      });
-  }
-
-  function init() {}
-
-  A.registerSection('overview', { init: init, load: load });
-})();
+registerSection('overview', { load });

@@ -1,191 +1,169 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script>
-    (function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();
-  </script>
-  <title>Помощь — Alfa Career</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
+{% block title %}Помощь — Alfa Career{% endblock %}
+{% block styles %}
   <link rel="stylesheet" href="{% static 'home/help.css' %}?v={{ ASSET_V }}">
-  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
-  <script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
-</head>
-<body>
-
-{% include 'partials/navbar.html' with active='help' %}
-
-<main class="hp-page">
-  <section class="hp-hero">
-    <h1>Как устроена платформа</h1>
-    <p>Где что находится, с чего начать кандидату и компании и ответы на частые вопросы.</p>
-    <nav class="hp-anchors" aria-label="Разделы страницы">
-      <a class="cr-chip" href="#map">Карта сайта</a>
-      <a class="cr-chip" href="#candidate">Кандидату</a>
-      <a class="cr-chip" href="#company">Компании</a>
-      <a class="cr-chip" href="#faq">Частые вопросы</a>
-    </nav>
-  </section>
-
-  {% if hint %}
-  <section class="hp-section">
-    <div class="hp-hint">
-      <div>
-        <div class="hp-hint-title">{{ hint.0 }}</div>
-        <div class="hp-hint-text">{{ hint.1 }}</div>
-      </div>
-      <a class="cr-btn-primary hp-hint-btn" href="{{ hint.2 }}">{{ hint.3 }}</a>
-    </div>
-  </section>
-  {% endif %}
-
-  <section class="hp-section" id="map">
-    <h2 class="cr-section-title">Карта сайта</h2>
-    <p class="cr-section-sub">Все разделы платформы и кому они доступны</p>
-
-    {% for group in site_map %}
-    <div class="hp-group">
-      <div class="hp-group-head">
-        <h3 class="hp-group-title">{{ group.title }}</h3>
-        <span class="hp-group-sub">{{ group.sub }}</span>
-      </div>
-      <div class="hp-map">
-        {% for item in group.items %}
-        {% if item.url %}<a class="hp-map-card" href="{{ item.url }}">{% else %}<div class="hp-map-card hp-map-card-static">{% endif %}
-          <div class="hp-map-top">
-            <span class="hp-map-title">{{ item.title }}</span>
-            <span class="hp-access hp-access-{{ item.access }}">{{ item.access_label }}</span>
+{% endblock %}
+{% block navbar %}
+  {% include "partials/navbar.html" with active="help" %}
+{% endblock %}
+{% block body %}
+  <main class="hp-page">
+    <section class="hp-hero">
+      <h1>Как устроена платформа</h1>
+      <p>Где что находится, с чего начать кандидату и компании и ответы на частые вопросы.</p>
+      <nav class="hp-anchors" aria-label="Разделы страницы">
+        <a class="cr-chip" href="#map">Карта сайта</a>
+        <a class="cr-chip" href="#candidate">Кандидату</a>
+        <a class="cr-chip" href="#company">Компании</a>
+        <a class="cr-chip" href="#faq">Частые вопросы</a>
+      </nav>
+    </section>
+    {% if hint %}
+      <section class="hp-section">
+        <div class="hp-hint">
+          <div>
+            <div class="hp-hint-title">{{ hint.0 }}</div>
+            <div class="hp-hint-text">{{ hint.1 }}</div>
           </div>
-          <div class="hp-map-text">{{ item.text }}</div>
-          <div class="hp-map-path">{% if item.url %}{{ item.url }}{% else %}/логин/{% endif %}</div>
-        {% if item.url %}</a>{% else %}</div>{% endif %}
-        {% endfor %}
+          <a class="cr-btn-primary hp-hint-btn" href="{{ hint.2 }}">{{ hint.3 }}</a>
+        </div>
+      </section>
+    {% endif %}
+    <section class="hp-section" id="map">
+      <h2 class="cr-section-title">Карта сайта</h2>
+      <p class="cr-section-sub">Все разделы платформы и кому они доступны</p>
+      {% for group in site_map %}
+        <div class="hp-group">
+          <div class="hp-group-head">
+            <h3 class="hp-group-title">{{ group.title }}</h3>
+            <span class="hp-group-sub">{{ group.sub }}</span>
+          </div>
+          <div class="hp-map">
+            {% for item in group.items %}
+              {% if item.url %}
+                <a class="hp-map-card" href="{{ item.url }}">
+              {% else %}
+                <div class="hp-map-card hp-map-card-static">
+              {% endif %}
+                <div class="hp-map-top">
+                  <span class="hp-map-title">{{ item.title }}</span>
+                  <span class="hp-access hp-access-{{ item.access }}">{{ item.access_label }}</span>
+                </div>
+                <div class="hp-map-text">{{ item.text }}</div>
+                <div class="hp-map-path">{% if item.url %}{{ item.url }}{% else %}/логин/{% endif %}</div>
+                {% if item.url %}
+                  </a>
+                {% else %}
+                  </div>
+                {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </section>
+    <section class="hp-section" id="candidate">
+      <h2 class="cr-section-title">Путь кандидата</h2>
+      <p class="cr-section-sub">От регистрации до внимания компаний</p>
+      <ol class="hp-steps">
+        <li class="hp-step">
+          <div class="hp-step-title">Зарегистрируйтесь</div>
+          <div class="hp-step-text">Выберите роль «Кандидат». После регистрации вход выполнится сразу, откроется личный кабинет.</div>
+        </li>
+        <li class="hp-step">
+          <div class="hp-step-title">Заполните профиль</div>
+          <div class="hp-step-text">В настройках добавьте фото, описание, навыки и ссылки на GitHub, Telegram или сайт — так вас увидят компании.</div>
+        </li>
+        <li class="hp-step">
+          <div class="hp-step-title">Проходите тесты</div>
+          <div class="hp-step-text">В каталоге тестов есть вопросы и задачи на код. Тест считается пройденным при результате от 60%.</div>
+        </li>
+        <li class="hp-step">
+          <div class="hp-step-title">Участвуйте в конкурсах</div>
+          <div class="hp-step-text">Отправьте решение кейса до окончания срока. Вердикт компании появится в кабинете, в разделе «Конкурсы».</div>
+        </li>
+        <li class="hp-step">
+          <div class="hp-step-title">Делитесь опытом</div>
+          <div class="hp-step-text">Напишите статью о собеседовании или подготовке, соберите свой тест для других кандидатов.</div>
+        </li>
+        <li class="hp-step">
+          <div class="hp-step-title">Следите за прогрессом</div>
+          <div class="hp-step-text">В статистике — результаты, карта активности и серия дней подряд. Отчёт можно выгрузить в PDF.</div>
+        </li>
+      </ol>
+    </section>
+    <section class="hp-section" id="company">
+      <h2 class="cr-section-title">Путь компании</h2>
+      <p class="cr-section-sub">От регистрации до отбора кандидатов</p>
+      <ol class="hp-steps">
+        <li class="hp-step">
+          <div class="hp-step-title">Зарегистрируйтесь</div>
+          <div class="hp-step-text">Выберите роль «Компания». Кабинет откроется сразу, но тесты и конкурсы будут закрыты до проверки.</div>
+        </li>
+        <li class="hp-step">
+          <div class="hp-step-title">Подтвердите компанию</div>
+          <div class="hp-step-text">На странице профиля загрузите регистрационный документ в PDF — например, выписку из ЕГРЮЛ. Его проверит модератор.</div>
+        </li>
+        <li class="hp-step">
+          <div class="hp-step-title">Оформите профиль</div>
+          <div class="hp-step-text">В настройках добавьте описание, логотип, отрасль, город и направления работы — это увидят кандидаты.</div>
+        </li>
+        <li class="hp-step">
+          <div class="hp-step-title">Публикуйте тесты</div>
+          <div class="hp-step-text">Соберите тест из вопросов и задач на код. На странице «Как проходят тест» видно, насколько он сложный.</div>
+        </li>
+        <li class="hp-step">
+          <div class="hp-step-title">Проводите конкурсы</div>
+          <div class="hp-step-text">Опишите кейс, приложите файлы, задайте срок. Присланные работы принимайте, отклоняйте и выбирайте победителя.</div>
+        </li>
+        <li class="hp-step">
+          <div class="hp-step-title">Анализируйте результаты</div>
+          <div class="hp-step-text">Статистика компании собирает тесты, конкурсы и оценки кандидатов. Отчёт выгружается в PDF.</div>
+        </li>
+      </ol>
+    </section>
+    <section class="hp-section hp-section-last" id="faq">
+      <h2 class="cr-section-title">Частые вопросы</h2>
+      <p class="cr-section-sub">Нажмите на вопрос, чтобы раскрыть ответ</p>
+      <div class="hp-faq">
+        <details class="hp-faq-item">
+          <summary>Почему у компании разделы «Тесты» и «Конкурсы» с замком?</summary>
+          <p>Публиковать материалы может только подтверждённая компания. Загрузите регистрационный документ в PDF на странице профиля — после одобрения модератором замки снимутся. Если заявку отклонят, причина появится там же, и документ можно будет заменить.</p>
+        </details>
+        <details class="hp-faq-item">
+          <summary>Как проверяются задачи на код?</summary>
+          <p>Решение запускается в отдельном контейнере без доступа к сети. Кнопка «Запустить» проверяет решение на открытых примерах, «Отправить» — на всех тест-кейсах, включая скрытые. Язык задачи выбирает её автор. На всю проверку отводится не больше минуты.</p>
+        </details>
+        <details class="hp-faq-item">
+          <summary>Когда тест считается пройденным?</summary>
+          <p>При результате от 60%. Если уйти со страницы до завершения, ответы пропадут — система предупредит об этом заранее.</p>
+        </details>
+        <details class="hp-faq-item">
+          <summary>Сколько раз можно отправить решение на конкурс?</summary>
+          <p>Один раз и только до окончания срока приёма работ. Отдельно регистрироваться в конкурсе не нужно: участником становится тот, кто прислал решение.</p>
+        </details>
+        <details class="hp-faq-item">
+          <summary>Кто видит мою почту и телефон?</summary>
+          <p>Только вы и подтверждённые компании. Анонимные посетители и компании без проверки документов контактов не видят.</p>
+        </details>
+        <details class="hp-faq-item">
+          <summary>Как считается серия активности?</summary>
+          <p>Засчитываются завершённое прохождение теста, отправленное решение конкурса и созданный тест или статья. Если сегодня вы ещё ничего не сделали, серия не обрывается — день не закончился. Она прерывается, когда проходят целые сутки без событий.</p>
+        </details>
+        <details class="hp-faq-item">
+          <summary>Как пожаловаться на материал?</summary>
+          <p>На странице статьи или конкурса нажмите «Пожаловаться» и опишите причину. Жаловаться на свой материал и повторно на тот же нельзя. Жалобы разбирает модератор.</p>
+        </details>
+        <details class="hp-faq-item">
+          <summary>Что происходит при блокировке аккаунта?</summary>
+          <p>В кабинете появляется плашка с причиной и сроком. Читать можно, но действия недоступны. Профиль и материалы скрываются из каталогов и возвращаются после снятия блокировки.</p>
+        </details>
+        <details class="hp-faq-item">
+          <summary>Можно ли выгрузить свою статистику?</summary>
+          <p>Да. В разделе «Статистика» кабинета нажмите «Экспорт в PDF» — отчёт скачается сразу.</p>
+        </details>
       </div>
-    </div>
-    {% endfor %}
-  </section>
-
-  <section class="hp-section" id="candidate">
-    <h2 class="cr-section-title">Путь кандидата</h2>
-    <p class="cr-section-sub">От регистрации до внимания компаний</p>
-    <ol class="hp-steps">
-      <li class="hp-step">
-        <div class="hp-step-title">Зарегистрируйтесь</div>
-        <div class="hp-step-text">Выберите роль «Кандидат». После регистрации вход выполнится сразу, откроется личный кабинет.</div>
-      </li>
-      <li class="hp-step">
-        <div class="hp-step-title">Заполните профиль</div>
-        <div class="hp-step-text">В настройках добавьте фото, описание, навыки и ссылки на GitHub, Telegram или сайт — так вас увидят компании.</div>
-      </li>
-      <li class="hp-step">
-        <div class="hp-step-title">Проходите тесты</div>
-        <div class="hp-step-text">В каталоге тестов есть вопросы и задачи на код. Тест считается пройденным при результате от 60%.</div>
-      </li>
-      <li class="hp-step">
-        <div class="hp-step-title">Участвуйте в конкурсах</div>
-        <div class="hp-step-text">Отправьте решение кейса до окончания срока. Вердикт компании появится в кабинете, в разделе «Конкурсы».</div>
-      </li>
-      <li class="hp-step">
-        <div class="hp-step-title">Делитесь опытом</div>
-        <div class="hp-step-text">Напишите статью о собеседовании или подготовке, соберите свой тест для других кандидатов.</div>
-      </li>
-      <li class="hp-step">
-        <div class="hp-step-title">Следите за прогрессом</div>
-        <div class="hp-step-text">В статистике — результаты, карта активности и серия дней подряд. Отчёт можно выгрузить в PDF.</div>
-      </li>
-    </ol>
-  </section>
-
-  <section class="hp-section" id="company">
-    <h2 class="cr-section-title">Путь компании</h2>
-    <p class="cr-section-sub">От регистрации до отбора кандидатов</p>
-    <ol class="hp-steps">
-      <li class="hp-step">
-        <div class="hp-step-title">Зарегистрируйтесь</div>
-        <div class="hp-step-text">Выберите роль «Компания». Кабинет откроется сразу, но тесты и конкурсы будут закрыты до проверки.</div>
-      </li>
-      <li class="hp-step">
-        <div class="hp-step-title">Подтвердите компанию</div>
-        <div class="hp-step-text">На странице профиля загрузите регистрационный документ в PDF — например, выписку из ЕГРЮЛ. Его проверит модератор.</div>
-      </li>
-      <li class="hp-step">
-        <div class="hp-step-title">Оформите профиль</div>
-        <div class="hp-step-text">В настройках добавьте описание, логотип, отрасль, город и направления работы — это увидят кандидаты.</div>
-      </li>
-      <li class="hp-step">
-        <div class="hp-step-title">Публикуйте тесты</div>
-        <div class="hp-step-text">Соберите тест из вопросов и задач на код. На странице «Как проходят тест» видно, насколько он сложный.</div>
-      </li>
-      <li class="hp-step">
-        <div class="hp-step-title">Проводите конкурсы</div>
-        <div class="hp-step-text">Опишите кейс, приложите файлы, задайте срок. Присланные работы принимайте, отклоняйте и выбирайте победителя.</div>
-      </li>
-      <li class="hp-step">
-        <div class="hp-step-title">Анализируйте результаты</div>
-        <div class="hp-step-text">Статистика компании собирает тесты, конкурсы и оценки кандидатов. Отчёт выгружается в PDF.</div>
-      </li>
-    </ol>
-  </section>
-
-  <section class="hp-section hp-section-last" id="faq">
-    <h2 class="cr-section-title">Частые вопросы</h2>
-    <p class="cr-section-sub">Нажмите на вопрос, чтобы раскрыть ответ</p>
-    <div class="hp-faq">
-      <details class="hp-faq-item">
-        <summary>Почему у компании разделы «Тесты» и «Конкурсы» с замком?</summary>
-        <p>Публиковать материалы может только подтверждённая компания. Загрузите регистрационный документ в PDF на странице профиля — после одобрения модератором замки снимутся. Если заявку отклонят, причина появится там же, и документ можно будет заменить.</p>
-      </details>
-      <details class="hp-faq-item">
-        <summary>Как проверяются задачи на код?</summary>
-        <p>Решение запускается в отдельном контейнере без доступа к сети. Кнопка «Запустить» проверяет решение на открытых примерах, «Отправить» — на всех тест-кейсах, включая скрытые. Язык задачи выбирает её автор. На всю проверку отводится не больше минуты.</p>
-      </details>
-      <details class="hp-faq-item">
-        <summary>Когда тест считается пройденным?</summary>
-        <p>При результате от 60%. Если уйти со страницы до завершения, ответы пропадут — система предупредит об этом заранее.</p>
-      </details>
-      <details class="hp-faq-item">
-        <summary>Сколько раз можно отправить решение на конкурс?</summary>
-        <p>Один раз и только до окончания срока приёма работ. Отдельно регистрироваться в конкурсе не нужно: участником становится тот, кто прислал решение.</p>
-      </details>
-      <details class="hp-faq-item">
-        <summary>Кто видит мою почту и телефон?</summary>
-        <p>Только вы и подтверждённые компании. Анонимные посетители и компании без проверки документов контактов не видят.</p>
-      </details>
-      <details class="hp-faq-item">
-        <summary>Как считается серия активности?</summary>
-        <p>Засчитываются завершённое прохождение теста, отправленное решение конкурса и созданный тест или статья. Если сегодня вы ещё ничего не сделали, серия не обрывается — день не закончился. Она прерывается, когда проходят целые сутки без событий.</p>
-      </details>
-      <details class="hp-faq-item">
-        <summary>Как пожаловаться на материал?</summary>
-        <p>На странице статьи или конкурса нажмите «Пожаловаться» и опишите причину. Жаловаться на свой материал и повторно на тот же нельзя. Жалобы разбирает модератор.</p>
-      </details>
-      <details class="hp-faq-item">
-        <summary>Что происходит при блокировке аккаунта?</summary>
-        <p>В кабинете появляется плашка с причиной и сроком. Читать можно, но действия недоступны. Профиль и материалы скрываются из каталогов и возвращаются после снятия блокировки.</p>
-      </details>
-      <details class="hp-faq-item">
-        <summary>Можно ли выгрузить свою статистику?</summary>
-        <p>Да. В разделе «Статистика» кабинета нажмите «Экспорт в PDF» — отчёт скачается сразу.</p>
-      </details>
-    </div>
-  </section>
-</main>
-
-<footer class="cr-footer">
-  <div class="cr-footer-inner">
-    <div style="display:flex;align-items:center;gap:9px;">
-      <span class="cr-brand-mark" style="width:22px;height:22px;border-radius:6px;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><rect x="3.5" y="13" width="4.3" height="8" rx="1.4"/><rect x="9.85" y="8" width="4.3" height="13" rx="1.4"/><rect x="16.2" y="3" width="4.3" height="18" rx="1.4"/></svg>
-      </span>
-      <span style="font-weight:700;font-size:14px;">Career</span>
-    </div>
-    <div class="cr-footer-copy">© 2026 · HR-решение для IT-собеседований</div>
-  </div>
-</footer>
-
-</body>
-</html>
+    </section>
+  </main>
+  {% include "partials/footer.html" %}
+{% endblock %}

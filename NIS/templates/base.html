@@ -1,0 +1,42 @@
+{% load static alfa %}
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}Alfa Career{% endblock %}</title>
+    <script src="{% static 'js/theme-init.js' %}?v={{ ASSET_V }}"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v={{ ASSET_V }}">
+    {% block site_css %}
+      <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
+    {% endblock %}
+    {% block styles %}{% endblock %}
+    <script type="importmap">
+    {
+      "imports": {
+        "alfa/core": "{% static "js/core.js" %}?v={{ ASSET_V }}",
+        "alfa/pager": "{% static "js/pager.js" %}?v={{ ASSET_V }}",
+        "alfa/report": "{% static "js/report.js" %}?v={{ ASSET_V }}",
+        "alfa/admin": "{% static "administration/dashboard.js" %}?v={{ ASSET_V }}",
+        "alfa/profile-list": "{% static "profiles/list_page.js" %}?v={{ ASSET_V }}",
+        "marked": "{% static "vendor/marked.esm.js" %}",
+        "dompurify": "{% static "vendor/purify.es.mjs" %}"
+      }
+    }
+    </script>
+    <script type="module" src="{% static 'js/career.js' %}?v={{ ASSET_V }}"></script>
+    {% block page_data %}{% endblock %}
+  </head>
+  <body{% block body_attrs %}{% endblock %}>
+    {% block navbar %}
+      {% include "partials/navbar.html" %}
+    {% endblock %}
+    {% block body %}{% endblock %}
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

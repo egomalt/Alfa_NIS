@@ -23,7 +23,7 @@ def _account_brief(username):
 def api_delete_article(request, article_id):
     article = get_object_or_404(Article, id=article_id)
     author = article.author_username
-    title = article.title or ('Статья #%d' % article.id)
+    title = article.title or f'Статья #{article.id}'
     article.delete()
     return JsonResponse({'ok': True, 'deleted': 'article', 'title': title, 'author': author})
 
@@ -33,7 +33,7 @@ def api_delete_article(request, article_id):
 def api_delete_contest(request, contest_id):
     contest = get_object_or_404(Contest, id=contest_id)
     author = contest.company_username
-    title = contest.title or ('Конкурс #%d' % contest.id)
+    title = contest.title or f'Конкурс #{contest.id}'
     contest.delete()
     return JsonResponse({'ok': True, 'deleted': 'contest', 'title': title, 'author': author})
 
@@ -43,7 +43,7 @@ def api_delete_contest(request, contest_id):
 def api_delete_test(request, test_id):
     test = get_object_or_404(Test, id=test_id)
     author = test.owner_username
-    title = test.title or ('Тест #%d' % test.id)
+    title = test.title or f'Тест #{test.id}'
     test.delete()
     return JsonResponse({'ok': True, 'deleted': 'test', 'title': title, 'author': author})
 

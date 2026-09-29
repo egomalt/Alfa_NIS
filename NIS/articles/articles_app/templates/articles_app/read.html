@@ -1,193 +1,276 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script>(function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();</script>
-  <title>{{ article.title|default:"Статья" }} — Career</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
-  <link rel="stylesheet" href="{% static 'articles_app/css/app.css' %}?v={{ ASSET_V }}">
-  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
-  <script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
-</head>
-<body>
-
-{% include 'partials/navbar.html' with active='articles' chip_id='read-user-chip' %}
-
-<!-- Reading progress -->
-<div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-
-<!-- Cover -->
-<div class="cover">
-  <div class="cover-bg" style="background:{{ cover_gradient }};position:absolute;inset:0;"></div>
-  <svg class="cover-pattern" viewBox="0 0 1440 420" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%;opacity:.1;">
-    <circle cx="1200" cy="80" r="280" fill="#fff"/>
-    <circle cx="1350" cy="380" r="360" fill="#fff"/>
-    <circle cx="140" cy="360" r="180" fill="#fff"/>
-    <circle cx="200" cy="60" r="140" fill="#fff"/>
-  </svg>
-  <div class="cover-overlay"></div>
-  <div class="breadcrumb">
-    <a class="bc-link" href="/articles/">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
-      Статьи
-    </a>
-    {% if article.tags %}
-    <span class="bc-sep">›</span>
-    <span class="bc-current">{{ article.tags.0 }}</span>
-    {% endif %}
+{% extends "base.html" %}
+{% load static alfa %}
+{% block title %}{{ article.title|default:"Статья" }} — Career{% endblock %}
+{% block page_data %}
+  {% page_data articleId=article.id isLoggedIn=is_logged_in modType="article" modId=article.id modAuthor=article.author_username modTitle=article.title %}
+{% endblock %}
+{% block styles %}
+  <link rel="stylesheet"
+        href="{% static 'articles_app/css/app.css' %}?v={{ ASSET_V }}">
+{% endblock %}
+{% block navbar %}
+  {% include "partials/navbar.html" with active="articles" %}
+{% endblock %}
+{% block body %}
+  <!-- Reading progress -->
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress-fill"></div>
   </div>
-  <div class="cover-bottom">
-    {% if article.tags %}
-    <div class="cover-tags">
-      {% for tag in article.tags %}<span class="cover-tag">{{ tag }}</span>{% endfor %}
+  <!-- Cover -->
+  <div class="cover">
+    <div class="cover-bg" style="background:{{ cover_gradient }}"></div>
+    <svg class="cover-pattern"
+         viewBox="0 0 1440 420"
+         xmlns="http://www.w3.org/2000/svg"
+         preserveAspectRatio="xMidYMid slice">
+      <circle cx="1200" cy="80" r="280" fill="#fff" />
+      <circle cx="1350" cy="380" r="360" fill="#fff" />
+      <circle cx="140" cy="360" r="180" fill="#fff" />
+      <circle cx="200" cy="60" r="140" fill="#fff" />
+    </svg>
+    <div class="cover-overlay"></div>
+    <div class="breadcrumb">
+      <a class="bc-link" href="/articles/">
+        <svg width="12"
+             height="12"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round">
+          <path d="M19 12H5" />
+          <path d="M11 6l-6 6 6 6" />
+        </svg>
+        Статьи
+      </a>
+      {% if article.tags %}
+        <span class="bc-sep">›</span>
+        <span class="bc-current">{{ article.tags.0 }}</span>
+      {% endif %}
     </div>
-    {% endif %}
-    <div class="cover-title">{{ article.title|default:"Без названия" }}</div>
-  </div>
-</div>
-
-<!-- Layout -->
-<div class="layout">
-
-  <article class="article">
-
-    <div class="meta-row">
-      {# Подпись автора ведёт в его профиль — но только если профиль открывается #}
-      {% if author_url %}<a class="author-block" href="{{ author_url }}">{% else %}<div class="author-block">{% endif %}
-        <div class="author-av" style="background:{{ av_bg }};color:{{ av_fg }};">{{ initial }}</div>
-        <div>
-          <div class="author-name">{{ author_name }}</div>
-          {% if user_profile and user_profile.bio %}
-          <div class="author-sub">{{ user_profile.bio|truncatechars:60 }}</div>
-          {% endif %}
+    <div class="cover-bottom">
+      {% if article.tags %}
+        <div class="cover-tags">
+          {% for tag in article.tags %}<span class="cover-tag">{{ tag }}</span>{% endfor %}
         </div>
-      {% if author_url %}</a>{% else %}</div>{% endif %}
-      <div class="meta-divider"></div>
-      {% if article.read_time %}
-      <div class="meta-item">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        {{ article.read_time }} мин чтения
-      </div>
       {% endif %}
-      {% if article.published_at %}
-      <div class="meta-item">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        {{ article.published_at|date:"j E Y" }}
-      </div>
-      {% endif %}
-      <div class="meta-item">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        {{ article.views }}
-      </div>
-      <div class="meta-actions">
-        <button class="btn-share" id="btn-share-top" onclick="copyLink()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
-          Поделиться
-        </button>
-      </div>
+      <div class="cover-title">{{ article.title|default:"Без названия" }}</div>
     </div>
-
-    <div class="prose" id="article-content">
-      {% if article.content %}{{ article.content|safe }}{% endif %}
-    </div>
-
-    <div class="vote-row">
-      <div class="vote-widget">
-        <button class="vote-btn up {% if user_vote == 1 %}active{% endif %}" id="btn-up" onclick="vote('up')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-          Полезно
-        </button>
-        <div class="vote-sep"></div>
-        <div class="vote-count {% if user_vote == 1 %}up{% elif user_vote == -1 %}down{% endif %}" id="vote-count">{{ vote_score }}</div>
-        <div class="vote-sep"></div>
-        <button class="vote-btn down {% if user_vote == -1 %}active{% endif %}" id="btn-down" onclick="vote('down')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-        </button>
-      </div>
-      <button type="button" id="btn-report" class="cr-report-btn"
-              data-report-type="article" data-report-id="{{ article.id }}"
-              data-report-author="{{ article.author_username }}"
-              data-report-title="{{ article.title }}">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-        Пожаловаться
-      </button>
-    </div>
-
-    {% if author_url %}<a class="author-card is-link" href="{{ author_url }}">{% else %}<div class="author-card">{% endif %}
-      <div class="author-card-top">
-        <div class="author-card-av" style="background:{{ av_bg }};color:{{ av_fg }};">{{ initial }}</div>
-        <div class="author-card-head">
-          <div class="author-card-name">{{ author_name }}</div>
-          {% if user_profile and user_profile.bio %}
-          <div class="author-card-role">{{ user_profile.bio|truncatechars:80 }}</div>
+  </div>
+  <!-- Layout -->
+  <div class="layout">
+    <article class="article">
+      <div class="meta-row">
+        {# Подпись автора ведёт в его профиль — но только если профиль открывается #}
+        {% if author_url %}
+          <a class="author-block" href="{{ author_url }}">
+        {% else %}
+          <div class="author-block">
+        {% endif %}
+          <div class="author-av" style="background:{{ av_bg }};color:{{ av_fg }};">{{ initial }}</div>
+          <div>
+            <div class="author-name">{{ author_name }}</div>
+            {% if user_profile and user_profile.bio %}
+              <div class="author-sub">{{ user_profile.bio|truncatechars:60 }}</div>
+            {% endif %}
+          </div>
+          {% if author_url %}
+            </a>
+          {% else %}
+            </div>
           {% endif %}
+          <div class="meta-divider"></div>
+          {% if article.read_time %}
+            <div class="meta-item">
+              <svg width="13"
+                   height="13"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   stroke-width="2"
+                   stroke-linecap="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              {{ article.read_time }} мин чтения
+            </div>
+          {% endif %}
+          {% if article.published_at %}
+            <div class="meta-item">
+              <svg width="13"
+                   height="13"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   stroke-width="2"
+                   stroke-linecap="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+              {{ article.published_at|date:"j E Y" }}
+            </div>
+          {% endif %}
+          <div class="meta-item">
+            <svg width="13"
+                 height="13"
+                 viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="2"
+                 stroke-linecap="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            {{ article.views }}
+          </div>
+          <div class="meta-actions">
+            <button type="button" class="btn-share" id="btn-share-top">
+              <svg width="13"
+                   height="13"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   stroke-width="2"
+                   stroke-linecap="round">
+                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" />
+              </svg>
+              Поделиться
+            </button>
+          </div>
+        </div>
+        <div class="prose" id="article-content">{% if article.content %}{{ article.content|safe }}{% endif %}</div>
+        <div class="vote-row">
+          <div class="vote-widget">
+            <button type="button"
+                    class="vote-btn up {% if user_vote == 1 %}active{% endif %}"
+                    id="btn-up"
+                    data-vote="1">
+              <svg width="14"
+                   height="14"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   stroke-width="2.5"
+                   stroke-linecap="round">
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+              Полезно
+            </button>
+            <div class="vote-sep"></div>
+            <div class="vote-count {% if user_vote == 1 %}up{% elif user_vote == -1 %}down{% endif %}"
+                 id="vote-count">{{ vote_score }}</div>
+            <div class="vote-sep"></div>
+            <button type="button"
+                    class="vote-btn down {% if user_vote == -1 %}active{% endif %}"
+                    id="btn-down"
+                    data-vote="-1">
+              <svg width="14"
+                   height="14"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   stroke-width="2.5"
+                   stroke-linecap="round">
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </svg>
+            </button>
+          </div>
+          <button type="button"
+                  id="btn-report"
+                  class="cr-report-btn"
+                  data-report-type="article"
+                  data-report-id="{{ article.id }}"
+                  data-report-author="{{ article.author_username }}"
+                  data-report-title="{{ article.title }}">
+            <svg width="14"
+                 height="14"
+                 viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="2"
+                 stroke-linecap="round">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z" />
+              <line x1="4" y1="22" x2="4" y2="15" />
+            </svg>
+            Пожаловаться
+          </button>
         </div>
         {% if author_url %}
-        <span class="author-card-go">
-          Профиль
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </span>
+          <a class="author-card is-link" href="{{ author_url }}">
+        {% else %}
+          <div class="author-card">
         {% endif %}
-      </div>
-      {% if user_profile and user_profile.bio %}
-      <div class="author-bio">{{ user_profile.bio }}</div>
-      {% endif %}
-      <div class="author-stats">
-        <div>
-          <div class="author-stat-val">{{ author_article_count }}</div>
-          <div class="author-stat-label">статей</div>
-        </div>
-        <div>
-          <div class="author-stat-val">{{ author_total_views }}</div>
-          <div class="author-stat-label">просмотров</div>
-        </div>
-      </div>
-    {% if author_url %}</a>{% else %}</div>{% endif %}
-
-  </article>
-
-  <aside class="art-sidebar">
-    <div class="sidebar-card" id="toc-card" style="display:none;">
-      <div class="sidebar-title">Содержание</div>
-      <div class="toc-list" id="toc"></div>
-    </div>
-
-    {% if related %}
-    <div class="sidebar-card">
-      <div class="sidebar-title">Похожие статьи</div>
-      <div class="related-list">
-        {% for item in related %}
-        <a class="related-item" href="/articles/{{ item.article.id }}/">
-          <div class="related-thumb" style="background:{{ item.cover_gradient }};"></div>
-          <div>
-            <div class="related-title">{{ item.article.title|default:"Без названия" }}</div>
-            <div class="related-meta">{% if item.article.read_time %}{{ item.article.read_time }} мин · {% endif %}{{ item.article.views }} просмотров</div>
+          <div class="author-card-top">
+            <div class="author-card-av"
+                 style="background:{{ av_bg }};
+                        color:{{ av_fg }}">{{ initial }}</div>
+            <div class="author-card-head">
+              <div class="author-card-name">{{ author_name }}</div>
+              {% if user_profile and user_profile.bio %}
+                <div class="author-card-role">{{ user_profile.bio|truncatechars:80 }}</div>
+              {% endif %}
+            </div>
+            {% if author_url %}
+              <span class="author-card-go">
+                Профиль
+                <svg width="13"
+                     height="13"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                     stroke-linecap="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </span>
+            {% endif %}
           </div>
-        </a>
-        {% endfor %}
+          {% if user_profile and user_profile.bio %}
+            <div class="author-bio">{{ user_profile.bio }}</div>
+          {% endif %}
+          <div class="author-stats">
+            <div>
+              <div class="author-stat-val">{{ author_article_count }}</div>
+              <div class="author-stat-label">статей</div>
+            </div>
+            <div>
+              <div class="author-stat-val">{{ author_total_views }}</div>
+              <div class="author-stat-label">просмотров</div>
+            </div>
+          </div>
+          {% if author_url %}
+            </a>
+          {% else %}
+            </div>
+          {% endif %}
+        </article>
+        <aside class="art-sidebar">
+          <div class="sidebar-card" id="toc-card" hidden>
+            <div class="sidebar-title">Содержание</div>
+            <div class="toc-list" id="toc"></div>
+          </div>
+          {% if related %}
+            <div class="sidebar-card">
+              <div class="sidebar-title">Похожие статьи</div>
+              <div class="related-list">
+                {% for item in related %}
+                  <a class="related-item" href="/articles/{{ item.article.id }}/">
+                    <div class="related-thumb" style="background:{{ item.cover_gradient }};"></div>
+                    <div>
+                      <div class="related-title">{{ item.article.title|default:"Без названия" }}</div>
+                      <div class="related-meta">{% if item.article.read_time %}{{ item.article.read_time }} мин · {% endif %}{{ item.article.views }} просмотров</div>
+                    </div>
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </aside>
       </div>
-    </div>
-    {% endif %}
-  </aside>
-
-</div>
-
-<script>
-const ARTICLE_ID = {{ article.id }};
-const IS_LOGGED_IN = {{ is_logged_in|yesno:"true,false" }};
-let userVote = {{ user_vote|default:"null" }};
-</script>
-<script src="{% static 'articles_app/js/app.js' %}?v={{ ASSET_V }}"></script>
-<meta name="csrf-token" content="{{ csrf_token }}">
-<script>
-  window.ALFA_MOD_TARGET = { type: 'article', id: {{ article.id }}, author: "{{ article.author_username|escapejs }}", title: "{{ article.title|escapejs }}" };
-</script>
-<script src="{% static 'js/report.js' %}?v={{ ASSET_V }}"></script>
-<script src="{% static 'js/moderation-bar.js' %}?v={{ ASSET_V }}"></script>
-</body>
-</html>
+      <script type="module"
+              src="{% static 'articles_app/js/app.js' %}?v={{ ASSET_V }}"></script>
+      <script type="module" src="{% static 'js/report.js' %}?v={{ ASSET_V }}"></script>
+      <script type="module"
+              src="{% static 'js/moderation-bar.js' %}?v={{ ASSET_V }}"></script>
+{% endblock %}

@@ -1,64 +1,90 @@
-{% extends 'cabinet/base_company.html' %}
+{% extends "cabinet/base_company.html" %}
 {% load static %}
-
 {% block title %}Тесты компании — Alfa Career{% endblock %}
-
 {% block panel %}
-<div id="company-flash" class="app-alert" hidden></div>
-
-<div class="cp-page-header">
-  <div>
-    <div class="cp-page-title">Тесты и оценки</div>
-    <div class="cp-page-sub">Управляйте тестами и следите за результатами кандидатов</div>
+  <div id="company-flash" class="app-alert" hidden></div>
+  <div class="cp-page-header">
+    <div>
+      <div class="cp-page-title">Тесты и оценки</div>
+      <div class="cp-page-sub">Управляйте тестами и следите за результатами кандидатов</div>
+    </div>
+    <a href="/constructor/" class="cp-btn-primary">
+      <svg width="14"
+           height="14"
+           viewBox="0 0 24 24"
+           fill="none"
+           stroke="currentColor"
+           stroke-width="2.5"
+           stroke-linecap="round">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+      Создать тест
+    </a>
   </div>
-  <a href="/constructor/" class="cp-btn-primary" style="text-decoration:none;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-    Создать тест
-  </a>
-</div>
-
-<div class="cp-stats-row">
-  <div class="cp-stat-card"><div class="cp-stat-value" id="stat-total-tests">0</div><div class="cp-stat-label">Всего тестов</div></div>
-  <div class="cp-stat-card"><div class="cp-stat-value" id="stat-active-tests">0</div><div class="cp-stat-label">Активные</div></div>
-  <div class="cp-stat-card"><div class="cp-stat-value" id="stat-submissions">0</div><div class="cp-stat-label">Прохождений</div></div>
-  <div class="cp-stat-card"><div class="cp-stat-value" id="stat-completion-rate">0%</div><div class="cp-stat-label">Активных, %</div></div>
-</div>
-
-<div class="cr-filters">
-  <button class="cr-chip active" data-f="all">Все</button>
-  <button class="cr-chip" data-f="published">Опубликованные</button>
-  <button class="cr-chip" data-f="draft">Черновики</button>
-  <span class="cr-filter-count" id="tests-filter-count"></span>
-</div>
-
-<div class="list-card">
-  <div class="list-card-header">
-    <h2>Обзор тестов</h2>
-  </div>
-
-  <div id="tests-table-wrapper" class="table-wrapper" hidden>
-    <table class="tests-table">
-      <thead>
-        <tr>
-          <th>Название</th><th>Статус</th><th>Страниц</th><th>Прохождений</th><th>Создан</th><th>Действия</th>
-        </tr>
-      </thead>
-      <tbody id="tests-table-body"></tbody>
-    </table>
-  </div>
-
-  <div id="tests-empty" hidden>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="1.5" stroke-linecap="round"><rect x="9" y="3" width="13" height="13" rx="2"/><path d="M5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/></svg>
-      {# Текст зависит от того, пусто из-за фильтра или тестов нет вовсе #}
-      <div id="tests-empty-title" style="font-size:15px;font-weight:600;">Тестов пока нет</div>
-      <div id="tests-empty-sub" style="font-size:13.5px;color:var(--muted);">Создайте первый тест, чтобы начать оценку кандидатов</div>
-      <a id="tests-empty-create" href="/constructor/" class="cp-btn-primary" style="text-decoration:none;">Создать тест</a>
+  <div class="cp-stats-row">
+    <div class="cp-stat-card">
+      <div class="cp-stat-value" id="stat-total-tests">0</div>
+      <div class="cp-stat-label">Всего тестов</div>
+    </div>
+    <div class="cp-stat-card">
+      <div class="cp-stat-value" id="stat-active-tests">0</div>
+      <div class="cp-stat-label">Активные</div>
+    </div>
+    <div class="cp-stat-card">
+      <div class="cp-stat-value" id="stat-submissions">0</div>
+      <div class="cp-stat-label">Прохождений</div>
+    </div>
+    <div class="cp-stat-card">
+      <div class="cp-stat-value" id="stat-completion-rate">0%</div>
+      <div class="cp-stat-label">Активных, %</div>
     </div>
   </div>
-</div>
+  <div class="cr-filters">
+    <button type="button" class="cr-chip active" data-f="all">Все</button>
+    <button type="button" class="cr-chip" data-f="published">Опубликованные</button>
+    <button type="button" class="cr-chip" data-f="draft">Черновики</button>
+    <span class="cr-filter-count" id="tests-filter-count"></span>
+  </div>
+  <div class="list-card">
+    <div class="list-card-header">
+      <h2>Обзор тестов</h2>
+    </div>
+    <div id="tests-table-wrapper" class="table-wrapper" hidden>
+      <table class="tests-table">
+        <thead>
+          <tr>
+            <th>Название</th>
+            <th>Статус</th>
+            <th>Страниц</th>
+            <th>Прохождений</th>
+            <th>Создан</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="tests-table-body">
+        </tbody>
+      </table>
+    </div>
+    <div id="tests-empty" hidden>
+      <div>
+        <svg width="40"
+             height="40"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="var(--faint)"
+             stroke-width="1.5"
+             stroke-linecap="round">
+          <rect x="9" y="3" width="13" height="13" rx="2" />
+          <path d="M5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1" />
+        </svg>
+        {# Текст зависит от того, пусто из-за фильтра или тестов нет вовсе #}
+        <div id="tests-empty-title">Тестов пока нет</div>
+        <div id="tests-empty-sub">Создайте первый тест, чтобы начать оценку кандидатов</div>
+        <a id="tests-empty-create" href="/constructor/" class="cp-btn-primary">Создать тест</a>
+      </div>
+    </div>
+  </div>
 {% endblock %}
-
 {% block page_script %}
-<script type="module" src="{% static 'companies/app.js' %}?v={{ ASSET_V }}"></script>
+  <script type="module" src="{% static 'companies/app.js' %}?v={{ ASSET_V }}"></script>
 {% endblock %}

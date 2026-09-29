@@ -1,102 +1,110 @@
 /* Раздел «Верификация компаний». */
-(function () {
-  'use strict';
-  var A = window.AdminPanel;
-  var filter = 'pending';
+import { api, byId as el, esc, formatDate, toast } from 'alfa/core';
+import { renderPager } from 'alfa/pager';
+import {
+  emptyState,
+  fail,
+  latestOnly,
+  openDocModal,
+  openReasonModal,
+  pill,
+  registerSection,
+  reloadOverview,
+} from 'alfa/admin';
 
-  function metaLine(v) {
-    var parts = [];
-    if (v.industry) parts.push(v.industry);
-    if (v.city) parts.push(v.city);
-    var line = parts.join(' · ');
-    if (v.submitted_at) line += (line ? ' · ' : '') + 'подано ' + A.fmtDate(v.submitted_at);
-    return line;
+const DOC_ICON =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+
+let filter = 'pending';
+let page = 1;
+const latest = latestOnly();
+
+const metaLine = (item) =>
+  [item.industry, item.city, item.submitted_at && `подано ${formatDate(item.submitted_at)}`]
+    .filter(Boolean)
+    .join(' · ');
+
+function actionsHtml(item) {
+  if (item.status === 'pending') {
+    return `
+      <button class="ap-btn-accept" data-act="approve" data-user="${esc(item.username)}">Одобрить</button>
+      <button class="ap-btn-reject" data-act="reject" data-user="${esc(item.username)}">Отклонить</button>`;
   }
+  if (item.status === 'rejected') {
+    return `<span class="ap-decided-note">Отклонено: ${esc(item.reason || 'без причины')}</span>`;
+  }
+  return '<span class="ap-decided-note">Компания подтверждена</span>';
+}
 
-  function cardHtml(v) {
-    var actions;
-    if (v.status === 'pending') {
-      actions = '<button class="ap-btn-accept" data-act="approve" data-user="' + A.esc(v.username) + '">Одобрить</button>'
-        + '<button class="ap-btn-reject" data-act="reject" data-user="' + A.esc(v.username) + '">Отклонить</button>';
-    } else if (v.status === 'rejected') {
-      actions = '<span class="ap-decided-note">Отклонено: ' + A.esc(v.reason || 'без причины') + '</span>';
-    } else {
-      actions = '<span class="ap-decided-note">Компания подтверждена</span>';
+const cardHtml = (item) => `
+  <div class="ap-verify-card">
+    <span class="ap-company-avatar">${esc(item.letter)}</span>
+    <div class="ap-verify-main">
+      <div class="ap-verify-title">${esc(item.name)}</div>
+      <div class="ap-verify-meta">${esc(metaLine(item))}</div>
+    </div>
+    ${
+      item.document_name
+        ? `<a class="ap-verify-doc" data-act="viewdoc" data-name="${esc(item.document_name)}"
+        data-url="${esc(item.document_url)}">${DOC_ICON}${esc(item.document_name)}</a>`
+        : ''
     }
-    var doc = v.document_name
-      ? '<a class="ap-verify-doc" data-act="viewdoc" data-name="' + A.esc(v.document_name) + '" data-url="' + A.esc(v.document_url) + '">'
-        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
-        + A.esc(v.document_name) + '</a>'
-      : '';
-    return '<div class="ap-verify-card">'
-      + '<span class="ap-company-avatar">' + A.esc(v.letter) + '</span>'
-      + '<div class="ap-verify-main"><div class="ap-verify-title">' + A.esc(v.name) + '</div>'
-      + '<div class="ap-verify-meta">' + A.esc(metaLine(v)) + '</div></div>'
-      + doc
-      + A.pill(v.status)
-      + actions
-      + '</div>';
-  }
+    ${pill(item.status)}
+    ${actionsHtml(item)}
+  </div>`;
 
-  function render(list, total) {
-    var countEl = A.el('ap-vf-count');
-    if (countEl) countEl.textContent = (typeof total === 'number' ? total : list.length);
-    var wrap = A.el('ap-verify-list');
-    if (!list.length) {
-      wrap.innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Пусто</div><div class="ap-empty-sub">Заявок в этой категории нет</div></div>';
-      return;
-    }
-    wrap.innerHTML = list.map(cardHtml).join('');
-  }
-
-  var page = 1;
-
-  function load() {
-    A.apiGet('/api/v1/admin/verifications/?status=' + filter + '&page=' + page)
-      .then(function (d) {
-        render(d.verifications || [], d.total);
-        window.AlfaPager.render(A.el('ap-verify-pager'), d, function (next) { page = next; load(); });
-      })
-      .catch(function (e) {
-        A.el('ap-verify-list').innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Ошибка</div><div class="ap-empty-sub">' + A.esc(e.message) + '</div></div>';
-      });
-  }
-
-  function afterAction() {
-    load();
-    A.reloadOverview();
-  }
-
-  function init() {
-    A.el('ap-verify-filters').addEventListener('click', function (e) {
-      var btn = e.target.closest('[data-vf]');
-      if (!btn) return;
-      filter = btn.dataset.vf;
-      page = 1;
-      this.querySelectorAll('[data-vf]').forEach(function (b) { b.classList.toggle('active', b.dataset.vf === filter); });
+async function load() {
+  try {
+    const data = await latest(api.get(`/api/v1/admin/verifications/?status=${filter}&page=${page}`));
+    const list = data.verifications ?? [];
+    el('ap-vf-count').textContent = data.total ?? list.length;
+    el('ap-verify-list').innerHTML = list.length
+      ? list.map(cardHtml).join('')
+      : emptyState('Пусто', 'Заявок в этой категории нет');
+    renderPager(el('ap-verify-pager'), data, (next) => {
+      page = next;
       load();
     });
-
-    A.el('ap-verify-list').addEventListener('click', function (e) {
-      var t = e.target.closest('[data-act]');
-      if (!t) return;
-      var act = t.dataset.act;
-      if (act === 'viewdoc') {
-        A.openDocModal(t.dataset.name, t.dataset.url);
-      } else if (act === 'approve') {
-        A.apiPost('/api/v1/admin/verifications/' + t.dataset.user + '/approve/', {})
-          .then(function () { A.notify('Компания подтверждена.', 'ok'); afterAction(); })
-          .catch(A.fail);
-      } else if (act === 'reject') {
-        var username = t.dataset.user;
-        A.openReasonModal('Причина отклонения заявки', function (reason) {
-          A.apiPost('/api/v1/admin/verifications/' + username + '/reject/', { reason: reason })
-            .then(function () { A.notify('Заявка отклонена, компания увидит причину.', 'ok'); afterAction(); })
-            .catch(A.fail);
-        });
-      }
-    });
+  } catch (error) {
+    if (!error.stale) el('ap-verify-list').innerHTML = emptyState('Ошибка', error.message);
   }
+}
 
-  A.registerSection('verify', { init: init, load: load });
-})();
+async function decide(username, action, payload, message) {
+  try {
+    await api.post(`/api/v1/admin/verifications/${username}/${action}/`, payload);
+    toast(message, 'ok');
+    load();
+    reloadOverview();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+function init() {
+  el('ap-verify-filters').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-vf]');
+    if (!button) return;
+    filter = button.dataset.vf;
+    page = 1;
+    event.currentTarget
+      .querySelectorAll('[data-vf]')
+      .forEach((item) => item.classList.toggle('active', item.dataset.vf === filter));
+    load();
+  });
+
+  el('ap-verify-list').addEventListener('click', (event) => {
+    const target = event.target.closest('[data-act]');
+    if (!target) return;
+    const { act, user } = target.dataset;
+    if (act === 'viewdoc') openDocModal(target.dataset.name, target.dataset.url);
+    else if (act === 'approve') decide(user, 'approve', {}, 'Компания подтверждена.');
+    else if (act === 'reject') {
+      openReasonModal('Причина отклонения заявки', (reason) =>
+        decide(user, 'reject', { reason }, 'Заявка отклонена, компания увидит причину.'),
+      );
+    }
+  });
+}
+
+registerSection('verify', { init, load });

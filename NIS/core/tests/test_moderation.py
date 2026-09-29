@@ -273,7 +273,7 @@ class DocumentAccessTests(BaseCase):
     def test_document_has_no_public_url(self):
         """Прямая ссылка на файл не должна существовать даже в коде."""
         with self.assertRaises(ValueError):
-            self.company.registration_document.url
+            _ = self.company.registration_document.url
 
     def test_upload_lands_outside_media(self):
         """Загрузка из кабинета кладёт документ в приватную папку, не в media/."""

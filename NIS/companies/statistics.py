@@ -11,7 +11,6 @@ from django.db.models import Avg, Count, Q, Sum
 from django.db.models.functions import TruncWeek
 from django.utils import timezone
 
-from companies.models import CompanyRating
 from contests.contests_cabinet.models import Contest, ContestSubmission
 from tests.constructor.models import Test, TestAttempt
 from users.models import UserProfile

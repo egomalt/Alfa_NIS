@@ -72,4 +72,4 @@ def build_admin_pdf():
 
 
 def admin_filename():
-    return 'career-moderation-%s.pdf' % timezone.localtime(timezone.now()).strftime('%Y%m%d')
+    return f"career-moderation-{timezone.localtime(timezone.now()):%Y%m%d}.pdf"

@@ -1,0 +1,656 @@
+html,
+body {
+  height: 100%;
+}
+.ccon-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+.ccon-topbar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.ccon-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--text);
+}
+.ccon-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--brand);
+}
+.ccon-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--line);
+  flex-shrink: 0;
+}
+.ccon-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.ccon-btn-back:hover {
+  color: var(--text);
+}
+.ccon-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ccon-meta svg {
+  flex-shrink: 0;
+}
+.ccon-name {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ccon-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.ccon-tools {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.ccon-badge-draft {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.ccon-badge-pub {
+  font-size: 12px;
+  color: var(--green-text);
+  padding: 3px 9px;
+  border: 1px solid var(--green-text);
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--green-soft);
+}
+.ccon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.ccon-btn:hover {
+  color: var(--text);
+}
+.ccon-btn-save {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ccon-btn-save.saved {
+  border-color: var(--green-text);
+  color: var(--green-text);
+  background: var(--green-soft);
+}
+.ccon-btn-publish {
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ccon-btn-publish:hover {
+  background: var(--brand-strong);
+}
+.ccon-body {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.ccon-sidebar {
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  padding: 16px;
+  overflow-y: auto;
+}
+.ccon-sidebar-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--faint);
+  margin-bottom: 10px;
+}
+.ccon-sec-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+.ccon-sec-item:hover {
+  background: var(--surface-2);
+}
+.ccon-sec-item.active {
+  background: var(--brand-soft);
+  color: var(--brand-text);
+}
+.ccon-sec-item svg {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+.ccon-sec-item.active svg {
+  opacity: 1;
+}
+.ccon-sec-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.ccon-sec-item.active .ccon-sec-num {
+  background: var(--brand);
+  color: #fff;
+}
+.ccon-hint-box {
+  border: 1px dashed var(--line-2);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-top: 16px;
+}
+.ccon-editor {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow-y: auto;
+}
+.ccon-editor-content {
+  padding: 32px;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.ccon-panel {
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+}
+.ccon-panel.active {
+  display: flex;
+}
+.ccon-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  margin-bottom: 8px;
+}
+.ccon-field-hint {
+  font-size: 12px;
+  color: var(--faint);
+  margin-top: 6px;
+}
+.ccon-inp {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.ccon-inp:focus {
+  border-color: var(--brand);
+}
+.ccon-ta {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.65;
+  outline: none;
+  transition: border-color 0.15s;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.ccon-ta:focus {
+  border-color: var(--brand);
+}
+.ccon-sel-wrap {
+  position: relative;
+}
+.ccon-sel-wrap select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  padding: 0 34px 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14.5px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.ccon-sel-wrap select:focus {
+  border-color: var(--brand);
+}
+.ccon-sel-wrap svg {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.ccon-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.ccon-rule-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.ccon-rule-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ccon-rule-inp {
+  flex: 1;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+.ccon-rule-inp:focus {
+  border-color: var(--brand);
+}
+.ccon-btn-rm-rule {
+  height: 36px;
+  width: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+  flex-shrink: 0;
+}
+.ccon-btn-rm-rule:hover {
+  border-color: var(--red-text);
+  color: var(--red-text);
+}
+.ccon-btn-add-rule {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+  font-family: inherit;
+}
+.ccon-btn-add-rule:hover {
+  border-color: var(--brand);
+  color: var(--brand-text);
+}
+.ccon-type-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.ccon-type-card {
+  border: 1.5px solid var(--line-2);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.ccon-type-card:hover {
+  border-color: var(--brand);
+}
+.ccon-type-card.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.ccon-file-drop {
+  border: 2px dashed var(--line-2);
+  border-radius: 12px;
+  padding: 22px;
+  text-align: center;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s;
+  margin-bottom: 10px;
+}
+.ccon-file-drop:hover {
+  border-color: var(--brand);
+}
+.ccon-attach-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface);
+  margin-bottom: 8px;
+}
+.ccon-attach-row svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.ccon-btn-rm-attach {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+  flex-shrink: 0;
+}
+.ccon-btn-rm-attach:hover {
+  border-color: var(--red-text);
+  color: var(--red-text);
+}
+.ccon-attach-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ccon-attach-size {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--faint);
+  flex-shrink: 0;
+}
+.ccon-type-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.ccon-type-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.ccon-status {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ccon-status.error {
+  color: var(--red-text);
+}
+.ccon-status.ok {
+  color: var(--green-text);
+}
+
+/* Было: шапка одной нерезиновой строкой и тело grid 260px + редактор
+   с фиксированной высотой экрана. Ниже 1000px разделы переезжают наверх
+   горизонтальной лентой, ниже 760px шапка разбивается на две строки. */
+
+@media (max-width: 1000px) {
+  .ccon-app {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .ccon-body {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .ccon-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    overflow: visible;
+    padding: 12px 16px;
+  }
+  #ccon-sec-list {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  #ccon-sec-list::-webkit-scrollbar {
+    display: none;
+  }
+  .ccon-sec-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  /* Подсказка про смысл конкурса на узком экране только оттесняет форму */
+  .ccon-hint-box {
+    display: none;
+  }
+
+  .ccon-editor {
+    overflow: visible;
+  }
+  .ccon-editor-content {
+    padding: 22px 18px 60px;
+    max-width: none;
+  }
+}
+
+/* Когда кнопки не помещаются рядом с названием, шапка становится
+   двухстрочной: наверху «Назад», название, помощь и тема, ниже — действия */
+@media (max-width: 1100px) {
+  .ccon-topbar {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 10px 20px;
+  }
+  .ccon-actions {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* На телефоне: «Назад» и значки, ниже название, ещё ниже действия */
+@media (max-width: 760px) {
+  .ccon-topbar {
+    gap: 8px;
+    padding: 10px 14px;
+  }
+  .ccon-meta {
+    order: 2;
+    flex-basis: 100%;
+  }
+  .ccon-tools {
+    margin-left: auto;
+  }
+  .ccon-divider {
+    display: none;
+  }
+  .ccon-editor-content {
+    padding: 18px 14px 52px;
+  }
+  /* Категория/уровень и дедлайн/приз по две колонки не помещаются */
+  .ccon-row2 {
+    grid-template-columns: 1fr;
+  }
+  .ccon-type-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 460px) {
+  .ccon-actions {
+    flex-wrap: wrap;
+  }
+  .ccon-actions .ccon-btn,
+  .ccon-actions .ccon-btn-save,
+  .ccon-actions .ccon-btn-publish {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+
+.ccon-brand-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+.ccon-app .cr-theme-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.ccon-optional {
+  font-weight: 400;
+  text-transform: none;
+  color: var(--faint);
+}
+.ccon-file-drop svg {
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+.ccon-file-drop.is-dragover {
+  border-color: var(--brand);
+}
+.ccon-file-drop-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.ccon-file-drop-hint {
+  font-size: 12px;
+  color: var(--muted);
+}

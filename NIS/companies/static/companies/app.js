@@ -1,233 +1,96 @@
 /* Раздел «Тесты» кабинета компании.
    Профиль компании живёт отдельно — в cabinet/static/cabinet/company.js. */
-(() => {
-    const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
+import { api, byId, confirmDialog, esc, formatDateLong, pageData, statusPill, TEST_STATUSES, toast } from 'alfa/core';
 
-    const state = {
-        company: null,
-        tests: [],
-        stats: null,
-        filter: 'all',
-    };
+const { username = '' } = pageData();
+const ICONS = {
+  stats:
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-4"/></svg>',
+  edit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  delete:
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
+};
 
-    const STATUS_LABELS = { draft: 'Черновик', published: 'Опубликован' };
+const state = { loaded: false, tests: [], filter: 'all' };
 
-    function getCsrfToken() {
-        const cookie = document.cookie.split(';').map(c => c.trim())
-            .find(c => c.startsWith('csrftoken='));
-        if (cookie) return decodeURIComponent(cookie.slice('csrftoken='.length));
-        return document.querySelector('meta[name="csrf-token"]')?.content || '';
-    }
+function row(test) {
+  // Черновик по публичному адресу отдаёт 404 даже владельцу — ему открываем предпросмотр
+  const openUrl = test.status === 'published' ? test.url : `${test.url}?preview=1`;
+  // data-label подхватывает CSS на телефоне: шапка таблицы там скрыта
+  return `
+    <tr>
+      <td><a href="${esc(openUrl)}" target="_blank">${esc(test.title || '—')}</a></td>
+      <td data-label="Статус">${statusPill(TEST_STATUSES, test.status)}</td>
+      <td data-label="Страниц">${test.page_count ?? 0}</td>
+      <td data-label="Прохождений">${test.submissions ?? 0}</td>
+      <td data-label="Создан">${formatDateLong(test.created_at) || '—'}</td>
+      <td>
+        <div class="action-row">
+          ${test.status === 'published' ? `<a class="action-icon-btn" href="${esc(test.edit_url)}stats/" title="Как проходят тест">${ICONS.stats}</a>` : ''}
+          <a class="action-icon-btn" href="${esc(test.edit_url)}" title="Редактировать">${ICONS.edit}</a>
+          <button type="button" class="action-icon-btn danger" data-delete="${test.id}" title="Удалить">${ICONS.delete}</button>
+        </div>
+      </td>
+    </tr>`;
+}
 
-    function formatDate(value) {
-        if (!value) return '—';
-        try {
-            return new Date(value).toLocaleDateString('ru-RU', {
-                day: 'numeric', month: 'short', year: 'numeric',
-            });
-        } catch (_) {
-            return '—';
-        }
-    }
+/* Плашки сверху считают по всем тестам — это сводка; таблица — под фильтром */
+function renderTable() {
+  if (!state.loaded) return;
+  const { tests, filter } = state;
+  const shown = filter === 'all' ? tests : tests.filter((test) => test.status === filter);
+  byId('tests-filter-count').textContent = tests.length ? `${shown.length} из ${tests.length}` : '';
+  byId('tests-table-body').innerHTML = shown.map(row).join('');
+  byId('tests-table-wrapper').hidden = !shown.length;
+  byId('tests-empty').hidden = Boolean(shown.length);
+  // Пусто из-за фильтра и пусто вообще — разные сообщения
+  byId('tests-empty-title').textContent = tests.length ? 'Тестов не найдено' : 'Тестов пока нет';
+  byId('tests-empty-sub').textContent = tests.length
+    ? 'Под выбранный фильтр ничего не подходит'
+    : 'Создайте первый тест, чтобы начать оценку кандидатов';
+  byId('tests-empty-create').hidden = Boolean(tests.length);
+}
 
-    function setText(id, value) {
-        const element = document.getElementById(id);
-        if (element) element.textContent = value;
-    }
+async function loadTests() {
+  const { tests = [], stats = {} } = await api.get(`/api/v1/companies/${username}/tests/`);
+  Object.assign(state, { loaded: true, tests });
+  byId('stat-total-tests').textContent = stats.total_tests ?? 0;
+  byId('stat-active-tests').textContent = stats.active_tests ?? 0;
+  byId('stat-submissions').textContent = stats.submissions ?? 0;
+  byId('stat-completion-rate').textContent = `${stats.active_rate ?? 0}%`;
+  renderTable();
+}
 
-    function showFlash(message) {
-        const flash = document.getElementById('company-flash');
-        if (!flash) return;
-        flash.textContent = message || '';
-        flash.hidden = !message;
-    }
+document.querySelectorAll('.cr-chip[data-f]').forEach((chip, _, chips) =>
+  chip.addEventListener('click', () => {
+    state.filter = chip.dataset.f;
+    chips.forEach((item) => item.classList.toggle('active', item === chip));
+    renderTable();
+  }),
+);
 
-    async function fetchJson(url, options = {}) {
-        const response = await fetch(url, { credentials: 'same-origin', ...options });
-        let payload = null;
-        try {
-            payload = await response.json();
-        } catch (_) {
-            payload = null;
-        }
-        if (!response.ok || payload?.ok === false) {
-            const error = new Error(payload?.message || 'Не удалось загрузить данные.');
-            error.payload = payload;
-            throw error;
-        }
-        return payload;
-    }
+byId('tests-table-body').addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-delete]');
+  if (!button) return;
+  const confirmed = await confirmDialog({
+    title: 'Удалить тест?',
+    text: 'Тест будет удалён. Это действие нельзя отменить.',
+    confirmLabel: 'Удалить',
+  });
+  if (!confirmed) return;
+  try {
+    await api.delete(`/api/v1/tests/${button.dataset.delete}/`);
+    toast('Тест удалён', 'ok');
+    await loadTests();
+  } catch (error) {
+    toast(error.message);
+  }
+});
 
-    function buildActions(test, companyUsername) {
-        const cell = document.createElement('td');
-        // Кнопки стояли впритык к правому краю таблицы — отступ и зазор в CSS
-        const row = document.createElement('div');
-        row.className = 'action-row';
-
-        // Статистика есть только у опубликованного теста — черновик никто не проходил
-        const statsLink = document.createElement('a');
-        statsLink.href = `${test.edit_url}stats/`;
-        statsLink.className = 'action-icon-btn';
-        statsLink.title = 'Как проходят тест';
-        statsLink.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-4"/></svg>';
-        if (test.status !== 'published') statsLink.hidden = true;
-
-        const editLink = document.createElement('a');
-        editLink.href = test.edit_url;
-        editLink.className = 'action-icon-btn';
-        editLink.title = 'Редактировать';
-        editLink.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
-
-        const deleteButton = document.createElement('button');
-        deleteButton.type = 'button';
-        deleteButton.className = 'action-icon-btn danger';
-        deleteButton.title = 'Удалить';
-        deleteButton.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
-        deleteButton.addEventListener('click', () => deleteTest(test.id, companyUsername));
-
-        row.appendChild(statsLink);
-        row.appendChild(editLink);
-        row.appendChild(deleteButton);
-        cell.appendChild(row);
-        return cell;
-    }
-
-    function buildRow(test, companyUsername) {
-        const row = document.createElement('tr');
-
-        const titleCell = document.createElement('td');
-        const titleLink = document.createElement('a');
-        // Черновик по публичному адресу отдаёт 404 даже владельцу —
-        // ему открываем предпросмотр
-        titleLink.href = test.status === 'published' ? test.url : `${test.url}?preview=1`;
-        titleLink.textContent = test.title || '—';
-        titleLink.target = '_blank';
-        titleCell.appendChild(titleLink);
-        row.appendChild(titleCell);
-
-        const statusCell = document.createElement('td');
-        statusCell.dataset.label = 'Статус';
-        const pill = document.createElement('span');
-        pill.className = `status-pill ${String(test.status || '').toLowerCase()}`;
-        pill.textContent = STATUS_LABELS[test.status] || test.status || '—';
-        statusCell.appendChild(pill);
-        row.appendChild(statusCell);
-
-        // data-label подхватывает CSS на телефоне: там шапка таблицы скрыта,
-        // и без подписи непонятно, что за число в карточке
-        const cells = [
-            ['Страниц', String(test.page_count ?? 0)],
-            ['Прохождений', String(test.submissions ?? 0)],
-            ['Создан', formatDate(test.created_at)],
-        ];
-        for (const [label, value] of cells) {
-            const cell = document.createElement('td');
-            cell.dataset.label = label;
-            cell.textContent = value;
-            row.appendChild(cell);
-        }
-
-        row.appendChild(buildActions(test, companyUsername));
-        return row;
-    }
-
-    /** Тесты под выбранным фильтром. Плашки сверху считают по всем — это сводка. */
-    function filteredTests() {
-        if (state.filter === 'all') return state.tests;
-        return state.tests.filter(t => t.status === state.filter);
-    }
-
-    function renderTable() {
-        const wrapper = document.getElementById('tests-table-wrapper');
-        const body = document.getElementById('tests-table-body');
-        const empty = document.getElementById('tests-empty');
-        if (!wrapper || !body || !empty) return;
-
-        // Клик по фильтру возможен до того, как ответил сервер
-        if (!state.company) return;
-
-        const shown = filteredTests();
-        setText('tests-filter-count', state.tests.length ? `${shown.length} из ${state.tests.length}` : '');
-
-        body.innerHTML = '';
-
-        if (!shown.length) {
-            wrapper.hidden = true;
-            empty.hidden = false;
-            // Пусто из-за фильтра и пусто вообще — разные сообщения
-            setText('tests-empty-title', state.tests.length ? 'Тестов не найдено' : 'Тестов пока нет');
-            setText('tests-empty-sub', state.tests.length
-                ? 'Под выбранный фильтр ничего не подходит'
-                : 'Создайте первый тест, чтобы начать оценку кандидатов');
-            const createBtn = document.getElementById('tests-empty-create');
-            if (createBtn) createBtn.hidden = Boolean(state.tests.length);
-            return;
-        }
-
-        for (const test of shown) {
-            body.appendChild(buildRow(test, state.company.username));
-        }
-        wrapper.hidden = false;
-        empty.hidden = true;
-    }
-
-    function initFilters() {
-        const chips = document.querySelectorAll('.cr-chip[data-f]');
-        chips.forEach(chip => {
-            chip.addEventListener('click', () => {
-                state.filter = chip.dataset.f;
-                chips.forEach(c => c.classList.toggle('active', c === chip));
-                renderTable();
-            });
-        });
-    }
-
-    function syncTestsPage(company, tests, stats) {
-        setText('stat-total-tests', String(stats?.total_tests ?? 0));
-        setText('stat-active-tests', String(stats?.active_tests ?? 0));
-        setText('stat-submissions', String(stats?.submissions ?? 0));
-        setText('stat-completion-rate', `${stats?.active_rate ?? 0}%`);
-        renderTable();
-    }
-
-    async function loadTests(username) {
-        const payload = await fetchJson(`/api/v1/companies/${username}/tests/`);
-        state.company = payload.company;
-        state.tests = payload.tests || [];
-        state.stats = payload.stats || null;
-        syncTestsPage(state.company, state.tests, state.stats);
-    }
-
-    async function deleteTest(testId, username) {
-        if (!confirm('Удалить тест? Это действие нельзя отменить.')) return;
-        try {
-            await fetchJson(`/api/v1/tests/${testId}/`, {
-                method: 'DELETE',
-                headers: { 'X-CSRFToken': getCsrfToken() },
-            });
-            await loadTests(username);
-        } catch (error) {
-            showFlash(error.message || 'Не удалось удалить тест.');
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-        showFlash('');
-        initFilters();
-
-        const username = BOOTSTRAP.username || '';
-        if (!username) {
-            showFlash('Не удалось определить компанию по адресу страницы.');
-            return;
-        }
-
-        try {
-            await loadTests(username);
-        } catch (error) {
-            showFlash(error.message || 'Не удалось загрузить данные компании.');
-            if (error.payload?.next_url) {
-                window.location.assign(error.payload.next_url);
-            }
-        }
-    });
-})();
+try {
+  await loadTests();
+} catch (error) {
+  const flash = byId('company-flash');
+  flash.textContent = error.message;
+  flash.hidden = false;
+}

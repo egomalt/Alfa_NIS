@@ -1,57 +1,60 @@
-{% extends 'cabinet/base_company.html' %}
-{% load static %}
-
+{% extends "cabinet/base_company.html" %}
+{% load static alfa %}
 {% block title %}Решения — Alfa Career{% endblock %}
-
-{% block head_extra %}
-<link rel="stylesheet" href="{% static 'contests/contests_cabinet/contests_cabinet.css' %}?v={{ ASSET_V }}">
-{# База отдаёт username и page; странице нужен ещё id конкурса #}
-<script>Object.assign(window.ALFA_APP_BOOTSTRAP, { contestId: {{ contest_id }} });</script>
+{% block cabinet_styles %}
+  <link rel="stylesheet"
+        href="{% static 'contests/contests_cabinet/contests_cabinet.css' %}?v={{ ASSET_V }}">
 {% endblock %}
-
+{% block extra_page_data %}
+  {% page_data contestId=contest_id %}
+{% endblock %}
 {% block panel %}
-<a href="/cabinet/company/contests/" class="cp-btn-secondary" style="text-decoration:none;margin-bottom:16px;">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
-  Все конкурсы
-</a>
-
-<div id="cs-page-header" class="cp-page-header">
-  <div>
-    <div class="cp-page-title" id="cs-title">Загрузка…</div>
-    <div class="cp-page-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <span id="cs-status-chip" style="font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--green-soft);color:var(--green-text);" hidden></span>
-      <span id="cs-deadline-text"></span>
+  <a href="/cabinet/company/contests/" class="cp-btn-secondary cs-back">
+    <svg width="14"
+         height="14"
+         viewBox="0 0 24 24"
+         fill="none"
+         stroke="currentColor"
+         stroke-width="2"
+         stroke-linecap="round">
+      <path d="M19 12H5" />
+      <path d="M11 6l-6 6 6 6" />
+    </svg>
+    Все конкурсы
+  </a>
+  <div id="cs-page-header" class="cp-page-header">
+    <div>
+      <div class="cp-page-title" id="cs-title">Загрузка…</div>
+      <div class="cp-page-sub cs-page-sub">
+        <span id="cs-status-chip"></span>
+        <span id="cs-deadline-text"></span>
+      </div>
     </div>
   </div>
-</div>
-
-<div class="cp-stats-row" id="cs-stats"></div>
-
-<div class="cs-panels">
-  <div class="cs-panel">
-    <div class="cs-panel-title">Воронка участия</div>
-    <div class="cs-panel-note">Просмотры страницы конкурса не считаются — воронка начинается с регистрации</div>
-    <div id="cs-funnel"></div>
+  <div class="cp-stats-row" id="cs-stats"></div>
+  <div class="cs-panels">
+    <div class="cs-panel">
+      <div class="cs-panel-title">Воронка участия</div>
+      <div class="cs-panel-note">Просмотры страницы конкурса не считаются — воронка начинается с регистрации</div>
+      <div id="cs-funnel"></div>
+    </div>
+    <div class="cs-panel">
+      <div class="cs-panel-title">Решения по дням</div>
+      <div class="cs-panel-note" id="cs-daily-note"></div>
+      <div class="cs-daily" id="cs-daily"></div>
+    </div>
   </div>
-  <div class="cs-panel">
-    <div class="cs-panel-title">Решения по дням</div>
-    <div class="cs-panel-note" id="cs-daily-note"></div>
-    <div class="cs-daily" id="cs-daily"></div>
+  <div class="cr-filters">
+    <button type="button" class="cr-chip active" data-f="all">Все</button>
+    <button type="button" class="cr-chip" data-f="pending">На проверке</button>
+    <button type="button" class="cr-chip" data-f="accepted">Приняты</button>
+    <button type="button" class="cr-chip" data-f="rejected">Отклонены</button>
+    <button type="button" class="cr-chip" data-f="liked">Понравившиеся ♥</button>
+    <span class="cr-filter-count" id="cs-filter-count"></span>
   </div>
-</div>
-
-<div class="cr-filters">
-  <button class="cr-chip active" data-f="all">Все</button>
-  <button class="cr-chip" data-f="pending">На проверке</button>
-  <button class="cr-chip" data-f="accepted">Приняты</button>
-  <button class="cr-chip" data-f="rejected">Отклонены</button>
-  <button class="cr-chip" data-f="liked">Понравившиеся ♥</button>
-  <span class="cr-filter-count" id="cs-filter-count"></span>
-</div>
-
-<div id="cs-sub-list"></div>
+  <div id="cs-sub-list"></div>
 {% endblock %}
-
 {% block page_script %}
-<script type="module" src="{% static 'contests/contests_cabinet/contest_submissions.js' %}?v={{ ASSET_V }}"></script>
+  <script type="module"
+          src="{% static 'contests/contests_cabinet/contest_submissions.js' %}?v={{ ASSET_V }}"></script>
 {% endblock %}

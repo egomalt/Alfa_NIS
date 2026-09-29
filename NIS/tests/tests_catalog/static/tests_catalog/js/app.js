@@ -1,192 +1,155 @@
 /* Каталог тренировочных тестов.
    Фильтры читаются из адреса (?q=, ?cat=, ?level=) — по таким ссылкам
    сюда ведут поиск и чипы с главной страницы. */
-(() => {
-  const PER_PAGE = 9;
+import { api, byId, countOf, esc, initial, LEVELS, TEST_CATEGORIES, WORDS } from 'alfa/core';
 
-  const LEVEL_LABELS = { junior: 'Junior', middle: 'Middle', senior: 'Senior' };
-  const CAT_LABELS = {
-    frontend: 'Frontend', backend: 'Backend',
-    devops: 'DevOps', analytics: 'Аналитика', other: 'Другое',
-  };
+const PAGE_SIZE = 9;
+const ICONS = {
+  questions:
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+  people:
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>',
+  arrow:
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
+};
 
-  const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const initial = name => (name || '?').trim()[0].toUpperCase();
-  const el = id => document.getElementById(id);
+const passedLabel = (count) => {
+  if (!count) return 'ещё никто не проходил';
+  const verb = count % 10 === 1 && count % 100 !== 11 ? 'прошёл' : 'прошли';
+  return `${count} ${verb}`;
+};
 
-  function questionsLabel(n) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m100 >= 11 && m100 <= 19) return `${n} вопросов`;
-    if (m10 === 1) return `${n} вопрос`;
-    if (m10 >= 2 && m10 <= 4) return `${n} вопроса`;
-    return `${n} вопросов`;
-  }
+/* Фильтры живут и в адресе, чтобы F5 и ссылка их сохраняли */
 
-  function testsLabel(n) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m100 >= 11 && m100 <= 19) return `${n} тестов`;
-    if (m10 === 1) return `${n} тест`;
-    if (m10 >= 2 && m10 <= 4) return `${n} теста`;
-    return `${n} тестов`;
-  }
+const params = new URLSearchParams(location.search);
+const state = {
+  tests: [],
+  level: params.get('level') || 'all',
+  category: params.get('cat') || 'all',
+  query: params.get('q') || '',
+  shown: PAGE_SIZE,
+};
 
-  function passedLabel(n) {
-    if (!n) return 'ещё никто не проходил';
-    const m10 = n % 10, m100 = n % 100;
-    if (m100 >= 11 && m100 <= 19) return `${n} прошли`;
-    if (m10 === 1) return `${n} прошёл`;
-    return `${n} прошли`;
-  }
+function syncUrl() {
+  const next = new URLSearchParams();
+  if (state.query.trim()) next.set('q', state.query.trim());
+  if (state.category !== 'all') next.set('cat', state.category);
+  if (state.level !== 'all') next.set('level', state.level);
+  history.replaceState(null, '', `${location.pathname}${next.size ? `?${next}` : ''}`);
+}
 
-  const ICON_Q = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
-  const ICON_PEOPLE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>';
-  const ICON_PLAY = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+function filtered() {
+  const query = state.query.trim().toLowerCase();
+  return state.tests.filter(
+    (test) =>
+      (state.level === 'all' || test.level === state.level) &&
+      (state.category === 'all' || test.category === state.category) &&
+      (!query ||
+        `${test.title} ${test.description} ${test.owner_name} ${test.owner_username}`.toLowerCase().includes(query)),
+  );
+}
 
-  /* ── Состояние ──────────────────────────────────────────────────── */
+function card(test) {
+  const level = LEVELS[test.level] ? test.level : '';
+  const author = test.owner_name || test.owner_username;
+  const category = TEST_CATEGORIES[test.category] ?? test.category ?? '';
+  return `
+    <article class="card te-card" ${level ? `data-card-level="${level}"` : ''}>
+      <div class="te-head">
+        <span class="te-author-av">${esc(initial(author))}</span>
+        <span class="te-author">${esc(author)}</span>
+        ${level ? `<span class="te-level te-level-${level}">${LEVELS[level]}</span>` : ''}
+      </div>
+      <div class="card-title">${esc(test.title || 'Без названия')}</div>
+      <div class="card-excerpt">${esc(test.description || 'Автор не добавил описание к заданию.')}</div>
+      <div class="te-meta">
+        <span class="co-stat">${ICONS.questions}${countOf(test.page_count, WORDS.questions)}</span>
+        <span class="co-stat">${ICONS.people}${passedLabel(test.submissions)}</span>
+        ${category ? `<span class="te-cat">${esc(category)}</span>` : ''}
+      </div>
+      <a class="te-start" href="${esc(test.url)}">Начать тест${ICONS.arrow}</a>
+    </article>`;
+}
 
-  const params = new URLSearchParams(location.search);
-  let all = [];
-  let level = params.get('level') || 'all';
-  let category = params.get('cat') || 'all';
-  let query = (params.get('q') || '').trim().toLowerCase();
-  let shown = PER_PAGE;
-
-  function visible() {
-    return all.filter(t => {
-      if (level !== 'all' && t.level !== level) return false;
-      if (category !== 'all' && t.category !== category) return false;
-      if (!query) return true;
-      return `${t.title} ${t.description} ${t.owner_name} ${t.owner_username}`
-        .toLowerCase().includes(query);
-    });
-  }
-
-  /* ── Отрисовка ──────────────────────────────────────────────────── */
-
-  function cardHtml(test) {
-    const levelKey = LEVEL_LABELS[test.level] ? test.level : '';
-    const levelBadge = levelKey
-      ? `<span class="te-level te-level-${levelKey}">${LEVEL_LABELS[levelKey]}</span>`
-      : '';
-    const catLabel = CAT_LABELS[test.category] || test.category || '';
-    const description = test.description || 'Автор не добавил описание к заданию.';
-
-    return `
-      <article class="card te-card"${levelKey ? ` data-level="${levelKey}"` : ''}>
-        <div class="te-head">
-          <span class="te-author-av">${esc(initial(test.owner_name || test.owner_username))}</span>
-          <span class="te-author">${esc(test.owner_name || test.owner_username)}</span>
-          ${levelBadge}
-        </div>
-        <div class="card-title">${esc(test.title || 'Без названия')}</div>
-        <div class="card-excerpt">${esc(description)}</div>
-        <div class="te-meta">
-          <span class="co-stat">${ICON_Q}${esc(questionsLabel(test.page_count))}</span>
-          <span class="co-stat">${ICON_PEOPLE}${esc(passedLabel(test.submissions))}</span>
-          ${catLabel ? `<span class="te-cat">${esc(catLabel)}</span>` : ''}
-        </div>
-        <a class="te-start" href="${esc(test.url)}">Начать тест${ICON_PLAY}</a>
-      </article>`;
-  }
-
-  function renderGrid() {
-    const list = visible();
-    const grid = el('grid');
-
-    el('count').textContent = list.length ? testsLabel(list.length) : '';
-
-    if (!list.length) {
-      grid.innerHTML = `<div class="state-msg">${
-        query ? `По запросу «${esc(query)}» ничего не нашлось` : 'Под выбранные фильтры ничего не подходит'
+function renderGrid() {
+  const list = filtered();
+  byId('count').textContent = list.length ? countOf(list.length, WORDS.tests) : '';
+  byId('grid').innerHTML = list.length
+    ? list.slice(0, state.shown).map(card).join('')
+    : `<div class="state-msg">${
+        state.query.trim()
+          ? `По запросу «${esc(state.query.trim())}» ничего не нашлось`
+          : 'Под выбранные фильтры ничего не подходит'
       }</div>`;
-      el('load-more-row').style.display = 'none';
-      return;
-    }
+  byId('load-more-row').hidden = state.shown >= list.length;
+}
 
-    grid.innerHTML = list.slice(0, shown).map(cardHtml).join('');
-    el('load-more-row').style.display = list.length > shown ? '' : 'none';
-  }
-
-  function renderTrending() {
-    const top = [...all].filter(t => t.submissions > 0)
-      .sort((a, b) => b.submissions - a.submissions).slice(0, 5);
-    const list = el('trending-list');
-
-    if (!top.length) {
-      list.innerHTML = '<div style="font-size:13px;color:var(--muted);">Эти задания ещё никто не проходил</div>';
-      return;
-    }
-
-    list.innerHTML = top.map((t, i) => `
-      <a class="trending-item" href="${esc(t.url)}">
-        <span class="trending-num">${i + 1}</span>
-        <span style="min-width:0;">
-          <div class="trending-title">${esc(t.title || 'Без названия')}</div>
-          <div class="trending-meta">${esc(passedLabel(t.submissions))}</div>
+function renderTrending() {
+  const top = state.tests
+    .filter((test) => test.submissions > 0)
+    .sort((a, b) => b.submissions - a.submissions)
+    .slice(0, 5);
+  byId('trending-list').innerHTML = top.length
+    ? top
+        .map(
+          (test, index) => `
+      <a class="trending-item" href="${esc(test.url)}">
+        <span class="trending-num">${index + 1}</span>
+        <span class="trending-body">
+          <span class="trending-title">${esc(test.title || 'Без названия')}</span>
+          <span class="trending-meta">${passedLabel(test.submissions)}</span>
         </span>
-      </a>`).join('');
-  }
+      </a>`,
+        )
+        .join('')
+    : '<div class="trending-empty">Эти задания ещё никто не проходил</div>';
+}
 
-  function syncChips() {
-    document.querySelectorAll('[data-level]').forEach(b =>
-      b.classList.toggle('active', b.dataset.level === level));
-    document.querySelectorAll('[data-cat]').forEach(b =>
-      b.classList.toggle('active', b.dataset.cat === category));
-    const input = el('search-input');
-    if (input && !input.value) input.value = params.get('q') || '';
-  }
+function syncChips() {
+  document
+    .querySelectorAll('.cr-chip[data-level]')
+    .forEach((chip) => chip.classList.toggle('active', chip.dataset.level === state.level));
+  document
+    .querySelectorAll('.cr-chip[data-cat]')
+    .forEach((chip) => chip.classList.toggle('active', chip.dataset.cat === state.category));
+}
 
-  /* ── Обработчики ────────────────────────────────────────────────── */
+function applyFilters(changes) {
+  Object.assign(state, changes, { shown: PAGE_SIZE });
+  syncChips();
+  syncUrl();
+  renderGrid();
+}
 
-  document.querySelectorAll('[data-level]').forEach(button => {
-    button.addEventListener('click', () => {
-      level = button.dataset.level;
-      shown = PER_PAGE;
-      syncChips();
-      renderGrid();
-    });
-  });
+document
+  .querySelectorAll('.cr-chip[data-level]')
+  .forEach((chip) => chip.addEventListener('click', () => applyFilters({ level: chip.dataset.level })));
+document
+  .querySelectorAll('.cr-chip[data-cat]')
+  .forEach((chip) => chip.addEventListener('click', () => applyFilters({ category: chip.dataset.cat })));
 
-  document.querySelectorAll('[data-cat]').forEach(button => {
-    button.addEventListener('click', () => {
-      category = button.dataset.cat;
-      shown = PER_PAGE;
-      syncChips();
-      renderGrid();
-    });
-  });
+const searchInput = byId('search-input');
+searchInput.value = state.query;
+searchInput.addEventListener('input', () => applyFilters({ query: searchInput.value }));
 
-  el('search-input').addEventListener('input', event => {
-    query = event.target.value.trim().toLowerCase();
-    shown = PER_PAGE;
-    renderGrid();
-  });
+byId('btn-load').addEventListener('click', () => {
+  state.shown += PAGE_SIZE;
+  renderGrid();
+});
 
-  el('btn-load').addEventListener('click', () => {
-    shown += PER_PAGE;
-    renderGrid();
-  });
+// Кнопку «Создать тест» видят только те, кто может завести тест
+api
+  .get('/api/v1/auth/me/')
+  .then(({ account }) => {
+    byId('btn-create').hidden = !['company', 'user'].includes(account?.role);
+  })
+  .catch(() => null);
 
-  // Кнопку «Создать тест» видят только те, кто может завести тест
-  fetch('/api/v1/auth/me/')
-    .then(r => r.json())
-    .then(data => {
-      const role = data.ok && data.account ? data.account.role : null;
-      if (role === 'company' || role === 'user') el('btn-create').style.display = '';
-    })
-    .catch(() => {});
-
-  fetch('/api/v1/tests/catalog/')
-    .then(r => r.json())
-    .then(data => {
-      if (!data.ok) throw new Error();
-      all = data.tests || [];
-      syncChips();
-      renderTrending();
-      renderGrid();
-    })
-    .catch(() => {
-      el('grid').innerHTML = '<div class="state-msg">Не удалось загрузить тесты</div>';
-    });
-})();
+syncChips();
+try {
+  ({ tests: state.tests = [] } = await api.get('/api/v1/tests/catalog/'));
+  renderTrending();
+  renderGrid();
+} catch {
+  byId('grid').innerHTML = '<div class="state-msg">Не удалось загрузить тесты</div>';
+}

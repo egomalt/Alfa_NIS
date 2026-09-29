@@ -1,672 +1,546 @@
-(function () {
-  'use strict';
+/* Кабинет компании: профиль и проверка документа, статистика, настройки. */
+import {
+  api,
+  byId as el,
+  confirmDialog,
+  countOf,
+  esc,
+  formatDateLong,
+  formatDateShort,
+  initial,
+  pageData,
+  toast,
+  WORDS,
+} from 'alfa/core';
 
-  var username = (window.ALFA_APP_BOOTSTRAP || {}).username || '';
-  var state = { company: null, contests: [], tests: [] };
+const { username = '', page = 'profile', panel = page } = pageData();
+const state = { company: null, contests: [], tests: [] };
 
-  var CSRF = (function () {
-    var m = document.cookie.match(/csrftoken=([^;]+)/);
-    if (m) return m[1];
-    var meta = document.querySelector('meta[name="csrf-token"]');
-    return meta ? meta.content : '';
-  })();
+// Разделы, которые рисует этот скрипт. У «Тестов» и «Конкурсов» свои скрипты:
+// им отсюда нужны только сайдбар, замки и выход, поэтому они передают panel='none'
+const OWN_PANELS = ['profile', 'stats', 'settings'];
 
-  function apiFetch(url, opts) {
-    opts = opts || {};
-    opts.headers = Object.assign({ 'Content-Type': 'application/json', 'X-CSRFToken': CSRF }, opts.headers || {});
-    opts.credentials = 'same-origin';
-    return fetch(url, opts).then(function (r) {
-      return r.json().then(function (d) {
-        if (!d.ok) throw new Error(d.message || 'Ошибка');
-        return d;
-      });
-    });
+const ICONS = {
+  pending:
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  rejected:
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+  none: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>',
+  trophy:
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"/></svg>',
+  draft:
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  file: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+};
+
+const setText = (id, value) => {
+  const node = el(id);
+  if (node) node.textContent = value;
+};
+
+const setAvatar = (node, company) => {
+  if (!node) return;
+  if (company.avatar_url) node.innerHTML = `<img src="${esc(company.avatar_url)}" alt="">`;
+  else node.textContent = initial(company.name || company.username);
+};
+
+const formatRating = (value) => (value ? `${value.toFixed(1)} ★` : '—');
+
+function renderSidebar(company) {
+  setAvatar(el('cp-sidebar-av'), company);
+  setText('cp-sidebar-name', company.name || username);
+}
+
+function renderHero(company) {
+  const avatar = el('cp-hero-av');
+  if (!avatar) return;
+  setAvatar(avatar, company);
+  setText('cp-hero-name', company.name || username);
+  el('cp-verified-badge').hidden = !company.is_verified;
+
+  const since = company.created_at ? `с ${new Date(company.created_at).getFullYear()} г.` : '';
+  setText('cp-hero-role', [company.industry, company.city, since].filter(Boolean).join(' · ') || 'Компания');
+  setText('cp-page-sub', company.contact_email || '');
+}
+
+function unlockSidebarLinks() {
+  ['tests', 'contests'].forEach((section) => {
+    el(`cp-link-${section}`)?.classList.remove('locked');
+    const lock = el(`cp-lock-${section}`);
+    if (lock) lock.hidden = true;
+  });
+}
+
+function renderTimeline(contests) {
+  const timeline = el('cp-timeline');
+  if (!timeline) return;
+  if (!contests.length) {
+    timeline.innerHTML = '<div class="cp-tl-empty">Активность появится здесь по мере работы на платформе</div>';
+    return;
   }
-
-  function apiFetchForm(url, formData) {
-    return fetch(url, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'X-CSRFToken': CSRF },
-      body: formData,
-    }).then(function (r) {
-      return r.json().then(function (d) {
-        if (!d.ok) throw new Error(d.message || JSON.stringify(d.errors || {}));
-        return d;
-      });
-    });
-  }
-
-  function el(id) { return document.getElementById(id); }
-
-  function esc(str) {
-    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  function renderSidebar(company) {
-    var avEl = el('cp-sidebar-av');
-    if (!avEl) return;
-    if (company.avatar_url) {
-      avEl.innerHTML = '<img src="' + esc(company.avatar_url) + '" alt="avatar">';
-    } else {
-      avEl.textContent = (company.name || '?').charAt(0).toUpperCase();
-    }
-    var nameEl = el('cp-sidebar-name');
-    if (nameEl) nameEl.textContent = company.name || username;
-  }
-
-  function renderHero(company) {
-    var avEl = el('cp-hero-av');
-    if (!avEl) return;
-    if (company.avatar_url) {
-      avEl.innerHTML = '<img src="' + esc(company.avatar_url) + '" alt="avatar">';
-    } else {
-      avEl.textContent = (company.name || '?').charAt(0).toUpperCase();
-    }
-    el('cp-hero-name').textContent = company.name || username;
-    var badge = el('cp-verified-badge');
-    badge.style.display = company.is_verified ? 'inline-flex' : 'none';
-
-    var parts = [];
-    if (company.industry) parts.push(company.industry);
-    if (company.city) parts.push(company.city);
-    if (company.created_at) {
-      var d = new Date(company.created_at);
-      parts.push('с ' + d.getFullYear() + ' г.');
-    }
-    el('cp-hero-role').textContent = parts.join(' · ') || 'Компания';
-    el('cp-page-sub').textContent = company.contact_email || '';
-  }
-
-  function renderProfileContent(company) {
-    // Эти элементы есть только на странице профиля
-    if (!el('cpstat-contests')) return;
-    var contests = state.contests;
-    var totalParticipants = contests.reduce(function (s, c) { return s + (c.participants_count || 0); }, 0);
-    var totalTests = state.tests ? state.tests.length : 0;
-
-    el('cpstat-contests').textContent = contests.length;
-    el('cpstat-tests').textContent = totalTests;
-    el('cpstat-participants').textContent = totalParticipants;
-    el('cpstat-rating').textContent = company.avg_rating ? company.avg_rating.toFixed(1) + ' ★' : '—';
-
-    el('cp-about-text').textContent = company.description || 'Описание не добавлено.';
-
-    var tagRow = el('cp-tag-row');
-    var dirs = company.directions || [];
-    var tagsHtml = dirs.map(function (d) { return '<span class="cp-tag">' + esc(d) + '</span>'; }).join('');
-    if (company.company_size) tagsHtml += '<span class="cp-tag">' + esc(company.company_size) + '</span>';
-    tagRow.innerHTML = tagsHtml;
-
-    el('sc-contests-sub').textContent = contests.length ? contests.length + ' конкурс(а)' : 'Нет конкурсов';
-    el('sc-tests-sub').textContent = totalTests ? totalTests + ' тест(а)' : 'Нет тестов';
-
-    renderTimeline(contests);
-  }
-
-  function renderTimeline(contests) {
-    var tl = el('cp-timeline');
-    if (!tl) return;
-    if (!contests.length) {
-      tl.innerHTML = '<div style="font-size:13.5px;color:var(--muted);padding:4px;">Активность появится здесь по мере работы на платформе</div>';
-      return;
-    }
-    var items = contests.slice(0, 5).map(function (c) {
-      var d = new Date(c.created_at);
-      var dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-      var bg = c.status === 'active' ? 'var(--green-soft)' : 'var(--surface-2)';
-      var icon = c.status === 'active' ? '🏆' : '📝';
-      return '<div class="cp-tl-row"><span class="cp-tl-icon" style="background:' + bg + ';">' + icon + '</span>'
-        + '<span class="cp-tl-text">Конкурс «' + esc(c.title) + '»</span>'
-        + '<span class="cp-tl-time">' + dateStr + '</span></div>';
-    });
-    tl.innerHTML = items.join('');
-  }
-
-  function unlockSidebarLinks() {
-    ['cp-link-tests', 'cp-link-contests'].forEach(function (id) {
-      var a = el(id);
-      if (a) a.classList.remove('locked');
-    });
-    ['cp-lock-tests', 'cp-lock-contests'].forEach(function (id) {
-      var sp = el(id);
-      if (sp) sp.style.display = 'none';
-    });
-  }
-
-  function showVerifyGate(company) {
-    var gate = el('cp-verify-gate');
-    var content = el('cp-profile-content');
-    var editBtn = el('cp-edit-btn');
-    if (gate) gate.style.display = '';
-    if (content) content.style.display = 'none';
-    if (editBtn) editBtn.style.display = 'none';
-    renderVerifyGate(company || state.company || {});
-  }
-
-  // Перерисовывает блок верификации по статусу: none / pending / rejected
-  function renderVerifyGate(company) {
-    var status = company.verification_status || 'none';
-    var statusEl = el('cp-verify-status');
-    var iconEl = el('cp-verify-icon');
-    var titleEl = el('cp-verify-title');
-    var subEl = el('cp-verify-sub');
-    var reasonEl = el('cp-verify-reason');
-    var uploadEl = el('cp-verify-upload');
-    var submitBtn = el('cp-submit-doc-btn');
-
-    if (reasonEl) reasonEl.innerHTML = '';
-
-    if (status === 'pending') {
-      // Документ на проверке — модерация ещё не приняла решение
-      if (statusEl) {
-        statusEl.textContent = 'Документ на проверке';
-        statusEl.style.background = 'var(--amber-soft)';
-        statusEl.style.color = 'var(--amber-text)';
-      }
-      if (iconEl) {
-        iconEl.style.background = 'var(--amber-soft)';
-        iconEl.style.color = 'var(--amber-text)';
-        iconEl.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
-      }
-      if (titleEl) titleEl.textContent = 'Документ отправлен на проверку';
-      if (subEl) subEl.textContent = 'Модератор проверит документ и подтвердит компанию. Обычно это занимает до 1–2 рабочих дней. После одобрения откроются создание тестов, конкурсов и другие функции.';
-      if (uploadEl) uploadEl.style.display = 'none';
-      return;
-    }
-
-    if (status === 'rejected') {
-      // Заявка отклонена — показываем причину и даём загрузить повторно
-      if (statusEl) {
-        statusEl.textContent = 'Заявка отклонена';
-        statusEl.style.background = 'var(--red-soft)';
-        statusEl.style.color = 'var(--red-text)';
-      }
-      if (iconEl) {
-        iconEl.style.background = 'var(--red-soft)';
-        iconEl.style.color = 'var(--red-text)';
-        iconEl.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>';
-      }
-      if (titleEl) titleEl.textContent = 'Документ не прошёл проверку';
-      if (subEl) subEl.textContent = 'Исправьте замечания и загрузите документ повторно.';
-      if (reasonEl && company.verification_reason) {
-        reasonEl.innerHTML = '<div class="cp-flash error" style="margin-bottom:16px;"><strong>Причина отклонения:</strong> ' + esc(company.verification_reason) + '</div>';
-      }
-      if (uploadEl) uploadEl.style.display = '';
-      if (submitBtn) submitBtn.textContent = 'Отправить повторно';
-      return;
-    }
-
-    // status === 'none' — документ ещё не загружали
-    if (statusEl) {
-      statusEl.textContent = 'Профиль не подтверждён';
-      statusEl.style.background = 'var(--amber-soft)';
-      statusEl.style.color = 'var(--amber-text)';
-    }
-    if (iconEl) {
-      iconEl.style.background = 'var(--amber-soft)';
-      iconEl.style.color = 'var(--amber-text)';
-      iconEl.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>';
-    }
-    if (titleEl) titleEl.textContent = 'Подтвердите, что компания реальна';
-    if (subEl) subEl.textContent = 'Загрузите документ, подтверждающий деятельность компании (выписка ЕГРЮЛ, свидетельство о регистрации и т.п.), чтобы открыть создание тестов, конкурсов и другие функции.';
-    if (uploadEl) uploadEl.style.display = '';
-    if (submitBtn) submitBtn.textContent = 'Отправить на проверку';
-  }
-
-  function showProfileContent(company) {
-    var gate = el('cp-verify-gate');
-    var content = el('cp-profile-content');
-    var editBtn = el('cp-edit-btn');
-    if (gate) gate.style.display = 'none';
-    if (content) content.style.display = '';
-    if (editBtn) editBtn.style.display = '';
-    unlockSidebarLinks();
-    renderProfileContent(company);
-  }
-
-  // ---- Verify doc upload ----
-  var chosenFile = null;
-
-  function initVerifyDoc() {
-    var docInput = el('cp-doc-input');
-    if (!docInput) return;
-    docInput.addEventListener('change', function () {
-      chosenFile = docInput.files[0] || null;
-      renderChosenFile();
-    });
-
-    var dropzone = el('cp-dropzone');
-    if (dropzone) {
-      dropzone.addEventListener('dragover', function (e) {
-        e.preventDefault();
-        dropzone.style.borderColor = 'var(--brand)';
-      });
-      dropzone.addEventListener('dragleave', function () {
-        dropzone.style.borderColor = '';
-      });
-      dropzone.addEventListener('drop', function (e) {
-        e.preventDefault();
-        dropzone.style.borderColor = '';
-        chosenFile = e.dataTransfer.files[0] || null;
-        renderChosenFile();
-      });
-    }
-
-    var submitBtn = el('cp-submit-doc-btn');
-    if (submitBtn) submitBtn.addEventListener('click', submitDoc);
-  }
-
-  function renderChosenFile() {
-    var wrap = el('cp-file-chosen-wrap');
-    var submitBtn = el('cp-submit-doc-btn');
-    if (!wrap) return;
-    if (!chosenFile) {
-      wrap.innerHTML = '';
-      if (submitBtn) submitBtn.disabled = true;
-      return;
-    }
-    wrap.innerHTML = '<div class="cp-file-chosen">📎 <span>' + esc(chosenFile.name) + ' (' + (chosenFile.size / 1024).toFixed(0) + ' КБ)</span></div>';
-    if (submitBtn) submitBtn.disabled = false;
-  }
-
-  function flashVerify(msg, type) {
-    var flashEl = el('cp-verify-flash');
-    if (!flashEl) return;
-    flashEl.innerHTML = '<div class="cp-flash ' + type + '">' + esc(msg) + '</div>';
-    if (type === 'success') setTimeout(function () { flashEl.innerHTML = ''; }, 4000);
-  }
-
-  function submitDoc() {
-    if (!chosenFile) return;
-    var btn = el('cp-submit-doc-btn');
-    btn.disabled = true;
-    btn.textContent = 'Отправка…';
-
-    var fd = new FormData();
-    fd.append('registration_document', chosenFile);
-
-    apiFetchForm('/api/v1/companies/' + username + '/verification/', fd)
-      .then(function (data) {
-        state.company = data.company;
-        chosenFile = null;
-        var wrap = el('cp-file-chosen-wrap');
-        if (wrap) wrap.innerHTML = '';
-        renderSidebar(data.company);
-        renderHero(data.company);
-        // Компания ушла на ручную модерацию — показываем состояние «на проверке»
-        showVerifyGate(data.company);
-      })
-      .catch(function (err) {
-        flashVerify(err.message, 'error');
-        btn.disabled = false;
-        btn.textContent = 'Отправить на проверку';
-      });
-  }
-
-  // ---- Профиль компании: одна точка отправки ----
-  /* Форма на сервере частичная: что не прислали — то не меняется. */
-  function sendProfile(formData, onDone) {
-    return apiFetchForm('/api/v1/companies/' + username + '/profile/', formData)
-      .then(function (data) {
-        if (!data.company) return data;
-        state.company = data.company;
-        renderSidebar(data.company);
-        renderHero(data.company);
-        renderLogoBox(data.company);
-        if (onDone) onDone(data.company);
-        return data;
-      });
-  }
-
-  // ---- Avatar upload ----
-  function initAvatarUpload() {
-    var heroAv = el('cp-hero-av');
-    var avatarInput = el('cp-avatar-input');
-    if (!heroAv || !avatarInput) return;
-    heroAv.addEventListener('click', function () { avatarInput.click(); });
-    avatarInput.addEventListener('change', function () {
-      var file = avatarInput.files[0];
-      if (!file) return;
-      var fd = new FormData();
-      fd.append('avatar', file);
-      sendProfile(fd).catch(function () {});
-      avatarInput.value = '';
-    });
-  }
-
-  // ---- Stats tab ----
-
-  /* Активность по неделям. Высота столбика — доля от самой активной недели;
-     считать от абсолютных значений нельзя, масштаб у компаний разный. */
-  function renderActivity(weekly) {
-    var chart = el('cp-activity-chart');
-    if (!chart) return;
-
-    var peak = weekly.reduce(function (m, w) {
-      return Math.max(m, w.submissions || 0, w.attempts || 0);
-    }, 0);
-
-    if (!peak) {
-      chart.innerHTML = '<div class="cp-chart-empty">За последние 12 недель активности не было</div>';
-      return;
-    }
-
-    chart.innerHTML = weekly.map(function (w) {
-      var date = new Date(w.week + 'T00:00:00');
-      var label = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-      var bar = function (value, cls, title) {
-        return '<div class="cp-chart-bar ' + cls + '" style="height:' + (value / peak * 100) + '%"'
-          + ' title="' + title + ': ' + value + '"></div>';
-      };
-      return '<div class="cp-chart-col">'
-        + '<div class="cp-chart-bars">'
-        +   bar(w.submissions || 0, 'subs', 'Решения')
-        +   bar(w.attempts || 0, 'att', 'Прохождения')
-        + '</div>'
-        + '<div class="cp-chart-label">' + esc(label) + '</div>'
-        + '</div>';
-    }).join('');
-  }
-
-  function renderSkills(skills) {
-    var section = el('cp-skills-section');
-    var wrap = el('cp-skills');
-    if (!section || !wrap) return;
-
-    if (!skills.length) {
-      section.style.display = 'none';
-      return;
-    }
-    section.style.display = '';
-    wrap.innerHTML = skills.map(function (s) {
-      return '<span class="cp-skill">' + esc(s.name)
-        + '<span class="cp-skill-count">' + s.count + '</span></span>';
-    }).join('');
-  }
-
-  function renderTotals(totals) {
-    var pairs = [
-      ['cpst2-contests', totals.contests],
-      ['cpst2-tests', totals.published_tests],
-      ['cpst2-participants', totals.participants],
-      ['cpst2-submissions', totals.submissions],
-      ['cpst2-winners', totals.winners],
-      ['cpst2-pending', totals.pending_submissions],
-      ['cpst2-attempts', totals.test_attempts],
-    ];
-    pairs.forEach(function (pair) {
-      var node = el(pair[0]);
-      if (node) node.textContent = pair[1];
-    });
-    var rating = el('cpst2-rating');
-    if (rating) rating.textContent = totals.avg_rating ? totals.avg_rating.toFixed(1) + ' ★' : '—';
-  }
-
-  function renderStatsTab() {
-    var c = state.company || {};
-
-    // Сводку считает сервер: числа должны совпадать с PDF-отчётом
-    apiFetch('/api/v1/companies/' + username + '/statistics/')
-      .then(function (data) {
-        renderTotals(data.totals || {});
-        renderActivity(data.weekly || []);
-        renderSkills(data.skills || []);
-      })
-      .catch(function () {
-        var chart = el('cp-activity-chart');
-        if (chart) chart.innerHTML = '<div class="cp-chart-empty">Не удалось загрузить статистику</div>';
-      });
-
-    // Рейтинг + распределение
-    var section = el('cp-stats-rating-section');
-    if (c.avg_rating) {
-      section.style.display = '';
-      el('cp-rating-score').textContent = c.avg_rating.toFixed(1);
-      el('cp-rating-count').textContent = (c.rating_count || 0) + ' оценок от кандидатов';
-      var dist = c.rating_dist || {};
-      el('cp-rating-dist').innerHTML = [5, 4, 3, 2, 1].map(function (star) {
-        var pct = dist[star] || 0;
-        return '<div class="cp-dist-row"><div class="cp-dist-label">' + star + ' ★</div>'
-          + '<div class="cp-dist-track"><div class="cp-dist-fill" style="width:' + pct + '%"></div></div>'
-          + '<div class="cp-dist-val">' + pct + '%</div></div>';
-      }).join('');
-    } else {
-      section.style.display = 'none';
-    }
-
-  }
-
-  // ---- Settings form ----
-  // Столько же направлений принимает сервер (companies/forms.py)
-  var MAX_DIRECTIONS = 10;
-  var directions = [];
-
-  var TEXT_FIELDS = [
-    ['cp-f-name', 'name'],
-    ['cp-f-desc', 'description'],
-    ['cp-f-email', 'contact_email'],
-    ['cp-f-phone', 'phone'],
-    ['cp-f-website', 'website'],
-    ['cp-f-city', 'city'],
-    ['cp-f-address', 'address'],
-    ['cp-f-industry', 'industry'],
-    ['cp-f-size', 'company_size'],
-  ];
-
-  function renderLogoBox(company) {
-    var preview = el('pic-preview');
-    if (!preview) return;
-    if (company.avatar_url) {
-      preview.innerHTML = '<img src="' + esc(company.avatar_url) + '" alt="Логотип компании">';
-    } else {
-      preview.textContent = (company.name || company.username || '?').charAt(0).toUpperCase();
-    }
-    el('cp-logo-remove').hidden = !company.avatar_url;
-  }
-
-  function renderDirections() {
-    var box = el('cp-dir-chips');
-    if (!box) return;
-    box.innerHTML = directions.map(function (name, index) {
-      return '<span class="chip-tag">' + esc(name)
-        + '<button type="button" class="chip-x" data-index="' + index
-        + '" title="Убрать" aria-label="Убрать направление ' + esc(name) + '">×</button></span>';
-    }).join('');
-
-    var full = directions.length >= MAX_DIRECTIONS;
-    el('cp-dir-input').disabled = full;
-    el('cp-dir-add').disabled = full;
-    el('cp-dir-count').textContent = full
-      ? '— больше ' + MAX_DIRECTIONS + ' не поместится'
-      : '— ' + directions.length + ' из ' + MAX_DIRECTIONS;
-  }
-
-  function addDirections(raw) {
-    // Строку из другого места обычно вставляют целиком, через запятую
-    raw.split(',').forEach(function (part) {
-      var name = part.trim().replace(/\s+/g, ' ').slice(0, 60);
-      if (!name || directions.length >= MAX_DIRECTIONS) return;
-      var exists = directions.some(function (d) { return d.toLowerCase() === name.toLowerCase(); });
-      if (!exists) directions.push(name);
-    });
-    el('cp-dir-input').value = '';
-    renderDirections();
-  }
-
-  function fillSettingsForm() {
-    var c = state.company;
-    if (!c) return;
-    TEXT_FIELDS.forEach(function (pair) { el(pair[0]).value = c[pair[1]] || ''; });
-    directions = (c.directions || []).slice();
-    renderDirections();
-    renderLogoBox(c);
-    el('cp-settings-flash').innerHTML = '';
-  }
-
-  function flashSettings(msg, type) {
-    el('cp-settings-flash').innerHTML = '<div class="cp-flash ' + type + '">' + esc(msg) + '</div>';
-  }
-
-  function saveProfile() {
-    var btn = el('cp-save-settings-btn');
-    btn.disabled = true;
-    btn.textContent = 'Сохранение…';
-
-    var fd = new FormData();
-    TEXT_FIELDS.forEach(function (pair) { fd.append(pair[1], el(pair[0]).value); });
-    // Пустое значение обязательно: по наличию ключа сервер понимает, что
-    // направления вообще присылали, и что пустой список — это очистка
-    if (!directions.length) fd.append('directions', '');
-    directions.forEach(function (name) { fd.append('directions', name); });
-
-    // Незакоммиченный ввод не должен пропадать при сохранении
-    var pending = el('cp-dir-input').value.trim();
-    if (pending && directions.length < MAX_DIRECTIONS) fd.append('directions', pending);
-
-    sendProfile(fd, function (company) {
-      directions = (company.directions || []).slice();
-      renderDirections();
-      el('cp-dir-input').value = '';
-      if (company.is_verified) renderProfileContent(company);
-      flashSettings('Сохранено', 'success');
+  timeline.innerHTML = contests
+    .slice(0, 5)
+    .map((contest) => {
+      const active = contest.status === 'active';
+      return `
+      <div class="cp-tl-row">
+        <span class="cp-tl-icon ${active ? 'is-active' : ''}">${active ? ICONS.trophy : ICONS.draft}</span>
+        <span class="cp-tl-text">Конкурс «${esc(contest.title)}»</span>
+        <span class="cp-tl-time">${esc(formatDateLong(contest.created_at).replace(/ \d{4}$/, ''))}</span>
+      </div>`;
     })
-      .catch(function (err) { flashSettings(err.message, 'error'); })
-      .then(function () {
-        btn.disabled = false;
-        btn.textContent = 'Сохранить';
-      });
+    .join('');
+}
+
+function renderProfileContent(company) {
+  if (!el('cpstat-contests')) return;
+  const { contests, tests } = state;
+  const participants = contests.reduce((sum, contest) => sum + (contest.participants_count || 0), 0);
+
+  setText('cpstat-contests', contests.length);
+  setText('cpstat-tests', tests.length);
+  setText('cpstat-participants', participants);
+  setText('cpstat-rating', formatRating(company.avg_rating));
+  setText('cp-about-text', company.description || 'Описание не добавлено.');
+
+  const tags = [...(company.directions || []), company.company_size].filter(Boolean);
+  el('cp-tag-row').innerHTML = tags.map((tag) => `<span class="cp-tag">${esc(tag)}</span>`).join('');
+
+  setText('sc-contests-sub', contests.length ? countOf(contests.length, WORDS.contests) : 'Нет конкурсов');
+  setText('sc-tests-sub', tests.length ? countOf(tests.length, WORDS.tests) : 'Нет тестов');
+
+  renderTimeline(contests);
+}
+
+function showProfileContent(company) {
+  el('cp-verify-gate').hidden = true;
+  el('cp-profile-content').hidden = false;
+  const editButton = el('cp-edit-btn');
+  if (editButton) editButton.hidden = false;
+  unlockSidebarLinks();
+  renderProfileContent(company);
+}
+
+const VERIFY_STATES = {
+  none: {
+    tone: 'amber',
+    status: 'Профиль не подтверждён',
+    title: 'Подтвердите, что компания реальна',
+    text: 'Загрузите документ, подтверждающий деятельность компании (выписка ЕГРЮЛ, свидетельство о регистрации и т.п.), чтобы открыть создание тестов, конкурсов и другие функции.',
+    upload: true,
+    button: 'Отправить на проверку',
+  },
+  pending: {
+    tone: 'amber',
+    status: 'Документ на проверке',
+    title: 'Документ отправлен на проверку',
+    text: 'Модератор проверит документ и подтвердит компанию. Обычно это занимает до 1–2 рабочих дней. После одобрения откроются создание тестов, конкурсов и другие функции.',
+    upload: false,
+  },
+  rejected: {
+    tone: 'red',
+    status: 'Заявка отклонена',
+    title: 'Документ не прошёл проверку',
+    text: 'Исправьте замечания и загрузите документ повторно.',
+    upload: true,
+    button: 'Отправить повторно',
+  },
+};
+
+function renderVerifyGate(company) {
+  const status = company.verification_status in VERIFY_STATES ? company.verification_status : 'none';
+  const view = VERIFY_STATES[status];
+
+  const badge = el('cp-verify-status');
+  badge.textContent = view.status;
+  badge.dataset.tone = view.tone;
+  const icon = el('cp-verify-icon');
+  icon.dataset.tone = view.tone;
+  icon.innerHTML = ICONS[status];
+  setText('cp-verify-title', view.title);
+  setText('cp-verify-sub', view.text);
+
+  el('cp-verify-reason').innerHTML =
+    status === 'rejected' && company.verification_reason
+      ? `<div class="cp-flash error cp-flash-spaced"><strong>Причина отклонения:</strong> ${esc(company.verification_reason)}</div>`
+      : '';
+  el('cp-verify-upload').hidden = !view.upload;
+  if (view.button) setText('cp-submit-doc-btn', view.button);
+}
+
+function showVerifyGate(company) {
+  el('cp-verify-gate').hidden = false;
+  el('cp-profile-content').hidden = true;
+  const editButton = el('cp-edit-btn');
+  if (editButton) editButton.hidden = true;
+  renderVerifyGate(company);
+}
+
+let chosenFile = null;
+
+function renderChosenFile() {
+  const wrap = el('cp-file-chosen-wrap');
+  if (!wrap) return;
+  el('cp-submit-doc-btn').disabled = !chosenFile;
+  wrap.innerHTML = chosenFile
+    ? `<div class="cp-file-chosen">${ICONS.file}<span>${esc(chosenFile.name)} (${Math.round(chosenFile.size / 1024)} КБ)</span></div>`
+    : '';
+}
+
+function flashVerify(message, type) {
+  const flash = el('cp-verify-flash');
+  if (!flash) return;
+  flash.innerHTML = `<div class="cp-flash ${type}">${esc(message)}</div>`;
+}
+
+async function submitDocument() {
+  if (!chosenFile) return;
+  const button = el('cp-submit-doc-btn');
+  button.disabled = true;
+  button.textContent = 'Отправка…';
+
+  const form = new FormData();
+  form.append('registration_document', chosenFile);
+  try {
+    const { company } = await api.post(`/api/v1/companies/${username}/verification/`, form);
+    state.company = company;
+    chosenFile = null;
+    renderChosenFile();
+    renderSidebar(company);
+    renderHero(company);
+    showVerifyGate(company);
+  } catch (error) {
+    flashVerify(error.message, 'error');
+    button.disabled = false;
+    button.textContent = VERIFY_STATES.none.button;
   }
+}
 
-  function initLogoButtons() {
-    var input = el('cp-logo-input');
-    if (!input) return;
-    el('cp-logo-pick').addEventListener('click', function () { input.click(); });
-    input.addEventListener('change', function () {
-      var file = input.files[0];
-      if (!file) return;
-      var fd = new FormData();
-      fd.append('avatar', file);
-      sendProfile(fd, function () { flashSettings('Логотип обновлён', 'success'); })
-        .catch(function (err) { flashSettings(err.message, 'error'); });
-      input.value = '';
-    });
-    el('cp-logo-remove').addEventListener('click', function () {
-      if (!confirm('Удалить логотип компании?')) return;
-      var fd = new FormData();
-      fd.append('remove_avatar', '1');
-      sendProfile(fd, function () { flashSettings('Логотип удалён', 'success'); })
-        .catch(function (err) { flashSettings(err.message, 'error'); });
-    });
-  }
+function initVerifyDocument() {
+  const input = el('cp-doc-input');
+  if (!input) return;
+  el('cp-doc-pick')?.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => {
+    chosenFile = input.files[0] ?? null;
+    renderChosenFile();
+  });
 
-  function initDirectionsEditor() {
-    var input = el('cp-dir-input');
-    if (!input) return;
-    el('cp-dir-add').addEventListener('click', function () { addDirections(input.value); });
-    input.addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter' && e.key !== ',') return;
-      // Enter внутри формы иначе отправляет её, запятая — попадает в текст
-      e.preventDefault();
-      addDirections(input.value);
-    });
-    el('cp-dir-chips').addEventListener('click', function (e) {
-      var btn = e.target.closest('.chip-x');
-      if (!btn) return;
-      directions.splice(Number(btn.dataset.index), 1);
-      renderDirections();
-    });
-  }
+  const dropzone = el('cp-dropzone');
+  dropzone?.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    dropzone.classList.add('is-dragover');
+  });
+  dropzone?.addEventListener('dragleave', () => dropzone.classList.remove('is-dragover'));
+  dropzone?.addEventListener('drop', (event) => {
+    event.preventDefault();
+    dropzone.classList.remove('is-dragover');
+    chosenFile = event.dataTransfer.files[0] ?? null;
+    renderChosenFile();
+  });
 
-  function initSettingsButtons() {
-    var saveBtn = el('cp-save-settings-btn');
-    var cancelBtn = el('cp-cancel-settings-btn');
-    if (saveBtn) saveBtn.addEventListener('click', saveProfile);
-    if (cancelBtn) cancelBtn.addEventListener('click', function () { fillSettingsForm(); });
-    initLogoButtons();
-    initDirectionsEditor();
-  }
+  el('cp-submit-doc-btn')?.addEventListener('click', submitDocument);
+}
 
-  // ---- Logout ----
-  function initLogout() {
-    var btn = el('cp-logout-btn');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-      apiFetch('/api/v1/auth/signout/', { method: 'POST' })
-        .then(function () { window.location.href = '/'; })
-        .catch(function () { window.location.href = '/'; });
-    });
-  }
+async function sendProfile(form) {
+  const { company } = await api.post(`/api/v1/companies/${username}/profile/`, form);
+  state.company = company;
+  renderSidebar(company);
+  renderHero(company);
+  renderLogoBox(company);
+  return company;
+}
 
-  // ---- Init ----
-  // Активный раздел задаётся сервером (отдельные адреса), а не кликом по вкладке
-  /* page  — какой пункт подсветить в сайдбаре (есть на всех страницах кабинета);
-     panel — какую панель рисовать этим скриптом. У разделов «Тесты» и «Конкурсы»
-     своя разметка и свои скрипты, им от company.js нужны только сайдбар, замки
-     и выход, поэтому они передают panel='none'. Без этого разделения скрипт
-     уходил в профильную ветку и падал на элементах, которых там нет. */
-  var BOOT = window.ALFA_APP_BOOTSTRAP || {};
-  var page = BOOT.page || 'profile';
-  var panel = BOOT.panel || page;
-
-  var OWN_PANELS = ['profile', 'stats', 'settings'];
-
-  function renderPanel(company) {
-    if (panel === 'stats') {
-      renderStatsTab();
-    } else if (panel === 'settings') {
-      fillSettingsForm();
-    } else {
-      renderHero(company);
-      if (company.is_verified) showProfileContent(company);
-      else showVerifyGate(company);
+function initHeroAvatarUpload() {
+  const avatar = el('cp-hero-av');
+  const input = el('cp-avatar-input');
+  if (!avatar || !input) return;
+  avatar.addEventListener('click', () => input.click());
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    input.value = '';
+    if (!file) return;
+    const form = new FormData();
+    form.append('avatar', file);
+    try {
+      await sendProfile(form);
+    } catch (error) {
+      toast(error.message);
     }
+  });
+}
+
+/* Высота столбика — доля от самой активной недели: масштаб у компаний разный */
+function renderActivity(weekly) {
+  const chart = el('cp-activity-chart');
+  if (!chart) return;
+  const peak = Math.max(0, ...weekly.flatMap((week) => [week.submissions || 0, week.attempts || 0]));
+  if (!peak) {
+    chart.innerHTML = '<div class="cp-chart-empty">За последние 12 недель активности не было</div>';
+    return;
+  }
+  const bar = (value, kind, title) =>
+    `<div class="cp-chart-bar ${kind}" style="height:${(value / peak) * 100}%" title="${title}: ${value}"></div>`;
+  chart.innerHTML = weekly
+    .map(
+      (week) => `
+    <div class="cp-chart-col">
+      <div class="cp-chart-bars">
+        ${bar(week.submissions || 0, 'subs', 'Решения')}
+        ${bar(week.attempts || 0, 'att', 'Прохождения')}
+      </div>
+      <div class="cp-chart-label">${esc(formatDateShort(`${week.week}T00:00:00`))}</div>
+    </div>`,
+    )
+    .join('');
+}
+
+function renderSkills(skills) {
+  const section = el('cp-skills-section');
+  if (!section) return;
+  section.hidden = !skills.length;
+  el('cp-skills').innerHTML = skills
+    .map(
+      (skill) => `<span class="cp-skill">${esc(skill.name)}<span class="cp-skill-count">${skill.count}</span></span>`,
+    )
+    .join('');
+}
+
+function renderTotals(totals) {
+  Object.entries({
+    'cpst2-contests': totals.contests,
+    'cpst2-tests': totals.published_tests,
+    'cpst2-participants': totals.participants,
+    'cpst2-submissions': totals.submissions,
+    'cpst2-winners': totals.winners,
+    'cpst2-pending': totals.pending_submissions,
+    'cpst2-attempts': totals.test_attempts,
+  }).forEach(([id, value]) => setText(id, value ?? 0));
+  setText('cpst2-rating', formatRating(totals.avg_rating));
+}
+
+function renderRating(company) {
+  const section = el('cp-stats-rating-section');
+  section.hidden = !company.avg_rating;
+  if (!company.avg_rating) return;
+  setText('cp-rating-score', company.avg_rating.toFixed(1));
+  setText('cp-rating-count', `${countOf(company.rating_count, WORDS.ratings)} от кандидатов`);
+  const distribution = company.rating_dist || {};
+  el('cp-rating-dist').innerHTML = [5, 4, 3, 2, 1]
+    .map((star) => {
+      const percent = distribution[star] || 0;
+      return `
+      <div class="cp-dist-row">
+        <div class="cp-dist-label">${star} ★</div>
+        <div class="cp-dist-track"><div class="cp-dist-fill" style="width:${percent}%"></div></div>
+        <div class="cp-dist-val">${percent}%</div>
+      </div>`;
+    })
+    .join('');
+}
+
+async function renderStatsTab() {
+  renderRating(state.company);
+  // Сводку считает сервер: числа должны совпадать с PDF-отчётом
+  try {
+    const data = await api.get(`/api/v1/companies/${username}/statistics/`);
+    renderTotals(data.totals ?? {});
+    renderActivity(data.weekly ?? []);
+    renderSkills(data.skills ?? []);
+  } catch {
+    const chart = el('cp-activity-chart');
+    if (chart) chart.innerHTML = '<div class="cp-chart-empty">Не удалось загрузить статистику</div>';
+  }
+}
+
+// Столько же направлений принимает сервер (companies/forms.py)
+const MAX_DIRECTIONS = 10;
+let directions = [];
+
+const TEXT_FIELDS = {
+  'cp-f-name': 'name',
+  'cp-f-desc': 'description',
+  'cp-f-email': 'contact_email',
+  'cp-f-phone': 'phone',
+  'cp-f-website': 'website',
+  'cp-f-city': 'city',
+  'cp-f-address': 'address',
+  'cp-f-industry': 'industry',
+  'cp-f-size': 'company_size',
+};
+
+function renderLogoBox(company) {
+  const preview = el('pic-preview');
+  if (!preview) return;
+  setAvatar(preview, company);
+  el('cp-logo-remove').hidden = !company.avatar_url;
+}
+
+function renderDirections() {
+  const box = el('cp-dir-chips');
+  if (!box) return;
+  box.innerHTML = directions
+    .map(
+      (name, index) => `
+    <span class="chip-tag">${esc(name)}<button type="button" class="chip-x" data-index="${index}"
+      title="Убрать" aria-label="Убрать направление ${esc(name)}">×</button></span>`,
+    )
+    .join('');
+
+  const full = directions.length >= MAX_DIRECTIONS;
+  el('cp-dir-input').disabled = full;
+  el('cp-dir-add').disabled = full;
+  setText(
+    'cp-dir-count',
+    full ? `— больше ${MAX_DIRECTIONS} не поместится` : `— ${directions.length} из ${MAX_DIRECTIONS}`,
+  );
+}
+
+function addDirections(raw) {
+  // Строку из другого места обычно вставляют целиком, через запятую
+  for (const part of raw.split(',')) {
+    const name = part.trim().replace(/\s+/g, ' ').slice(0, 60);
+    if (!name || directions.length >= MAX_DIRECTIONS) continue;
+    if (!directions.some((existing) => existing.toLowerCase() === name.toLowerCase())) directions.push(name);
+  }
+  el('cp-dir-input').value = '';
+  renderDirections();
+}
+
+function flashSettings(message, type) {
+  el('cp-settings-flash').innerHTML = `<div class="cp-flash ${type}">${esc(message)}</div>`;
+}
+
+function fillSettingsForm() {
+  const company = state.company;
+  if (!company || !el('cp-f-name')) return;
+  Object.entries(TEXT_FIELDS).forEach(([id, field]) => {
+    el(id).value = company[field] || '';
+  });
+  directions = [...(company.directions || [])];
+  renderDirections();
+  renderLogoBox(company);
+  el('cp-settings-flash').innerHTML = '';
+}
+
+async function saveSettings() {
+  const button = el('cp-save-settings-btn');
+  button.disabled = true;
+  button.textContent = 'Сохранение…';
+
+  const form = new FormData();
+  Object.entries(TEXT_FIELDS).forEach(([id, field]) => form.append(field, el(id).value));
+  // Незакоммиченный ввод не должен пропадать при сохранении
+  const pending = el('cp-dir-input').value.trim();
+  const toSend = pending && directions.length < MAX_DIRECTIONS ? [...directions, pending] : directions;
+  // Пустое значение обязательно: по наличию ключа сервер понимает, что пустой список — это очистка
+  if (!toSend.length) form.append('directions', '');
+  toSend.forEach((name) => form.append('directions', name));
+
+  try {
+    const company = await sendProfile(form);
+    directions = [...(company.directions || [])];
+    renderDirections();
+    el('cp-dir-input').value = '';
+    flashSettings('Сохранено', 'success');
+  } catch (error) {
+    flashSettings(error.message, 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Сохранить';
+  }
+}
+
+async function updateLogo(form, successMessage) {
+  try {
+    await sendProfile(form);
+    flashSettings(successMessage, 'success');
+  } catch (error) {
+    flashSettings(error.message, 'error');
+  }
+}
+
+function initSettings() {
+  const saveButton = el('cp-save-settings-btn');
+  if (!saveButton) return;
+  saveButton.addEventListener('click', saveSettings);
+  el('cp-cancel-settings-btn')?.addEventListener('click', fillSettingsForm);
+
+  const logoInput = el('cp-logo-input');
+  el('cp-logo-pick').addEventListener('click', () => logoInput.click());
+  logoInput.addEventListener('change', () => {
+    const file = logoInput.files[0];
+    logoInput.value = '';
+    if (!file) return;
+    const form = new FormData();
+    form.append('avatar', file);
+    updateLogo(form, 'Логотип обновлён');
+  });
+  el('cp-logo-remove').addEventListener('click', async () => {
+    if (!(await confirmDialog({ title: 'Удалить логотип компании?', confirmLabel: 'Удалить' }))) return;
+    const form = new FormData();
+    form.append('remove_avatar', '1');
+    updateLogo(form, 'Логотип удалён');
+  });
+
+  const directionInput = el('cp-dir-input');
+  el('cp-dir-add').addEventListener('click', () => addDirections(directionInput.value));
+  directionInput.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ',') return;
+    // Enter внутри формы иначе отправляет её, запятая — попадает в текст
+    event.preventDefault();
+    addDirections(directionInput.value);
+  });
+  el('cp-dir-chips').addEventListener('click', (event) => {
+    const button = event.target.closest('.chip-x');
+    if (!button) return;
+    directions.splice(Number(button.dataset.index), 1);
+    renderDirections();
+  });
+}
+
+el('cp-logout-btn')?.addEventListener('click', async () => {
+  // Уходим на главную в любом случае: без сессии кабинет всё равно не откроется
+  await api.post('/api/v1/auth/signout/').catch(() => null);
+  location.href = '/';
+});
+
+function renderPanel(company) {
+  if (panel === 'stats') renderStatsTab();
+  else if (panel === 'settings') fillSettingsForm();
+  else {
+    renderHero(company);
+    if (company.is_verified) showProfileContent(company);
+    else showVerifyGate(company);
+  }
+}
+
+async function init() {
+  const ownsPanel = OWN_PANELS.includes(panel);
+  if (ownsPanel) {
+    initVerifyDocument();
+    initHeroAvatarUpload();
+    initSettings();
   }
 
-  function init() {
-    // Оболочка кабинета — нужна на каждой странице
-    initLogout();
+  // Списки конкурсов и тестов нужны только профилю: у остальных разделов свои запросы
+  const needsLists = panel === 'profile';
+  const optional = (url, fallback) => (needsLists ? api.get(url).catch(() => fallback) : fallback);
+  try {
+    const [companyData, contestsData, testsData] = await Promise.all([
+      api.get(`/api/v1/companies/${username}/`),
+      optional('/api/v1/contests/company/', { contests: [] }),
+      optional(`/api/v1/companies/${username}/tests/`, { tests: [] }),
+    ]);
+    state.company = companyData.company;
+    state.contests = contestsData.contests ?? [];
+    state.tests = testsData.tests ?? [];
 
-    var ownsPanel = OWN_PANELS.indexOf(panel) !== -1;
-    if (ownsPanel) {
-      initVerifyDoc();
-      initAvatarUpload();
-      initSettingsButtons();
-    }
-
-    var companyFetch = apiFetch('/api/v1/companies/' + username + '/');
-    // Списки конкурсов и тестов нужны только профилю: на остальных страницах
-    // это были бы дубли запросов, которые уже делают их собственные скрипты
-    var needsLists = panel === 'profile';
-    var contestsFetch = needsLists
-      ? apiFetch('/api/v1/contests/company/').catch(function () { return { contests: [] }; })
-      : Promise.resolve({ contests: [] });
-    var testsFetch = needsLists
-      ? apiFetch('/api/v1/companies/' + username + '/tests/').catch(function () { return { tests: [] }; })
-      : Promise.resolve({ tests: [] });
-
-    Promise.all([companyFetch, contestsFetch, testsFetch])
-      .then(function (results) {
-        state.company = results[0].company;
-        state.contests = results[1].contests || [];
-        state.tests = results[2].tests || [];
-
-        var company = state.company;
-        renderSidebar(company);
-        // Разблокируем «Тесты»/«Конкурсы» на любой странице кабинета, если компания подтверждена
-        if (company.is_verified) unlockSidebarLinks();
-
-        if (ownsPanel) renderPanel(company);
-      })
-      .catch(function (err) {
-        var sub = el('cp-page-sub');
-        if (sub) sub.textContent = 'Ошибка загрузки: ' + err.message;
-      });
+    renderSidebar(state.company);
+    if (state.company.is_verified) unlockSidebarLinks();
+    if (ownsPanel) renderPanel(state.company);
+  } catch (error) {
+    setText('cp-page-sub', `Ошибка загрузки: ${error.message}`);
   }
+}
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
+init();

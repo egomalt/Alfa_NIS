@@ -42,8 +42,6 @@ class BaseCase(TestCase):
             self.assertEqual(response.status_code, 200, f'не удалось войти как {username}')
         return client
 
-    # ── фабрики контента ────────────────────────────────────────────────
-
     def make_article(self, author='kandidat', published=True, **kwargs):
         kwargs.setdefault('title', 'Статья')
         return Article.objects.create(

@@ -35,7 +35,7 @@ TOP_TESTS = 10
 def _week_label(iso):
     """Понедельник недели как «08.09» — подпись под столбиком."""
     day = date.fromisoformat(iso)
-    return '%02d.%02d' % (day.day, day.month)
+    return f'{day.day:02d}.{day.month:02d}'
 
 
 def contest_rows(username, limit=TOP_CONTESTS):
@@ -78,7 +78,7 @@ def _shown_of(total, limit):
     """Приписка под таблицей, если в отчёт попали не все записи."""
     if total <= limit:
         return None
-    return 'Показаны %d из %d — полный список в кабинете.' % (limit, total)
+    return f'Показаны {limit} из {total} — полный список в кабинете.'
 
 
 def _activity(r, weekly):
@@ -89,10 +89,9 @@ def _activity(r, weekly):
         r.section('Активность за 12 недель')
         r.empty_note('За последние 12 недель активности не было.')
         return
-    total = 'Всего за период: %d %s и %d %s.' % (
-        sum(subs), plural(sum(subs), ('решение', 'решения', 'решений')),
-        sum(atts), plural(sum(atts), ('прохождение', 'прохождения', 'прохождений')),
-    )
+    sub_total, att_total = sum(subs), sum(atts)
+    total = (f"Всего за период: {sub_total} {plural(sub_total, ('решение', 'решения', 'решений'))} "
+             f"и {att_total} {plural(att_total, ('прохождение', 'прохождения', 'прохождений'))}.")
     r.columns(
         [_week_label(w['week']) for w in weekly],
         [('решения на конкурсы', BRAND, subs), ('прохождения тестов', AMBER, atts)],
@@ -119,11 +118,11 @@ def _rating(r, totals, dist):
         return
     count = totals['rating_count']
     r.bars(
-        [('%d ★' % star, '%d%%' % dist.get(star, 0), dist.get(star, 0) / 100)
+        [(f'{star} ★', f'{dist.get(star, 0)}%', dist.get(star, 0) / 100)
          for star in (5, 4, 3, 2, 1)],
         title='Рейтинг компании',
-        note='%.1f из 5 — средняя оценка по %d %s кандидатов.' % (
-            totals['avg_rating'], count, plural(count, ('отзыву', 'отзывам', 'отзывам'))),
+        note=(f"{totals['avg_rating']:.1f} из 5 — средняя оценка по {count} "
+              f"{plural(count, ('отзыву', 'отзывам', 'отзывам'))} кандидатов."),
         label_w=40,
     )
 
@@ -132,17 +131,17 @@ def build_company_pdf(company):
     data = statistics.collect(company)
     totals = data['totals']
     avg = totals['avg_rating']
-    rating_str = ('%.1f ★' % avg) if avg is not None else '—'
+    rating_str = (f'{avg:.1f} ★') if avg is not None else '—'
 
     r = ReportBuilder('Статистика компании', company.name or company.username)
-    r.note('@%s · отчёт за всё время работы на платформе' % company.username)
+    r.note(f'@{company.username} · отчёт за всё время работы на платформе')
     r.spacer(6)
 
     r.kpi([
         (totals['contests'], 'Конкурсов создано'),
         (totals['published_tests'], 'Тестов опубликовано'),
         (totals['participants'], 'Участников привлечено'),
-        (rating_str, 'Оценка (%d отз.)' % totals['rating_count']),
+        (rating_str, f"Оценка ({totals['rating_count']} отз.)"),
     ])
     r.kpi([
         (totals['submissions'], 'Решений прислано'),
@@ -159,7 +158,7 @@ def build_company_pdf(company):
     contests = contest_rows(company.username)
     if contests:
         rows = [[
-            c.title or ('Конкурс #%d' % c.id),
+            c.title or f'Конкурс #{c.id}',
             c.category or '—',
             CONTEST_STATUS.get(c.status, c.status),
             c.participants_count or 0,
@@ -178,10 +177,10 @@ def build_company_pdf(company):
     tests = test_rows(company.username)
     if tests:
         rows = [[
-            t.title or ('Тест #%d' % t.id),
+            t.title or f'Тест #{t.id}',
             TEST_STATUS.get(t.status, t.status),
             attempts.count_for(t),
-            '%d%%' % round(t.avg_percent) if t.avg_percent is not None else '—',
+            f'{round(t.avg_percent)}%' if t.avg_percent is not None else '—',
             fmt_date(t.created_at),
         ] for t in tests]
         r.table(['Название', 'Статус', 'Прохождения', 'Средний результат', 'Создан'], rows,
@@ -196,4 +195,4 @@ def build_company_pdf(company):
 
 
 def company_filename(company):
-    return 'career-company-%s.pdf' % company.username
+    return f'career-company-{company.username}.pdf'

@@ -1,106 +1,118 @@
-/* Раздел «Пользователи»: бан и разбан. */
-(function () {
-  'use strict';
-  var A = window.AdminPanel;
-  var filter = 'all';
-  var query = '';
+/* Раздел «Пользователи»: поиск, бан и разбан. */
+import { api, byId as el, esc, formatDate, toast } from 'alfa/core';
+import { renderPager } from 'alfa/pager';
+import { emptyState, fail, latestOnly, openReasonModal, pill, registerSection, reloadOverview } from 'alfa/admin';
 
-  /* Коротко: слово «Забанен» дублирует и цвет плашки, и колонку «Статус» */
-  function banLabel(u) {
-    if (u.status !== 'banned') return null;
-    return u.ban_until ? 'Бан до ' + A.fmtDate(u.ban_until) : 'Бан навсегда';
+const SEARCH_DELAY_MS = 300;
+
+let filter = 'all';
+let query = '';
+let page = 1;
+const latest = latestOnly();
+
+// Коротко: слово «Забанен» дублирует и цвет плашки, и колонку «Статус»
+const banLabel = (user) => {
+  if (user.status !== 'banned') return null;
+  return user.ban_until ? `Бан до ${formatDate(user.ban_until)}` : 'Бан навсегда';
+};
+
+function actionsHtml(user) {
+  if (user.role === 'moderator') return '<span class="ap-u-meta">—</span>';
+  if (user.status === 'banned') {
+    return `<button class="ap-btn-mini" data-act="unban" data-user="${esc(user.username)}" data-name="${esc(user.name)}">Разбанить</button>`;
   }
+  return `<button class="ap-btn-mini ap-danger" data-act="ban" data-user="${esc(user.username)}" data-name="${esc(user.name)}">Бан</button>`;
+}
 
-  function rowHtml(u) {
-    var label = banLabel(u);
-    var statusHtml = A.pill(u.status, label);
-    var actions;
-    if (u.role === 'moderator') {
-      actions = '<span class="ap-u-meta">—</span>';
-    } else if (u.status === 'banned') {
-      actions = '<button class="ap-btn-mini" data-act="unban" data-user="' + A.esc(u.username) + '">Разбанить</button>';
-    } else {
-      actions = '<button class="ap-btn-mini ap-danger" data-act="ban" data-user="' + A.esc(u.username) + '" data-name="' + A.esc(u.name) + '">Бан</button>';
-    }
-    return '<div class="ap-trow ap-body">'
-      + '<div style="display:flex;align-items:center;gap:10px;"><span class="ap-company-avatar" style="width:30px;height:30px;font-size:13px;">' + A.esc(u.letter) + '</span><div class="ap-u-name">' + A.esc(u.name) + '</div></div>'
-      + '<div class="ap-u-meta">' + A.esc(u.role_label) + '</div>'
-      + '<div class="ap-u-meta">' + A.esc(A.fmtDate(u.joined_at)) + '</div>'
-      + '<div>' + statusHtml + '</div>'
-      + '<div class="ap-row-actions">' + actions + '</div>'
-      + '</div>';
-  }
+const rowHtml = (user) => `
+  <div class="ap-trow ap-body">
+    <div class="ap-u-cell">
+      <span class="ap-company-avatar is-small">${esc(user.letter)}</span>
+      <div class="ap-u-name">${esc(user.name)}</div>
+    </div>
+    <div class="ap-u-meta">${esc(user.role_label)}</div>
+    <div class="ap-u-meta">${esc(formatDate(user.joined_at))}</div>
+    <div>${pill(user.status, banLabel(user))}</div>
+    <div class="ap-row-actions">${actionsHtml(user)}</div>
+  </div>`;
 
-  function render(list, total) {
-    var countEl = A.el('ap-u-count');
-    if (countEl) countEl.textContent = (typeof total === 'number' ? total : list.length);
-    var wrap = A.el('ap-users-table');
-    if (!list.length) {
-      wrap.innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Никого не найдено</div><div class="ap-empty-sub">Измените фильтр или запрос</div></div>';
-      return;
-    }
-    var head = '<div class="ap-trow ap-thead"><span>Пользователь</span><span>Роль</span><span>С нами</span><span>Статус</span><span></span></div>';
-    wrap.innerHTML = head + list.map(rowHtml).join('');
-  }
+const HEAD =
+  '<div class="ap-trow ap-thead"><span>Пользователь</span><span>Роль</span><span>С нами</span><span>Статус</span><span></span></div>';
 
-  var page = 1;
-
-  function load() {
-    var url = '/api/v1/admin/users/?filter=' + encodeURIComponent(filter) + '&page=' + page;
-    if (query) url += '&q=' + encodeURIComponent(query);
-    A.apiGet(url)
-      .then(function (d) {
-        render(d.users || [], d.total);
-        window.AlfaPager.render(A.el('ap-users-pager'), d, function (next) { page = next; load(); });
-      })
-      .catch(function (e) {
-        A.el('ap-users-table').innerHTML = '<div class="ap-empty"><div class="ap-empty-title">Ошибка</div><div class="ap-empty-sub">' + A.esc(e.message) + '</div></div>';
-      });
-  }
-
-  function afterAction() {
-    load();
-    A.reloadOverview();
-  }
-
-  function init() {
-    A.el('ap-users-filters').addEventListener('click', function (e) {
-      var btn = e.target.closest('[data-uf]');
-      if (!btn) return;
-      filter = btn.dataset.uf;
-      page = 1;
-      this.querySelectorAll('[data-uf]').forEach(function (b) { b.classList.toggle('active', b.dataset.uf === filter); });
+async function load() {
+  const params = new URLSearchParams({ filter, page });
+  if (query) params.set('q', query);
+  try {
+    const data = await latest(api.get(`/api/v1/admin/users/?${params}`));
+    const users = data.users ?? [];
+    el('ap-u-count').textContent = data.total ?? users.length;
+    el('ap-users-table').innerHTML = users.length
+      ? HEAD + users.map(rowHtml).join('')
+      : emptyState('Никого не найдено', 'Измените фильтр или запрос');
+    renderPager(el('ap-users-pager'), data, (next) => {
+      page = next;
       load();
     });
-
-    var search = A.el('ap-user-search');
-    if (search) {
-      search.addEventListener('input', function () { query = this.value; page = 1; load(); });
-    }
-
-    A.el('ap-users-table').addEventListener('click', function (e) {
-      var t = e.target.closest('[data-act]');
-      if (!t) return;
-      var act = t.dataset.act;
-      var username = t.dataset.user;
-      var name = t.dataset.name || username;
-      if (act === 'unban') {
-        A.apiPost('/api/v1/admin/users/' + username + '/unban/', {})
-          .then(function () { A.notify('Блокировка с ' + name + ' снята.', 'ok'); afterAction(); })
-          .catch(A.fail);
-      } else if (act === 'ban') {
-        A.openReasonModal('Причина и срок бана — ' + name, function (reason, duration) {
-          A.apiPost('/api/v1/admin/users/' + username + '/ban/', { reason: reason, duration: duration })
-            .then(function (d) {
-              var extra = d.contests_removed ? ' Удалено конкурсов: ' + d.contests_removed + '.' : '';
-              A.notify(name + ' заблокирован.' + extra, 'ok');
-              afterAction();
-            })
-            .catch(A.fail);
-        }, true);
-      }
-    });
+  } catch (error) {
+    if (!error.stale) el('ap-users-table').innerHTML = emptyState('Ошибка', error.message);
   }
+}
 
-  A.registerSection('users', { init: init, load: load });
-})();
+async function act(url, payload, message) {
+  try {
+    const data = await api.post(url, payload);
+    toast(typeof message === 'function' ? message(data) : message, 'ok');
+    load();
+    reloadOverview();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+function init() {
+  el('ap-users-filters').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-uf]');
+    if (!button) return;
+    filter = button.dataset.uf;
+    page = 1;
+    event.currentTarget
+      .querySelectorAll('[data-uf]')
+      .forEach((item) => item.classList.toggle('active', item.dataset.uf === filter));
+    load();
+  });
+
+  // Запрос уходит, когда человек перестал печатать, а не на каждую букву
+  let searchTimer;
+  el('ap-user-search')?.addEventListener('input', (event) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      query = event.target.value.trim();
+      page = 1;
+      load();
+    }, SEARCH_DELAY_MS);
+  });
+
+  el('ap-users-table').addEventListener('click', (event) => {
+    const target = event.target.closest('[data-act]');
+    if (!target) return;
+    const { user } = target.dataset;
+    const name = target.dataset.name || user;
+    if (target.dataset.act === 'unban') {
+      act(`/api/v1/admin/users/${user}/unban/`, {}, `Блокировка с ${name} снята.`);
+    } else {
+      openReasonModal(
+        `Причина и срок бана — ${name}`,
+        (reason, duration) =>
+          act(
+            `/api/v1/admin/users/${user}/ban/`,
+            { reason, duration },
+            (data) =>
+              `${name} заблокирован.${data.contests_removed ? ` Удалено конкурсов: ${data.contests_removed}.` : ''}`,
+          ),
+        { needsDuration: true },
+      );
+    }
+  });
+}
+
+registerSection('users', { init, load });

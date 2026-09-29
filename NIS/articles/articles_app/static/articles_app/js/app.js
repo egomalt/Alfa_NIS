@@ -1,69 +1,73 @@
-// Progress bar
-window.addEventListener('scroll', () => {
-  const doc = document.documentElement;
-  const scrolled = doc.scrollTop || document.body.scrollTop;
-  const total = doc.scrollHeight - doc.clientHeight;
-  document.getElementById('progress-fill').style.width = (total > 0 ? (scrolled / total) * 100 : 0) + '%';
-  updateTOC();
-}, { passive: true });
+/* Страница чтения статьи: прогресс чтения, оглавление, голосование, ссылка. */
+import { api, byId, esc, pageData } from 'alfa/core';
 
-// Auto-build TOC from headings
-(function buildTOC() {
-  const headings = [...document.querySelectorAll('#article-content h2, #article-content h3')]
-    .filter(h => h.textContent.trim());
-  if (!headings.length) return;
-  const toc = document.getElementById('toc');
-  headings.forEach((h, i) => {
-    if (!h.id) h.id = 'toc-h' + i;
-    const item = document.createElement('a');
-    item.className = 'toc-item' + (h.tagName === 'H3' ? ' h3' : '');
-    item.href = '#' + h.id;
-    item.innerHTML = `<span class="toc-num">${String(i + 1).padStart(2, '0')}</span><span class="toc-text">${h.textContent.trim()}</span>`;
-    toc.appendChild(item);
-  });
-  document.getElementById('toc-card').style.display = '';
-})();
+const { articleId, isLoggedIn } = pageData();
+const CHECK_ICON =
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>';
 
-function updateTOC() {
-  const items = document.querySelectorAll('#article-content h2[id], #article-content h3[id]');
-  let active = null;
-  items.forEach(h => {
-    if (h.getBoundingClientRect().top <= 120) active = h.id;
-  });
-  document.querySelectorAll('.toc-item').forEach(item => {
-    item.classList.toggle('active', item.getAttribute('href') === '#' + active);
-  });
+const headings = [...document.querySelectorAll('#article-content h2, #article-content h3')].filter((heading) =>
+  heading.textContent.trim(),
+);
+
+headings.forEach((heading, index) => {
+  heading.id ||= `toc-h${index}`;
+  const item = document.createElement('a');
+  item.className = `toc-item${heading.tagName === 'H3' ? ' h3' : ''}`;
+  item.href = `#${heading.id}`;
+  item.innerHTML = `<span class="toc-num">${String(index + 1).padStart(2, '0')}</span><span class="toc-text">${esc(heading.textContent.trim())}</span>`;
+  byId('toc').append(item);
+});
+byId('toc-card').hidden = !headings.length;
+
+function highlightCurrentHeading() {
+  const current = headings.findLast((heading) => heading.getBoundingClientRect().top <= 120);
+  document
+    .querySelectorAll('.toc-item')
+    .forEach((item) => item.classList.toggle('active', item.hash === `#${current?.id}`));
 }
 
-async function vote(dir) {
-  if (!IS_LOGGED_IN) {
-    location.href = '/authorization/signin/?next=' + encodeURIComponent(location.pathname);
-    return;
-  }
-  const direction = dir === 'up' ? 1 : -1;
-  try {
-    const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-    const res = await fetch(`/api/v1/articles/${ARTICLE_ID}/vote/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-      body: JSON.stringify({ direction }),
-    });
-    const data = await res.json();
-    if (!data.ok) return;
-    userVote = data.user_vote;
-    const counter = document.getElementById('vote-count');
-    counter.textContent = data.score;
-    counter.className = 'vote-count' + (userVote === 1 ? ' up' : userVote === -1 ? ' down' : '');
-    document.getElementById('btn-up').classList.toggle('active', userVote === 1);
-    document.getElementById('btn-down').classList.toggle('active', userVote === -1);
-  } catch (e) { /* ignore */ }
-}
+addEventListener(
+  'scroll',
+  () => {
+    const doc = document.documentElement;
+    const total = doc.scrollHeight - doc.clientHeight;
+    byId('progress-fill').style.width = `${total > 0 ? (doc.scrollTop / total) * 100 : 0}%`;
+    highlightCurrentHeading();
+  },
+  { passive: true },
+);
 
-function copyLink() {
-  navigator.clipboard.writeText(location.href).catch(() => {});
-  const btn = document.getElementById('btn-share-top');
-  const orig = btn.innerHTML;
-  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Скопировано';
-  btn.style.cssText = 'border-color:var(--green-text);color:var(--green-text);background:var(--green-soft);';
-  setTimeout(() => { btn.innerHTML = orig; btn.style.cssText = ''; }, 1800);
-}
+document.querySelectorAll('[data-vote]').forEach((button) =>
+  button.addEventListener('click', async () => {
+    if (!isLoggedIn) {
+      location.href = `/authorization/signin/?next=${encodeURIComponent(location.pathname)}`;
+      return;
+    }
+    try {
+      const { score, user_vote: vote } = await api.post(`/api/v1/articles/${articleId}/vote/`, {
+        direction: Number(button.dataset.vote),
+      });
+      const counter = byId('vote-count');
+      counter.textContent = score;
+      counter.classList.toggle('up', vote === 1);
+      counter.classList.toggle('down', vote === -1);
+      byId('btn-up').classList.toggle('active', vote === 1);
+      byId('btn-down').classList.toggle('active', vote === -1);
+    } catch {
+      // Голос не записался — счётчик остаётся прежним
+    }
+  }),
+);
+
+byId('btn-share-top').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  if (button.classList.contains('is-copied')) return;
+  await navigator.clipboard?.writeText(location.href).catch(() => null);
+  const original = button.innerHTML;
+  button.innerHTML = `${CHECK_ICON} Скопировано`;
+  button.classList.add('is-copied');
+  setTimeout(() => {
+    button.innerHTML = original;
+    button.classList.remove('is-copied');
+  }, 1800);
+});

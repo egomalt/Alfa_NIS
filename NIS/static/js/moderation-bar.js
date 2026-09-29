@@ -1,327 +1,255 @@
 /* Плашка модератора на публичных страницах.
-   Страница объявляет цель через window.ALFA_MOD_TARGET:
-     { type:'article', id, author, title }
-     { type:'contest', id }                     // автора/заголовок добираем из API
-     { type:'test', id, author, title }         // страница прохождения теста
-     { type:'user', username }                  // профиль кандидата
-     { type:'company', username }               // профиль компании
-   Панель и действия показываются только аккаунту с ролью moderator. */
-(function () {
-  'use strict';
+   Страница объявляет цель в данных страницы ({% page_data %}):
+     modType='article', modId, modAuthor, modTitle
+     modType='contest', modId                    — автора и заголовок добираем из API
+     modType='test', modId, modAuthor, modTitle  — страница прохождения теста
+     modType='user' | 'company', modUsername     — профиль
+   Панель и действия видит только аккаунт с ролью moderator. */
+import { api, esc, pageData } from 'alfa/core';
 
-  var target = window.ALFA_MOD_TARGET;
-  if (!target || !target.type) return;
+const { modType: type, modId: id, modAuthor, modTitle, modUsername } = pageData();
 
-  var CSRF = (function () {
-    var m = document.cookie.match(/csrftoken=([^;]+)/);
-    if (m) return m[1];
-    var meta = document.querySelector('meta[name="csrf-token"]');
-    return meta ? meta.content : '';
-  })();
+const ROLE_LABEL = { user: 'Кандидат', company: 'Компания', moderator: 'Модератор' };
+const TARGET_LABEL = { article: 'Статья', contest: 'Конкурс', test: 'Тест', user: 'Кандидат', company: 'Компания' };
+const MATERIAL = {
+  article: { noun: 'статью', button: 'Удалить статью', after: '/articles/' },
+  contest: { noun: 'конкурс', button: 'Удалить конкурс', after: '/contests/' },
+  test: { noun: 'тест', button: 'Удалить тест', after: '/tests/' },
+};
+const CLOSE_ICON =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+async function resolveTarget() {
+  if (type === 'article') return { author: modAuthor, title: modTitle || 'статья' };
+  if (type === 'test') return { author: modAuthor, title: modTitle || 'тест' };
+  if (type === 'contest') {
+    const { contest = {} } = await api.get(`/api/v1/contests/${id}/`);
+    return { author: contest.company_username, title: contest.title || 'конкурс' };
   }
-  function jget(url) { return fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }); }
-  function jpost(url, body) {
-    return fetch(url, {
-      method: 'POST', credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify(body || {}),
-    }).then(function (r) { return r.json().then(function (d) { if (!d.ok) throw new Error(d.message || 'Ошибка'); return d; }); });
-  }
+  // Профиль человека или компании: автор — он сам
+  return { author: modUsername, title: '' };
+}
 
-  var ROLE_LABEL = { user: 'Кандидат', company: 'Компания', moderator: 'Модератор' };
+function closeModal() {
+  document.querySelector('.mb-overlay')?.remove();
+}
 
-  // Проверяем роль и только потом что-то рисуем
-  jget('/api/v1/auth/me/').then(function (me) {
-    var acc = me && me.account;
-    if (!acc || acc.role !== 'moderator') return;
-    injectStyles();
-    resolveTarget().then(buildBar).catch(function () { buildBar({}); });
-  }).catch(function () {});
+function openModal(html) {
+  closeModal();
+  const overlay = document.createElement('div');
+  overlay.className = 'mb-overlay';
+  overlay.innerHTML = `<div class="mb-modal">${html}</div>`;
+  document.body.append(overlay);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay || event.target.hasAttribute('data-close')) closeModal();
+  });
+  return overlay.querySelector('.mb-modal');
+}
 
-  // ── Данные цели ──────────────────────────────────────────────
-  function resolveTarget() {
-    if (target.type === 'article') {
-      return Promise.resolve({ author: target.author, authorRole: 'user', title: target.title || 'статья' });
+function flash(modal, message, ok = false) {
+  const box = modal.querySelector('.mb-flash');
+  box.textContent = message;
+  box.classList.toggle('is-ok', ok);
+}
+
+/* Поля блокировки общие для двух модалок: причина, срок и «навсегда» */
+const BAN_FIELDS = `
+  <textarea class="mb-textarea" data-ban-reason placeholder="Причина (увидит пользователь)"></textarea>
+  <div class="mb-row">
+    <input type="number" class="mb-num" data-ban-days min="1" value="7"> дней
+    <button class="mb-btn mb-mini" data-ban-perm type="button">Навсегда</button>
+    <span class="mb-grow"></span>
+    <button class="mb-btn mb-danger" data-ban-submit>Заблокировать</button>
+  </div>`;
+
+function setupBanFields(modal, username, onBanned) {
+  let permanent = false;
+  const days = modal.querySelector('[data-ban-days]');
+  modal.querySelector('[data-ban-perm]').addEventListener('click', (event) => {
+    permanent = !permanent;
+    event.currentTarget.classList.toggle('mb-active', permanent);
+    days.disabled = permanent;
+  });
+  modal.querySelector('[data-ban-submit]').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      await api.post(`/api/v1/admin/users/${username}/ban/`, {
+        reason: modal.querySelector('[data-ban-reason]').value.trim(),
+        duration: permanent ? 'perm' : days.value || '7',
+      });
+      onBanned();
+    } catch (error) {
+      flash(modal, error.message);
+      button.disabled = false;
     }
-    if (target.type === 'test') {
-      return Promise.resolve({ author: target.author, authorRole: null, title: target.title || 'тест' });
+  });
+}
+
+function confirmDeleteMaterial(context) {
+  const { noun, after } = MATERIAL[type];
+  const modal = openModal(`
+    <div class="mb-modal-title">Удалить ${noun}?</div>
+    <div class="mb-modal-text">Материал «${esc(context.title)}» будет удалён безвозвратно.${context.author ? ` Автор: <b>@${esc(context.author)}</b>.` : ''}</div>
+    <label class="mb-check"><input type="checkbox" data-also-ban> Также заблокировать автора</label>
+    <div class="mb-flash"></div>
+    <div class="mb-actions">
+      <button class="mb-btn" data-close>Отмена</button>
+      <button class="mb-btn mb-danger" data-delete>Удалить</button>
+      ${context.author ? '<button class="mb-btn" data-open-author>Другие действия</button>' : ''}
+    </div>`);
+
+  modal.querySelector('[data-open-author]')?.addEventListener('click', () => openAuthorActions(context.author));
+  modal.querySelector('[data-delete]').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    const alsoBan = modal.querySelector('[data-also-ban]').checked;
+    button.disabled = true;
+    button.textContent = 'Удаление…';
+    try {
+      await api.post(`/api/v1/admin/content/${type}/${id}/delete/`, {});
+    } catch (error) {
+      flash(modal, error.message);
+      button.disabled = false;
+      button.textContent = 'Удалить';
+      return;
     }
-    if (target.type === 'contest') {
-      return jget('/api/v1/contests/' + target.id + '/').then(function (d) {
-        var c = (d && (d.contest || d)) || {};
-        return { author: c.company_username, authorRole: 'company', title: c.title || 'конкурс' };
-      });
+    const leave = () => {
+      location.href = after;
+    };
+    // После удаления материала — сразу форма блокировки автора
+    if (alsoBan && context.author) openBanModal(context.author, leave);
+    else leave();
+  });
+}
+
+function openBanModal(username, onDone) {
+  const modal = openModal(`
+    <div class="mb-modal-title">Заблокировать @${esc(username)}</div>
+    ${BAN_FIELDS}
+    <div class="mb-flash"></div>
+    <div class="mb-actions"><button class="mb-btn" data-close>Пропустить</button></div>`);
+  modal.querySelector('[data-close]').addEventListener('click', onDone);
+  setupBanFields(modal, username, onDone);
+}
+
+async function openAuthorActions(username) {
+  if (!username) return;
+  let data;
+  try {
+    data = await api.get(`/api/v1/admin/users/${username}/content/`);
+  } catch {
+    openModal(`
+      <div class="mb-modal-title">Не удалось открыть</div>
+      <div class="mb-modal-text">Данные автора не загрузились. Обновите страницу и попробуйте ещё раз.</div>
+      <div class="mb-actions"><button class="mb-btn" data-close>Закрыть</button></div>`);
+    return;
+  }
+
+  const counts = data.counts ?? {};
+  const user = data.user ?? { username, name: username, role: null };
+  const categories = [
+    ['articles', 'Статьи', counts.articles || 0],
+    ['contests', 'Конкурсы', counts.contests || 0],
+    ['tests', 'Тесты', counts.tests || 0],
+  ].filter(([, , count]) => count > 0);
+
+  const categoryRows = categories.length
+    ? categories
+        .map(
+          ([key, label, count]) =>
+            `<label class="mb-check"><input type="checkbox" class="mb-cat" value="${key}"> ${label} <span class="mb-count">${count}</span></label>`,
+        )
+        .join('')
+    : '<div class="mb-modal-text">Материалов нет.</div>';
+
+  const modal = openModal(`
+    <div class="mb-modal-title">@${esc(user.username)}</div>
+    <div class="mb-modal-text">${esc(user.name)}${user.role ? ` · ${esc(ROLE_LABEL[user.role] ?? user.role)}` : ''}</div>
+    <div class="mb-group-title">Блокировка</div>
+    ${BAN_FIELDS}
+    <div class="mb-group-title">Удалить контент автора</div>
+    ${categoryRows}
+    <div class="mb-flash"></div>
+    <div class="mb-actions">
+      <button class="mb-btn" data-close>Закрыть</button>
+      ${categories.length ? '<button class="mb-btn mb-danger" data-purge>Удалить выбранное</button>' : ''}
+    </div>`);
+
+  setupBanFields(modal, username, () => flash(modal, 'Пользователь заблокирован.', true));
+  modal.querySelector('[data-purge]')?.addEventListener('click', () => {
+    const chosen = [...modal.querySelectorAll('.mb-cat:checked')].map((box) => box.value);
+    if (!chosen.length) {
+      flash(modal, 'Отметьте, что удалить.');
+      return;
     }
-    // Профиль человека или компании: автор — он сам
-    return Promise.resolve({
-      author: target.username,
-      authorRole: target.type === 'company' ? 'company' : 'user',
-      title: '',
-    });
-  }
+    const names = categories
+      .filter(([key]) => chosen.includes(key))
+      .map(([, label, count]) => `${label.toLowerCase()} — ${count}`)
+      .join(', ');
+    confirmPurge(username, names, chosen);
+  });
+}
 
-  // ── Панель ───────────────────────────────────────────────────
-
-  // Что именно мы сейчас модерируем — подпись рядом со значком
-  var TARGET_LABEL = {
-    article: 'Статья', contest: 'Конкурс', test: 'Тест',
-    user: 'Кандидат', company: 'Компания',
-  };
-
-  function buildBar(ctx) {
-    var bar = document.createElement('div');
-    bar.className = 'mb-bar';
-
-    var buttons = '';
-    if (target.type === 'article') {
-      buttons = '<button class="mb-btn mb-danger" data-mb="del-article">Удалить статью</button>';
-    } else if (target.type === 'contest') {
-      buttons = '<button class="mb-btn mb-danger" data-mb="del-contest">Удалить конкурс</button>';
-    } else if (target.type === 'test') {
-      buttons = '<button class="mb-btn mb-danger" data-mb="del-test">Удалить тест</button>';
+/* Отдельный шаг подтверждения показывает, что именно будет удалено.
+   После удаления страница перезагружается */
+function confirmPurge(username, names, chosen) {
+  const modal = openModal(`
+    <div class="mb-modal-title">Удалить контент автора?</div>
+    <div class="mb-modal-text">Будет удалено безвозвратно: ${esc(names)}. Автор: <b>@${esc(username)}</b>.</div>
+    <div class="mb-flash"></div>
+    <div class="mb-actions">
+      <button class="mb-btn" data-close>Отмена</button>
+      <button class="mb-btn mb-danger" data-confirm>Удалить</button>
+    </div>`);
+  modal.querySelector('[data-confirm]').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.textContent = 'Удаление…';
+    try {
+      await api.post(`/api/v1/admin/users/${username}/purge/`, { categories: chosen });
+      flash(modal, 'Контент удалён.', true);
+      setTimeout(() => location.reload(), 900);
+    } catch (error) {
+      flash(modal, error.message);
+      button.disabled = false;
+      button.textContent = 'Удалить';
     }
-    buttons += '<button class="mb-btn" data-mb="author">Действия</button>';
+  });
+}
 
-    // Кого модерируем — иначе на профиле непонятно, к кому относятся действия
-    var who = TARGET_LABEL[target.type] || '';
-    if (ctx.author) who += ' · @' + esc(ctx.author);
+function buildBar(context) {
+  // Кого модерируем — иначе на профиле непонятно, к кому относятся действия
+  const who = [TARGET_LABEL[type], context.author && `@${context.author}`].filter(Boolean).join(' · ');
+  const bar = document.createElement('div');
+  bar.className = 'mb-bar';
+  bar.innerHTML = `
+    <span class="mb-badge"><span class="mb-dot"></span>Модератор</span>
+    ${who ? `<span class="mb-target">${esc(who)}</span>` : ''}
+    <span class="mb-sep"></span>
+    ${MATERIAL[type] ? `<button class="mb-btn mb-danger" data-mb="delete">${MATERIAL[type].button}</button>` : ''}
+    <button class="mb-btn" data-mb="author">Действия</button>
+    <button class="mb-close" data-mb="hide" title="Скрыть панель" aria-label="Скрыть панель">${CLOSE_ICON}</button>`;
+  document.body.append(bar);
+  // Панель висит поверх страницы — освобождаем под неё место внизу
+  document.body.style.paddingBottom = `${bar.offsetHeight + 34}px`;
 
-    bar.innerHTML = '<span class="mb-badge"><span class="mb-dot"></span>Модератор</span>'
-      + (who ? '<span class="mb-target">' + who + '</span>' : '')
-      + '<span class="mb-sep"></span>'
-      + buttons
-      + '<button class="mb-close" data-mb="hide" title="Скрыть панель" aria-label="Скрыть панель">'
-      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
-    document.body.appendChild(bar);
-    // Панель висит поверх страницы — освобождаем под неё место, иначе она
-    // закрывает нижний край контента
-    document.body.style.paddingBottom = bar.offsetHeight + 34 + 'px';
+  bar.addEventListener('click', (event) => {
+    const action = event.target.closest('[data-mb]')?.dataset.mb;
+    if (action === 'delete') confirmDeleteMaterial(context);
+    else if (action === 'author') openAuthorActions(context.author);
+    else if (action === 'hide') {
+      bar.remove();
+      document.body.style.paddingBottom = '';
+    }
+  });
+}
 
-    bar.addEventListener('click', function (e) {
-      var b = e.target.closest('[data-mb]');
-      if (!b) return;
-      var act = b.getAttribute('data-mb');
-      if (act === 'del-article') confirmDeleteMaterial(ctx, 'article');
-      else if (act === 'del-contest') confirmDeleteMaterial(ctx, 'contest');
-      else if (act === 'del-test') confirmDeleteMaterial(ctx, 'test');
-      else if (act === 'author') openAuthorActions(ctx.author);
-      else if (act === 'hide') {
-        bar.remove();
-        document.body.style.paddingBottom = '';
-      }
-    });
-  }
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeModal();
+});
 
-  // ── Модалка удаления материала ───────────────────────────────
-  function confirmDeleteMaterial(ctx, kind) {
-    var noun = { article: 'статью', contest: 'конкурс', test: 'тест' }[kind];
-    var body = '<div class="mb-modal-title">Удалить ' + noun + '?</div>'
-      + '<div class="mb-modal-text">Материал «' + esc(ctx.title) + '» будет удалён безвозвратно.'
-      + (ctx.author ? ' Автор: <b>@' + esc(ctx.author) + '</b>.' : '') + '</div>'
-      + '<label class="mb-check"><input type="checkbox" id="mb-also-ban"> Также заблокировать автора</label>'
-      + '<div class="mb-flash" id="mb-flash"></div>'
-      + '<div class="mb-actions">'
-      + '<button class="mb-btn" data-close>Отмена</button>'
-      + '<button class="mb-btn mb-danger" id="mb-do-del">Удалить</button>'
-      + (ctx.author ? '<button class="mb-btn" data-open-author>Другие действия</button>' : '')
-      + '</div>';
-    var m = openModal(body);
-    m.querySelector('[data-open-author]') && m.querySelector('[data-open-author]').addEventListener('click', function () {
-      closeModal(); openAuthorActions(ctx.author);
-    });
-    m.querySelector('#mb-do-del').addEventListener('click', function () {
-      var alsoBan = m.querySelector('#mb-also-ban').checked;
-      var url = '/api/v1/admin/content/' + kind + '/' + target.id + '/delete/';
-      var btn = this; btn.disabled = true; btn.textContent = 'Удаление…';
-      jpost(url, {}).then(function () {
-        if (alsoBan && ctx.author) {
-          // после удаления материала — сразу форма блокировки автора
-          closeModal(); openBanModal(ctx.author, function () { gotoAfterDelete(kind); });
-        } else {
-          gotoAfterDelete(kind);
-        }
-      }).catch(function (err) {
-        flash(m, err.message); btn.disabled = false; btn.textContent = 'Удалить';
-      });
-    });
-  }
-
-  function gotoAfterDelete(kind) {
-    window.location.href = { article: '/articles/', contest: '/contests/', test: '/tests/' }[kind];
-  }
-
-  // ── Модалка действий с автором (бан и удаление его контента) ─
-  function openAuthorActions(username) {
-    if (!username) return;
-    jget('/api/v1/admin/users/' + username + '/content/').then(function (d) {
-      var counts = d.counts || {};
-      var u = d.user || { username: username, name: username, role: null };
-      var cats = [
-        ['articles', 'Статьи', counts.articles || 0],
-        ['contests', 'Конкурсы', counts.contests || 0],
-        ['tests', 'Тесты', counts.tests || 0],
-      ].filter(function (c) { return c[2] > 0; });
-
-      var catRows = cats.length
-        ? cats.map(function (c) {
-            return '<label class="mb-check"><input type="checkbox" class="mb-cat" value="' + c[0] + '"> ' + c[1] + ' <span class="mb-count">' + c[2] + '</span></label>';
-          }).join('')
-        : '<div class="mb-modal-text">Материалов нет.</div>';
-
-      var body = '<div class="mb-modal-title">@' + esc(u.username) + '</div>'
-        + '<div class="mb-modal-text">' + esc(u.name || '') + (u.role ? ' · ' + esc(ROLE_LABEL[u.role] || u.role) : '') + '</div>'
-
-        + '<div class="mb-group-title">Блокировка</div>'
-        + '<textarea class="mb-textarea" id="mb-ban-reason" placeholder="Причина (увидит пользователь)"></textarea>'
-        + '<div class="mb-row"><input type="number" class="mb-num" id="mb-ban-days" min="1" value="7"> дней '
-        + '<button class="mb-btn mb-mini" id="mb-ban-perm" type="button">Навсегда</button>'
-        + '<span class="mb-grow"></span>'
-        + '<button class="mb-btn mb-danger" id="mb-do-ban">Заблокировать</button></div>'
-
-        + '<div class="mb-group-title">Удалить контент автора</div>'
-        + catRows
-        + '<div class="mb-flash" id="mb-flash"></div>'
-        + '<div class="mb-actions">'
-        + '<button class="mb-btn" data-close>Закрыть</button>'
-        + (cats.length ? '<button class="mb-btn mb-danger" id="mb-do-purge">Удалить выбранное</button>' : '')
-        + '</div>';
-
-      var m = openModal(body);
-      var perm = false;
-      m.querySelector('#mb-ban-perm').addEventListener('click', function () {
-        perm = !perm; this.classList.toggle('mb-active', perm);
-        m.querySelector('#mb-ban-days').disabled = perm;
-      });
-      m.querySelector('#mb-do-ban').addEventListener('click', function () {
-        var reason = m.querySelector('#mb-ban-reason').value.trim();
-        var duration = perm ? 'perm' : (m.querySelector('#mb-ban-days').value || '7');
-        this.disabled = true;
-        jpost('/api/v1/admin/users/' + username + '/ban/', { reason: reason, duration: duration })
-          .then(function () { flash(m, 'Пользователь заблокирован.', true); })
-          .catch(function (err) { flash(m, err.message); this && (this.disabled = false); }.bind(this));
-      });
-      var purgeBtn = m.querySelector('#mb-do-purge');
-      if (purgeBtn) purgeBtn.addEventListener('click', function () {
-        var chosen = Array.prototype.map.call(m.querySelectorAll('.mb-cat:checked'), function (c) { return c.value; });
-        if (!chosen.length) { flash(m, 'Отметьте, что удалить.'); return; }
-        var names = cats.filter(function (c) { return chosen.indexOf(c[0]) !== -1; })
-          .map(function (c) { return c[1].toLowerCase() + ' — ' + c[2]; }).join(', ');
-        confirmPurge(username, names, chosen);
-      });
-    }).catch(function () {
-      openModal('<div class="mb-modal-title">Не удалось открыть</div>'
-        + '<div class="mb-modal-text">Данные автора не загрузились. Обновите страницу и попробуйте ещё раз.</div>'
-        + '<div class="mb-actions"><button class="mb-btn" data-close>Закрыть</button></div>');
-    });
-  }
-
-  /* Отдельный шаг подтверждения вместо window.confirm: тот выглядит как
-     системное окно браузера и не показывает, что именно будет удалено.
-     Модалка автора тут закрывается — после удаления страница всё равно
-     перезагружается. */
-  function confirmPurge(username, names, chosen) {
-    var m = openModal('<div class="mb-modal-title">Удалить контент автора?</div>'
-      + '<div class="mb-modal-text">Будет удалено безвозвратно: ' + esc(names) + '.'
-      + ' Автор: <b>@' + esc(username) + '</b>.</div>'
-      + '<div class="mb-flash" id="mb-flash"></div>'
-      + '<div class="mb-actions"><button class="mb-btn" data-close>Отмена</button>'
-      + '<button class="mb-btn mb-danger" id="mb-confirm-purge">Удалить</button></div>');
-    m.querySelector('#mb-confirm-purge').addEventListener('click', function () {
-      this.disabled = true; this.textContent = 'Удаление…';
-      jpost('/api/v1/admin/users/' + username + '/purge/', { categories: chosen })
-        .then(function () { flash(m, 'Контент удалён.', true); setTimeout(function () { window.location.reload(); }, 900); })
-        .catch(function (err) { flash(m, err.message); this.disabled = false; this.textContent = 'Удалить'; }.bind(this));
-    });
-  }
-
-  // Отдельная форма блокировки (для потока «удалить + заблокировать»)
-  function openBanModal(username, onDone) {
-    var body = '<div class="mb-modal-title">Заблокировать @' + esc(username) + '</div>'
-      + '<textarea class="mb-textarea" id="mb-ban-reason" placeholder="Причина (увидит пользователь)"></textarea>'
-      + '<div class="mb-row"><input type="number" class="mb-num" id="mb-ban-days" min="1" value="7"> дней '
-      + '<button class="mb-btn mb-mini" id="mb-ban-perm" type="button">Навсегда</button></div>'
-      + '<div class="mb-flash" id="mb-flash"></div>'
-      + '<div class="mb-actions"><button class="mb-btn" data-close>Пропустить</button>'
-      + '<button class="mb-btn mb-danger" id="mb-do-ban">Заблокировать</button></div>';
-    var m = openModal(body);
-    var perm = false;
-    m.querySelector('#mb-ban-perm').addEventListener('click', function () {
-      perm = !perm; this.classList.toggle('mb-active', perm); m.querySelector('#mb-ban-days').disabled = perm;
-    });
-    m.querySelector('[data-close]').addEventListener('click', function () { if (onDone) onDone(); });
-    m.querySelector('#mb-do-ban').addEventListener('click', function () {
-      var reason = m.querySelector('#mb-ban-reason').value.trim();
-      var duration = perm ? 'perm' : (m.querySelector('#mb-ban-days').value || '7');
-      this.disabled = true;
-      jpost('/api/v1/admin/users/' + username + '/ban/', { reason: reason, duration: duration })
-        .then(function () { if (onDone) onDone(); }).catch(function (err) { flash(m, err.message); this.disabled = false; }.bind(this));
-    });
-  }
-
-  // ── Модалка (общая) ──────────────────────────────────────────
-  function openModal(html) {
-    closeModal();
-    var ov = document.createElement('div');
-    ov.className = 'mb-overlay';
-    ov.innerHTML = '<div class="mb-modal">' + html + '</div>';
-    document.body.appendChild(ov);
-    ov.addEventListener('click', function (e) {
-      if (e.target === ov || e.target.hasAttribute('data-close')) closeModal();
-    });
-    return ov.querySelector('.mb-modal');
-  }
-  function closeModal() {
-    var ex = document.querySelector('.mb-overlay');
-    if (ex) ex.remove();
-  }
-  function flash(m, msg, ok) {
-    var f = m.querySelector('#mb-flash');
-    if (f) f.innerHTML = '<div class="mb-flash-box ' + (ok ? 'ok' : 'err') + '">' + esc(msg) + '</div>';
-  }
-
-  // ── Стили ────────────────────────────────────────────────────
-  function injectStyles() {
-    if (document.getElementById('mb-styles')) return;
-    var css = ''
-      + '.mb-bar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:9000;display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;max-width:calc(100vw - 24px);background:var(--surface,#fff);border:1px solid var(--line,#e2e7f0);border-radius:14px;box-shadow:0 10px 34px rgba(16,24,40,.20);}'
-      + '.mb-badge{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--brand-text,#c81e2d);white-space:nowrap;}'
-      + '.mb-dot{width:7px;height:7px;border-radius:50%;background:var(--brand,#d62839);box-shadow:0 0 0 3px rgba(214,40,57,.18);flex-shrink:0;}'
-      /* Кого модерируем: длинный логин обрезаем, а не растягиваем панель */
-      + '.mb-target{font-size:12.5px;color:var(--muted,#6e7787);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}'
-      + '.mb-sep{width:1px;align-self:stretch;background:var(--line,#e2e7f0);margin:0 2px;}'
-      + '.mb-close{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;border:none;border-radius:8px;background:transparent;color:var(--faint,#99a2b2);cursor:pointer;}'
-      + '.mb-close:hover{background:var(--surface-2,#edf0f6);color:var(--text,#161a22);}'
-      /* На телефоне панель занимает всю ширину и переносит кнопки */
-      + '@media(max-width:560px){.mb-bar{left:12px;right:12px;bottom:12px;transform:none;max-width:none;flex-wrap:wrap;row-gap:8px;}'
-      + '.mb-sep{display:none;}.mb-target{max-width:none;flex:1;}.mb-btn{flex:1;}}'
-      + '.mb-btn{height:34px;padding:0 14px;border:1px solid var(--line-2,#d2d9e6);border-radius:9px;background:var(--surface,#fff);color:var(--text,#161a22);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;}'
-      + '.mb-btn:hover{border-color:var(--brand,#d62839);color:var(--brand-text,#c81e2d);}'
-      + '.mb-btn.mb-danger{background:var(--brand,#d62839);border-color:var(--brand,#d62839);color:#fff;}'
-      + '.mb-btn.mb-danger:hover{opacity:.9;color:#fff;}'
-      + '.mb-btn.mb-mini{height:30px;padding:0 10px;font-size:12px;}'
-      + '.mb-btn.mb-active{background:var(--brand,#d62839);color:#fff;border-color:var(--brand,#d62839);}'
-      + '.mb-overlay{position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px;}'
-      + '.mb-modal{width:100%;max-width:460px;background:var(--surface,#fff);border:1px solid var(--line,#e2e7f0);border-radius:16px;padding:24px;box-shadow:0 16px 44px rgba(16,24,40,.28);max-height:90vh;overflow-y:auto;}'
-      + '.mb-modal-title{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px;color:var(--text,#161a22);}'
-      + '.mb-modal-text{font-size:13.5px;color:var(--muted,#6e7787);line-height:1.55;margin-bottom:14px;}'
-      + '.mb-group-title{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--faint,#99a2b2);margin:16px 0 8px;}'
-      + '.mb-check{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--text-2,#3c434f);padding:6px 0;cursor:pointer;}'
-      + '.mb-count{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted,#6e7787);background:var(--surface-2,#edf0f6);border-radius:999px;padding:1px 8px;}'
-      + '.mb-textarea{width:100%;min-height:64px;padding:10px 12px;border:1px solid var(--line-2,#d2d9e6);border-radius:10px;background:var(--surface,#fff);color:var(--text,#161a22);font-size:13.5px;font-family:inherit;resize:vertical;margin-bottom:10px;box-sizing:border-box;}'
-      + '.mb-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2,#3c434f);flex-wrap:wrap;margin-bottom:4px;}'
-      + '.mb-num{width:70px;height:32px;padding:0 10px;border:1px solid var(--line-2,#d2d9e6);border-radius:8px;background:var(--surface,#fff);color:var(--text,#161a22);font-family:inherit;}'
-      + '.mb-grow{flex:1;}'
-      + '.mb-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px;}'
-      + '.mb-flash{margin-top:12px;}'
-      + '.mb-flash-box{padding:9px 12px;border-radius:9px;font-size:13px;}'
-      + '.mb-flash-box.err{background:var(--red-soft,#fce7e8);color:var(--red-text,#c81e2d);}'
-      + '.mb-flash-box.ok{background:var(--green-soft,#e2f3ea);color:var(--green-text,#15935a);}';
-    var st = document.createElement('style');
-    st.id = 'mb-styles';
-    st.textContent = css;
-    document.head.appendChild(st);
-  }
-})();
+if (type) {
+  // Сначала роль — остальным посетителям ничего не рисуем и не запрашиваем
+  const me = await api.get('/api/v1/auth/me/').catch(() => null);
+  if (me?.account?.role === 'moderator') buildBar(await resolveTarget().catch(() => ({})));
+}

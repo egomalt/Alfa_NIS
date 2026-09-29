@@ -143,18 +143,35 @@ class ArticleAuthorLinkTests(BaseCase):
 class ProfilePageTests(BaseCase):
     """Публичные профили: страница собирается на клиенте, проверяем обвязку."""
 
-    def test_profile_pages_load_plural_helper(self):
-        """Счётчики на профилях склоняются общим js/plural.js."""
-        for url in (f'/{self.candidate.username}/', '/firma/'):
+    def _profile_css(self, url):
+        """Стили, которые подключает страница: тестовый клиент статику
+        не отдаёт, поэтому читаем файлы по ссылкам из разметки."""
+        body = Client().get(url).content.decode()
+        root = Path(settings.BASE_DIR)
+        css = []
+        for href in re.findall(r'href="/static/(profiles/[\w.]+\.css)', body):
+            css.append((root / 'profiles/static' / href).read_text(encoding='utf-8'))
+        self.assertTrue(css, f'{url} не подключает стили профиля')
+        return '\n'.join(css)
+
+    def test_profile_pages_use_shared_plural_helper(self):
+        """Счётчики на профилях склоняются общим countOf из js/core.js,
+        а не собственной копией правил в каждом файле."""
+        root = Path(settings.BASE_DIR)
+        for url, script in ((f'/{self.candidate.username}/', 'user.js'), ('/firma/', 'company.js')):
             with self.subTest(url=url):
                 body = Client().get(url).content.decode()
-                self.assertIn('js/plural.js', body)
+                self.assertIn('js/core.js', body)
+                self.assertRegex(body, rf'<script type="module"\s+src="/static/profiles/{script}')
+                source = (root / 'profiles/static/profiles' / script).read_text(encoding='utf-8')
+                self.assertIn('countOf', source)
+                self.assertNotIn('% 10', source)
 
     def test_avatar_is_drawn_over_the_cover(self):
         """Баннер позиционирован, аватарка — нет: без position он её перекрывал."""
         for url, prefix in ((f'/{self.candidate.username}/', 'pu'), ('/firma/', 'pc')):
             with self.subTest(url=url):
-                css = Client().get(url).content.decode()
+                css = self._profile_css(url)
                 rule = re.search(rf'\.{prefix}-hero-av \{{([^}}]*)\}}', css)
                 self.assertIsNotNone(rule, f'нет правила .{prefix}-hero-av')
                 self.assertIn('position: relative', rule.group(1))
@@ -169,7 +186,7 @@ class ProfilePageTests(BaseCase):
         )
         for url, selector in pages:
             with self.subTest(url=url):
-                css = Client().get(url).content.decode()
+                css = self._profile_css(url)
                 rule = re.search(rf'{re.escape(selector)} \{{[^}}]*flex-basis:\s*100%', css)
                 self.assertIsNotNone(rule, f'{selector} не занимает всю строку на узком экране')
 
@@ -190,7 +207,7 @@ class ProfilePageTests(BaseCase):
         """Метка в две строки сдвигала число вниз относительно соседних плашек."""
         for url, prefix in ((f'/{self.candidate.username}/', 'pu'), ('/firma/', 'pc')):
             with self.subTest(url=url):
-                css = Client().get(url).content.decode()
+                css = self._profile_css(url)
                 rule = re.search(rf'\.{prefix}-stat-value \{{([^}}]*)\}}', css)
                 self.assertIsNotNone(rule, f'нет правила .{prefix}-stat-value')
                 self.assertIn('margin-top: auto', rule.group(1))
@@ -726,7 +743,7 @@ class UserContestsSectionTests(BaseCase):
         body = response.content.decode()
         self.assertIn('us-content', body)
         # Кабинет свои четыре списочных запроса на этой странице не делает
-        self.assertIn('panel: "none"', body)
+        self.assertIn('"panel": "none"', body)
 
 
 class CabinetSidebarTests(BaseCase):
@@ -879,7 +896,8 @@ class CabinetSidebarTests(BaseCase):
         for page in pages:
             with self.subTest(page=page):
                 markup = (root / page).read_text(encoding='utf-8')
-                self.assertIn('ALFA_MOD_TARGET', markup)
+                # Цель модерации страница объявляет в своих данных
+                self.assertIn('modType=', markup)
                 self.assertIn('moderation-bar.js', markup)
 
     def test_moderator_can_delete_a_test(self):
@@ -970,31 +988,47 @@ class CabinetSidebarTests(BaseCase):
         rule = re.search(r'\.ap-trow \{([^}]*)\}', css)
         self.assertIsNotNone(rule, 'нет правила .ap-trow')
         self.assertIn('minmax(0', rule.group(1))
-        self.assertIn('.ap-trow > * { min-width: 0; }', css)
+        self.assertIn('.ap-trow > * { min-width: 0; }', ' '.join(css.split()))
 
     def test_chip_mounts_without_an_id(self):
         """Автомонтирование передавало `el.id`, и у контейнера без id
         получался getElementById('') — чип молча не появлялся. В админке
         контейнер именно такой."""
         source = (Path(settings.BASE_DIR) / 'static/js/career.js').read_text(encoding='utf-8')
-        self.assertNotIn('mountUserChip(el.id)', source)
-        self.assertIn('forEach(mountUserChip)', source)
+        self.assertNotIn('el.id', source)
+        self.assertIn("querySelectorAll('[data-user-chip]')", source)
+        self.assertIn('chips.forEach((chip) => renderChip(chip, account))', source)
 
     def test_every_page_with_the_navbar_can_draw_the_chip(self):
-        """Шапка без career.js осталась бы с пустым местом вместо чипа."""
+        """Шапка без career.js осталась бы с пустым местом вместо чипа.
+        Скрипт подключает templates/base.html — страница должна от него
+        наследоваться (напрямую или через базу кабинета)."""
+        from django.template.loader import get_template
+
         root = Path(settings.BASE_DIR)
+        self.assertIn('js/career.js', (root / 'templates/base.html').read_text(encoding='utf-8'))
+
+        def extends_base(template_name, depth=0):
+            source = get_template(template_name).template.source
+            match = re.search(r"{%\s*extends\s+['\"]([^'\"]+)['\"]", source)
+            if 'js/career.js' in source:
+                return True
+            return bool(match) and depth < 5 and extends_base(match.group(1), depth + 1)
+
         checked = 0
         for path in root.glob('**/templates/**/*.html'):
             # Партиалы — вставки, скрипт подключает страница, которая их включает
-            if 'partials' in path.parts:
+            if 'partials' in path.parts or 'venv' in path.parts:
                 continue
             markup = path.read_text(encoding='utf-8')
             if 'data-user-chip' not in markup and 'partials/navbar.html' not in markup:
                 continue
             checked += 1
-            with self.subTest(page=str(path.relative_to(root))):
-                self.assertIn('js/career.js', markup)
-        self.assertGreater(checked, 10, 'страницы с шапкой не нашлись — проверка ничего не проверила')
+            relative = path.relative_to(root).as_posix()
+            with self.subTest(page=relative):
+                self.assertTrue(extends_base(relative.split('templates/', 1)[1]),
+                                'страница не наследует base.html и не подключает career.js')
+        self.assertGreaterEqual(checked, 10, 'страницы с шапкой не нашлись — проверка ничего не проверила')
 
     def test_user_chip_knows_every_role(self):
         """Подписи те же, что в панели модерации и в шапке админки."""
@@ -1053,7 +1087,7 @@ class CabinetSidebarTests(BaseCase):
         mobile = re.search(r'@media \(max-width: 680px\) \{(.*?)\n\}', css, re.S)
         self.assertIsNotNone(mobile, 'нет мобильного медиазапроса для таблицы')
         self.assertIn('min-width: 0', mobile.group(1))
-        self.assertIn('.cc-thead { display: none; }', mobile.group(1))
+        self.assertIn('.cc-thead { display: none; }', ' '.join(mobile.group(1).split()))
 
     def test_tests_page_has_status_filters(self):
         """Список тестов фильтруется так же, как список конкурсов."""

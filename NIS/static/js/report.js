@@ -1,120 +1,103 @@
 /* Кнопка «Пожаловаться». Разметка объявляет цель атрибутами:
    <button data-report-type="article" data-report-id="12" data-report-author="ivan">
-   Показывается только вошедшему и только на чужом материале. */
-(() => {
-  function csrfToken() {
-    const cookie = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('csrftoken='));
-    if (cookie) return decodeURIComponent(cookie.slice('csrftoken='.length));
-    return document.querySelector('meta[name="csrf-token"]')?.content || '';
-  }
+   Кнопка видна только вошедшему и только на чужом материале. */
+import { api, toast } from 'alfa/core';
 
-  function buildModal() {
-    const wrap = document.createElement('div');
-    wrap.id = 'report-modal';
-    wrap.className = 'cr-modal';
-    wrap.innerHTML = `
-      <div class="cr-modal-card">
-        <div class="cr-modal-title">Пожаловаться на материал</div>
-        <div class="cr-modal-sub" id="report-target"></div>
-        <div class="cr-modal-label">Причина</div>
-        <textarea id="report-reason" class="cr-modal-textarea" maxlength="2000"
-                  placeholder="Что не так с этим материалом?"></textarea>
-        <div class="cr-modal-error" id="report-error"></div>
-        <div class="cr-modal-actions">
-          <button type="button" id="report-cancel" class="cr-modal-btn-cancel">Отмена</button>
-          <button type="button" id="report-send" class="cr-modal-btn-primary">Отправить</button>
-        </div>
-      </div>`;
-    document.body.appendChild(wrap);
-    return wrap;
-  }
+let modal = null;
+let current = null;
 
-  let modal = null;
-  let current = null;
-
-  function openModal(button) {
-    if (!modal) modal = buildModal();
-    current = button;
-    modal.querySelector('#report-target').textContent = button.dataset.reportTitle || '';
-    modal.querySelector('#report-reason').value = '';
-    modal.querySelector('#report-error').textContent = '';
-    modal.classList.add('open');
-    modal.querySelector('#report-reason').focus();
-  }
-
-  function closeModal() {
-    if (modal) modal.classList.remove('open');
-    current = null;
-  }
-
-  async function send() {
-    const reasonEl = modal.querySelector('#report-reason');
-    const errEl = modal.querySelector('#report-error');
-    const sendBtn = modal.querySelector('#report-send');
-    const reason = reasonEl.value.trim();
-
-    if (!reason) { errEl.textContent = 'Опишите, что не так.'; return; }
-
-    sendBtn.disabled = true;
-    sendBtn.textContent = 'Отправка…';
-    try {
-      const resp = await fetch('/api/v1/reports/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          target_type: current.dataset.reportType,
-          target_id: current.dataset.reportId,
-          reason,
-        }),
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) { errEl.textContent = data.message || 'Не удалось отправить жалобу.'; return; }
-      closeModal();
-      current = null;
-      alert(data.message || 'Жалоба отправлена модераторам.');
-    } catch (_) {
-      errEl.textContent = 'Не удалось отправить жалобу.';
-    } finally {
-      sendBtn.disabled = false;
-      sendBtn.textContent = 'Отправить';
-    }
-  }
-
-  document.addEventListener('click', event => {
-    const btn = event.target.closest('[data-report-type]');
-    if (btn) { openModal(btn); return; }
-    if (event.target.id === 'report-cancel' || event.target.id === 'report-modal') { closeModal(); return; }
-    if (event.target.id === 'report-send') send();
+function buildModal() {
+  const node = document.createElement('div');
+  node.id = 'report-modal';
+  node.className = 'cr-modal';
+  node.innerHTML = `
+    <div class="cr-modal-card" role="dialog" aria-modal="true">
+      <div class="cr-modal-title">Пожаловаться на материал</div>
+      <div class="cr-modal-sub" data-report-target></div>
+      <div class="cr-modal-label">Причина</div>
+      <textarea class="cr-modal-textarea" data-report-reason maxlength="2000"
+                placeholder="Что не так с этим материалом?"></textarea>
+      <div class="cr-modal-error" data-report-error></div>
+      <div class="cr-modal-actions">
+        <button type="button" class="cr-modal-btn-cancel" data-report-cancel>Отмена</button>
+        <button type="button" class="cr-modal-btn-primary" data-report-send>Отправить</button>
+      </div>
+    </div>`;
+  node.addEventListener('click', (event) => {
+    if (event.target === node || event.target.closest('[data-report-cancel]')) close();
+    else if (event.target.closest('[data-report-send]')) send();
   });
+  document.body.append(node);
+  return node;
+}
 
-  // Показываем кнопку только вошедшим и только на чужом материале
-  let mePromise = null;
+const part = (name) => modal.querySelector(`[data-report-${name}]`);
 
-  function loadMe() {
-    if (!mePromise) {
-      mePromise = fetch('/api/v1/auth/me/')
-        .then(r => r.json())
-        .then(data => (data.ok ? data.account : null))
-        .catch(() => null);
-    }
-    return mePromise;
+function open(button) {
+  modal ??= buildModal();
+  current = button;
+  part('target').textContent = button.dataset.reportTitle ?? '';
+  part('reason').value = '';
+  part('error').textContent = '';
+  modal.classList.add('open');
+  part('reason').focus();
+}
+
+function close() {
+  modal?.classList.remove('open');
+  current = null;
+}
+
+async function send() {
+  const reason = part('reason').value.trim();
+  if (!reason) {
+    part('error').textContent = 'Опишите, что не так.';
+    return;
   }
-
-  function refresh() {
-    const buttons = document.querySelectorAll('[data-report-type]');
-    if (!buttons.length) return;
-    loadMe().then(me => {
-      if (!me) return;
-      buttons.forEach(btn => {
-        const own = btn.dataset.reportAuthor && btn.dataset.reportAuthor === me.username;
-        btn.style.display = own ? 'none' : 'inline-flex';  // класс скрывает по умолчанию
-      });
+  const button = part('send');
+  button.disabled = true;
+  button.textContent = 'Отправка…';
+  try {
+    const data = await api.post('/api/v1/reports/', {
+      target_type: current.dataset.reportType,
+      target_id: current.dataset.reportId,
+      reason,
     });
+    close();
+    toast(data.message || 'Жалоба отправлена модераторам.', 'ok');
+  } catch (error) {
+    part('error').textContent = error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Отправить';
   }
+}
 
-  // Страницы с асинхронной загрузкой (конкурс) вызывают refresh() сами,
-  // когда кнопка появилась в разметке
-  window.AlfaReport = { refresh };
-  refresh();
-})();
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-report-type]');
+  if (button) open(button);
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') close();
+});
+
+let accountRequest = null;
+
+/* Показывает кнопки на чужих материалах. Страницы, которые дорисовывают
+   кнопку позже (конкурс), вызывают эту функцию сами. */
+export async function refreshReportButtons() {
+  const buttons = document.querySelectorAll('[data-report-type]');
+  if (!buttons.length) return;
+  accountRequest ??= api
+    .get('/api/v1/auth/me/')
+    .then((data) => data.account)
+    .catch(() => null);
+  const account = await accountRequest;
+  if (!account) return;
+  buttons.forEach((button) => {
+    button.hidden = button.dataset.reportAuthor === account.username;
+    button.classList.add('is-available');
+  });
+}
+
+refreshReportButtons();

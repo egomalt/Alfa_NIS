@@ -16,6 +16,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
+from authorization.models import Account
 from companies.models import Company
 from contests.contests_cabinet.models import Contest, ContestSubmission
 from core.demo import MARK, TAKER_PREFIX, build_pages, ensure_takers, make_attempts

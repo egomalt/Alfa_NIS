@@ -1,118 +1,42 @@
-/* Публичный список тестов компании. API отдаёт анониму только
+/* Все тесты компании — публичный список. Аноним получает только
    опубликованные, поэтому фильтр здесь по уровню, а не по статусу. */
-(function () {
-  'use strict';
+import { api, countOf, esc, LEVELS, pageData, TEST_CATEGORIES, WORDS } from 'alfa/core';
+import { filteredList, renderOwnerHeader } from 'alfa/profile-list';
 
-  var username = (window.ALFA_APP_BOOTSTRAP || {}).username || '';
-  var allTests = [];
-  var activeFilter = 'all';
+const { username = '' } = pageData();
 
-  var LEVEL_LABELS = { junior: 'Junior', middle: 'Middle', senior: 'Senior' };
-  var CAT_LABELS = {
-    frontend: 'Frontend', backend: 'Backend', devops: 'DevOps',
-    analytics: 'Аналитика', other: 'Другое',
-  };
+const card = (test) => {
+  const meta = [TEST_CATEGORIES[test.category] ?? test.category, countOf(test.page_count, WORDS.questions)]
+    .filter(Boolean)
+    .join(' · ');
+  const level = LEVELS[test.level] ? `<span class="ct-level ct-level-${test.level}">${LEVELS[test.level]}</span>` : '';
+  return `
+    <a class="ct-card" href="${esc(test.url)}">
+      <div class="ct-card-main">
+        <div class="ct-card-title">${esc(test.title || 'Без названия')}</div>
+        <div class="ct-card-meta">${esc(meta)}</div>
+      </div>
+      <span class="ct-mono">${countOf(test.submissions, WORDS.attempts)}</span>
+      ${level}
+    </a>`;
+};
 
-  function esc(s) {
-    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+const list = filteredList({
+  prefix: 'ct',
+  matches: (test, level) => test.level === level,
+  card,
+  empty: (hasAny) => `
+    <div class="ct-empty">
+      <div class="ct-empty-title">${hasAny ? 'Тестов не найдено' : 'Тестов пока нет'}</div>
+      <div class="ct-empty-sub">${hasAny ? 'Попробуйте другой фильтр' : 'Компания ещё не опубликовала ни одного задания'}</div>
+    </div>`,
+});
 
-  function apiFetch(url) {
-    return fetch(url, { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (d) { if (!d.ok) throw new Error(d.message || 'Ошибка'); return d; });
-  }
-
-  function questionsLabel(n) {
-    return AlfaPlural.withNumber(n, 'вопрос', 'вопроса', 'вопросов');
-  }
-
-  function levelPill(level) {
-    if (!LEVEL_LABELS[level]) return '';
-    return '<span class="ct-level ct-level-' + level + '">' + LEVEL_LABELS[level] + '</span>';
-  }
-
-  function filterTests(f) {
-    if (f === 'all') return allTests;
-    return allTests.filter(function (t) { return t.level === f; });
-  }
-
-  function renderList() {
-    var list = filterTests(activeFilter);
-    var countEl = document.getElementById('ct-count');
-    if (countEl) countEl.textContent = list.length + ' из ' + allTests.length;
-
-    var wrap = document.getElementById('ct-list');
-    if (!list.length) {
-      wrap.innerHTML = '<div class="ct-empty">'
-        + '<div class="ct-empty-title">' + (allTests.length ? 'Тестов не найдено' : 'Тестов пока нет') + '</div>'
-        + '<div class="ct-empty-sub">' + (allTests.length ? 'Попробуйте другой фильтр' : 'Компания ещё не опубликовала ни одного задания') + '</div>'
-        + '</div>';
-      return;
-    }
-
-    wrap.innerHTML = list.map(function (t) {
-      var meta = [CAT_LABELS[t.category] || t.category, questionsLabel(t.page_count)]
-        .filter(Boolean).join(' · ');
-      return '<a class="ct-card" href="' + esc(t.url) + '">'
-        + '<div class="ct-card-main">'
-        +   '<div class="ct-card-title">' + esc(t.title || 'Без названия') + '</div>'
-        +   '<div class="ct-card-meta">' + esc(meta) + '</div>'
-        + '</div>'
-        + '<span class="ct-mono">' + AlfaPlural.attempts(t.submissions) + '</span>'
-        + levelPill(t.level)
-        + '</a>';
-    }).join('');
-  }
-
-  function initFilters() {
-    document.querySelectorAll('.ct-filter-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        activeFilter = btn.dataset.f;
-        document.querySelectorAll('.ct-filter-btn').forEach(function (b) {
-          b.classList.toggle('active', b.dataset.f === activeFilter);
-        });
-        renderList();
-      });
-    });
-  }
-
-  function init() {
-    var backLink = document.getElementById('ct-back-link');
-    if (backLink) backLink.href = '/' + username + '/';
-
-    initFilters();
-
-    apiFetch('/api/v1/companies/' + username + '/tests/').then(function (data) {
-      var company = data.company || {};
-      // Владелец видит здесь и свои черновики — на публичной странице они лишние
-      allTests = (data.tests || []).filter(function (t) { return t.status === 'published'; });
-
-      var avEl = document.getElementById('ct-company-av');
-      if (avEl) {
-        if (company.avatar_url) {
-          avEl.innerHTML = '<img src="' + esc(company.avatar_url) + '" alt="">';
-        } else {
-          avEl.textContent = (company.name || '?')[0].toUpperCase();
-        }
-      }
-
-      var titleEl = document.getElementById('ct-page-title');
-      if (titleEl) {
-        var badge = company.is_verified ? '<span class="ct-verified">✓</span>' : '';
-        titleEl.innerHTML = 'Тесты «' + esc(company.name || username) + '» ' + badge;
-      }
-
-      renderList();
-    }).catch(function (e) {
-      var wrap = document.getElementById('ct-list');
-      if (wrap) wrap.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);">' + esc(e.message) + '</div>';
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
+try {
+  const { company = {}, tests = [] } = await api.get(`/api/v1/companies/${username}/tests/`);
+  renderOwnerHeader({ prefix: 'ct', owner: company, username, title: `Тесты «${company.name || username}»` });
+  // Владелец видит здесь и свои черновики — на публичной странице они лишние
+  list.show(tests.filter((test) => test.status === 'published'));
+} catch (error) {
+  list.fail(error.message);
+}

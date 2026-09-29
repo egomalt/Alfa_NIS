@@ -1,150 +1,114 @@
-const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
-const USERNAME = BOOTSTRAP.username || '';
+/* Раздел «Конкурсы» кабинета компании: сводка, фильтр по статусу, таблица. */
+import { api, byId, confirmDialog, CONTEST_STATUSES, esc, formatDate, statusPill, toast } from 'alfa/core';
 
-function csrf() {
-  return document.querySelector('meta[name="csrf-token"]')?.content || '';
-}
-
-async function api(url, opts = {}) {
-  const res = await fetch(url, { headers: { 'X-CSRFToken': csrf(), 'Content-Type': 'application/json' }, ...opts });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Ошибка');
-  return data;
-}
-
-const STATUS_META = {
-  active:   { label: 'Активен',      bg: 'var(--green-soft)',  color: 'var(--green-text)' },
-  review:   { label: 'На проверке',  bg: 'var(--amber-soft)',  color: 'var(--amber-text)' },
-  finished: { label: 'Завершён',     bg: 'var(--surface-2)',   color: 'var(--muted)' },
-  draft:    { label: 'Черновик',     bg: 'var(--amber-soft)',  color: 'var(--amber-text)' },
+const URGENT_DAYS = 10;
+const ICONS = {
+  submissions:
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+  edit: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+  delete:
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
 };
 
-let contests = [];
-let activeFilter = 'all';
+const state = { contests: [], filter: 'all' };
 
-function formatDeadline(dt) {
-  if (!dt) return '—';
-  const d = new Date(dt);
-  // Дедлайн — в коротком ДД.ММ.ГГГГ: локаль ru-RU так форматирует по умолчанию,
-  // а «30 июля 2026 г.» в таблице и заголовке занимало полстроки
-  return d.toLocaleDateString('ru-RU');
-}
+const isUrgent = ({ deadline, status }) =>
+  status === 'active' && deadline && (new Date(deadline) - Date.now()) / 86400000 <= URGENT_DAYS;
 
-function isUrgent(dt, status) {
-  if (status !== 'active' || !dt) return false;
-  const days = (new Date(dt) - Date.now()) / 86400000;
-  return days <= 10;
-}
+const emptyHtml = (title, text) =>
+  `<div class="cc-empty"><div class="cc-empty-title">${esc(title)}</div><div class="cc-empty-sub">${esc(text)}</div></div>`;
 
 function renderStats() {
-  const active = contests.filter(c => c.status === 'active').length;
-  const participants = contests.reduce((s, c) => s + (c.participants_count || 0), 0);
-  const submissions = contests.reduce((s, c) => s + (c.submissions_count || 0), 0);
-  document.getElementById('cc-stats-row').innerHTML = [
-    { v: contests.length, l: 'Всего конкурсов' },
-    { v: active, l: 'Сейчас активны' },
-    { v: participants, l: 'Участников' },
-    { v: submissions, l: 'Решений прислано' },
-  ].map(s => `
-    <div class="cp-stat-card">
-      <div class="cp-stat-value">${s.v}</div>
-      <div class="cp-stat-label">${s.l}</div>
-    </div>`).join('');
+  const { contests } = state;
+  const sum = (key) => contests.reduce((total, contest) => total + (contest[key] || 0), 0);
+  byId('cc-stats-row').innerHTML = [
+    [contests.length, 'Всего конкурсов'],
+    [contests.filter((contest) => contest.status === 'active').length, 'Сейчас активны'],
+    [sum('participants_count'), 'Участников'],
+    [sum('submissions_count'), 'Решений прислано'],
+  ]
+    .map(
+      ([value, label]) => `
+    <div class="cp-stat-card"><div class="cp-stat-value">${value}</div><div class="cp-stat-label">${label}</div></div>`,
+    )
+    .join('');
 }
 
-function renderTable() {
-  const filtered = activeFilter === 'all' ? contests : contests.filter(c => c.status === activeFilter);
-  document.getElementById('cc-filter-count').textContent = `${filtered.length} из ${contests.length}`;
-  const wrap = document.getElementById('cc-table-wrap');
-
-  if (filtered.length === 0) {
-    wrap.innerHTML = `<div class="cc-empty">
-      <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Конкурсов не найдено</div>
-      <div style="font-size:14px;color:var(--muted);">Попробуйте другой фильтр или создайте новый конкурс</div>
-    </div>`;
-    return;
-  }
-
-  wrap.innerHTML = `<div class="list-card">
-    <div class="list-card-header"><h2>Обзор конкурсов</h2></div>
-    <div class="cc-scroll">
-    <div class="cc-thead">
-      <span>Название</span><span>Дедлайн</span><span>Участники</span><span>Решения</span><span>Статус</span><span></span>
+/* Строка ведёт на страницу конкурса, кнопки справа — на свои разделы */
+const row = (contest) => `
+  <div class="cc-trow" data-href="/contests/${contest.id}/">
+    <div>
+      <div class="cc-title">${esc(contest.title || 'Без названия')}</div>
+      <div class="cc-sub">${esc(contest.category)}</div>
     </div>
-    ${filtered.map(c => {
-      const m = STATUS_META[c.status] || STATUS_META.draft;
-      const urgent = isUrgent(c.deadline, c.status);
-      return `
-      <div class="cc-trow" onclick="location.href='/contests/${c.id}/'">
-        <div>
-          <div style="font-size:14px;font-weight:600;margin-bottom:2px;">${c.title || 'Без названия'}</div>
-          <div style="font-size:12px;color:var(--muted);">${c.category || ''}</div>
-        </div>
-        <div class="cc-deadline${urgent ? ' urgent' : ''}">${formatDeadline(c.deadline)}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-2);">${c.participants_count || 0}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-2);">${c.submissions_count || 0}</div>
-        <div><span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:${m.bg};color:${m.color};">${m.label}</span></div>
-        <div class="cc-actions" onclick="event.stopPropagation()">
-          <button class="cc-icon-btn" title="Решения" onclick="location.href='/cabinet/company/contests/${c.id}/submissions/'">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          </button>
-          <button class="cc-icon-btn" title="Редактировать" onclick="location.href='/cabinet/company/contests/${c.id}/edit/'">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-          </button>
-          <button class="cc-icon-btn danger" title="Удалить" data-delete-contest="${c.id}">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-          </button>
-        </div>
-      </div>`;
-    }).join('')}
+    <div class="cc-deadline ${isUrgent(contest) ? 'urgent' : ''}">${formatDate(contest.deadline) || '—'}</div>
+    <div class="cc-num">${contest.participants_count || 0}</div>
+    <div class="cc-num">${contest.submissions_count || 0}</div>
+    <div>${statusPill(CONTEST_STATUSES, contest.status)}</div>
+    <div class="cc-actions">
+      <a class="cc-icon-btn" href="/cabinet/company/contests/${contest.id}/submissions/" title="Решения">${ICONS.submissions}</a>
+      <a class="cc-icon-btn" href="/cabinet/company/contests/${contest.id}/edit/" title="Редактировать">${ICONS.edit}</a>
+      <button type="button" class="cc-icon-btn danger" data-delete="${contest.id}" title="Удалить">${ICONS.delete}</button>
     </div>
   </div>`;
+
+function renderTable() {
+  const { contests, filter } = state;
+  const shown = filter === 'all' ? contests : contests.filter((contest) => contest.status === filter);
+  byId('cc-filter-count').textContent = `${shown.length} из ${contests.length}`;
+  byId('cc-table-wrap').innerHTML = shown.length
+    ? `<div class="list-card">
+        <div class="list-card-header"><h2>Обзор конкурсов</h2></div>
+        <div class="cc-scroll">
+          <div class="cc-thead"><span>Название</span><span>Дедлайн</span><span>Участники</span><span>Решения</span><span>Статус</span><span></span></div>
+          ${shown.map(row).join('')}
+        </div>
+      </div>`
+    : emptyHtml('Конкурсов не найдено', 'Попробуйте другой фильтр или создайте новый конкурс');
 }
 
-// Обработчик вешается на контейнер один раз: содержимое таблицы перерисовывается,
-// и слушатели на самих кнопках терялись бы после каждой перерисовки.
-function initTableActions() {
-  document.getElementById('cc-table-wrap').addEventListener('click', event => {
-    const btn = event.target.closest('[data-delete-contest]');
-    if (btn) deleteContest(Number(btn.dataset.deleteContest), event);
+async function deleteContest(id) {
+  const confirmed = await confirmDialog({
+    title: 'Удалить конкурс?',
+    text: 'Конкурс и присланные решения будут удалены. Это действие нельзя отменить.',
+    confirmLabel: 'Удалить',
   });
-}
-
-async function deleteContest(id, e) {
-  e.stopPropagation();
-  if (!confirm('Удалить конкурс?')) return;
+  if (!confirmed) return;
   try {
-    await api(`/api/v1/contests/${id}/`, { method: 'DELETE' });
-    contests = contests.filter(c => c.id !== id);
+    await api.delete(`/api/v1/contests/${id}/`);
+    state.contests = state.contests.filter((contest) => contest.id !== id);
     renderStats();
     renderTable();
-  } catch (err) {
-    alert(err.message);
+    toast('Конкурс удалён', 'ok');
+  } catch (error) {
+    toast(error.message);
   }
 }
 
-function initFilters() {
-  document.querySelectorAll('.cr-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeFilter = btn.dataset.f;
-      document.querySelectorAll('.cr-chip').forEach(b => b.classList.toggle('active', b === btn));
-      renderTable();
-    });
-  });
-}
-
-async function load() {
-  try {
-    const data = await api('/api/v1/contests/company/');
-    contests = data.contests || [];
-    renderStats();
-    renderTable();
-  } catch (err) {
-    document.getElementById('cc-table-wrap').innerHTML =
-      `<div class="cc-empty"><div style="font-size:16px;font-weight:700;margin-bottom:6px;">Ошибка загрузки</div><div style="font-size:14px;color:var(--muted);">${err.message}</div></div>`;
+// Один обработчик на контейнер: таблица перерисовывается целиком
+byId('cc-table-wrap').addEventListener('click', (event) => {
+  const deleteButton = event.target.closest('[data-delete]');
+  if (deleteButton) {
+    deleteContest(Number(deleteButton.dataset.delete));
+    return;
   }
-}
+  if (event.target.closest('a')) return;
+  const rowElement = event.target.closest('[data-href]');
+  if (rowElement) location.href = rowElement.dataset.href;
+});
 
-initFilters();
-initTableActions();
-load();
+document.querySelectorAll('.cr-chip[data-f]').forEach((chip, _, chips) =>
+  chip.addEventListener('click', () => {
+    state.filter = chip.dataset.f;
+    chips.forEach((item) => item.classList.toggle('active', item === chip));
+    renderTable();
+  }),
+);
+
+try {
+  ({ contests: state.contests = [] } = await api.get('/api/v1/contests/company/'));
+  renderStats();
+  renderTable();
+} catch (error) {
+  byId('cc-table-wrap').innerHTML = emptyHtml('Ошибка загрузки', error.message);
+}

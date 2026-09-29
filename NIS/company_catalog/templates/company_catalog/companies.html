@@ -1,73 +1,80 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="csrf-token" content="{{ csrf_token }}">
-  <script>(function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();</script>
-  <title>Компании — Career</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
-  <link rel="stylesheet" href="{% static 'css/catalog.css' %}?v={{ ASSET_V }}">
-  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
-  <script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
-  <script src="{% static 'company_catalog/js/app.js' %}?v={{ ASSET_V }}" defer></script>
-</head>
-<body>
-
-{% include 'partials/navbar.html' with active='companies' chip_id='cat-user-chip' %}
-
-<main>
-
-  <div class="hero">
-    <div class="hero-label">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg>
-      Работодатели
+{% block title %}Компании — Career{% endblock %}
+{% block styles %}
+  <link rel="stylesheet"
+        href="{% static 'css/catalog.css' %}?v={{ ASSET_V }}">
+{% endblock %}
+{% block navbar %}
+  {% include "partials/navbar.html" with active="companies" %}
+{% endblock %}
+{% block body %}
+  <main>
+    <div class="hero">
+      <div class="hero-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1" />
+        </svg>
+        Работодатели
+      </div>
+      <div class="hero-title">Компании на платформе</div>
+      <div class="hero-sub">Проверенные работодатели: тесты, конкурсы и оценки от кандидатов</div>
     </div>
-    <div class="hero-title">Компании на платформе</div>
-    <div class="hero-sub">Проверенные работодатели: тесты, конкурсы и оценки от кандидатов</div>
-  </div>
-
-  <div class="search-row">
-    <div class="search-wrap">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-      <input class="search-input" id="search-input" type="text" placeholder="Поиск по компаниям...">
+    <div class="search-row">
+      <div class="search-wrap">
+        <svg width="17"
+             height="17"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round">
+          <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.5" y2="16.5" />
+        </svg>
+        <input class="search-input"
+               id="search-input"
+               type="text"
+               placeholder="Поиск по компаниям...">
+      </div>
+      <a href="/authorization/signup/" class="btn-write" id="btn-join" hidden>
+        <svg width="14"
+             height="14"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2.5"
+             stroke-linecap="round">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Стать компанией
+      </a>
     </div>
-    <a href="/authorization/signup/" class="btn-write" id="btn-join" style="display:none;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      Стать компанией
-    </a>
-  </div>
-
-  <div class="cr-filters" id="industries">
-    <span class="cr-filter-label">Индустрия</span>
-    <span class="cr-filter-count" id="industries-count"></span>
-  </div>
-
-  <div class="content-cols">
-    <section>
-      <div class="section-header">
-        <div class="section-title">Все компании</div>
-        <div class="section-count" id="co-count"></div>
-      </div>
-      <div class="co-grid" id="co-grid">
-        <div class="state-msg">Загрузка...</div>
-      </div>
-      <div class="load-more-row" id="load-more-row" style="display:none;">
-        <button class="btn-load" id="btn-load">Загрузить ещё</button>
-      </div>
-    </section>
-
-    <aside class="aside">
-      <div class="aside-card">
-        <div class="aside-title">Больше всего тестов</div>
-        <div class="trending-list" id="trending-list"></div>
-      </div>
-    </aside>
-  </div>
-
-</main>
-</body>
-</html>
+    <div class="cr-filters" id="industries">
+      <span class="cr-filter-label">Индустрия</span>
+    </div>
+    <div class="content-cols">
+      <section>
+        <div class="section-header">
+          <div class="section-title">Все компании</div>
+          <div class="section-count" id="co-count"></div>
+        </div>
+        <div class="co-grid" id="co-grid">
+          <div class="state-msg">Загрузка...</div>
+        </div>
+        <div class="load-more-row" id="load-more-row" hidden>
+          <button type="button" class="btn-load" id="btn-load">Загрузить ещё</button>
+        </div>
+      </section>
+      <aside class="aside">
+        <div class="aside-card">
+          <div class="aside-title">Больше всего тестов</div>
+          <div class="trending-list" id="trending-list"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+{% endblock %}
+{% block scripts %}
+  <script type="module"
+          src="{% static 'company_catalog/js/app.js' %}?v={{ ASSET_V }}"></script>
+{% endblock %}

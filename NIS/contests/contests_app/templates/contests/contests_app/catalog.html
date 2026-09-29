@@ -1,124 +1,135 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="csrf-token" content="{{ csrf_token }}">
-<script>
-  (function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();
-</script>
-<title>Конкурсы — Career</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
-<link rel="stylesheet" href="{% static 'css/catalog.css' %}?v={{ ASSET_V }}">
-<style>
-/* Модалка «войдите, чтобы участвовать» — только на этой странице */
-.modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; padding: 24px; }
-.modal-backdrop.open { display: flex; }
-.modal-card { width: 100%; max-width: 400px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); padding: 30px; box-shadow: var(--shadow-lg); text-align: center; }
-.modal-icon { width: 52px; height: 52px; border-radius: 14px; background: var(--brand-soft); color: var(--brand-text); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-.modal-title { font-size: 18px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; }
-.modal-sub { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin-bottom: 22px; }
-.modal-actions { display: flex; flex-direction: column; gap: 10px; }
-.modal-btn-primary { height: 42px; border: none; border-radius: 10px; background: var(--brand); color: var(--on-brand); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
-.modal-btn-primary:hover { background: var(--brand-strong); }
-.modal-btn-secondary { height: 42px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
-.modal-btn-secondary:hover { background: var(--surface-2); }
-.modal-btn-cancel { height: 36px; border: none; background: transparent; color: var(--muted); font-size: 13px; cursor: pointer; font-family: inherit; margin-top: 4px; }
-.modal-btn-cancel:hover { color: var(--text); }
-</style>
-<script>
-  window.ALFA_APP_BOOTSTRAP = { page: "contests_catalog" };
-</script>
-<script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
-<script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
-<script type="module" src="{% static 'contests/contests_app/catalog.js' %}?v={{ ASSET_V }}"></script>
-</head>
-<body>
-
-{% include 'partials/navbar.html' with active='contests' chip_id='catalog-user-chip' %}
-
-<main>
-
-  <div class="hero">
-    <div class="hero-label">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"/></svg>
-      Соревнования
-    </div>
-    <div class="hero-title">Конкурсы от компаний</div>
-    <div class="hero-sub">Решайте реальные кейсы, показывайте себя работодателю и получайте офферы</div>
-  </div>
-
-  <div class="search-row">
-    <div class="search-wrap">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-      <input class="search-input" id="search-input" type="search" placeholder="Поиск по конкурсам..." autocomplete="off">
-    </div>
-    <a href="/cabinet/company/contests/new/" class="btn-write" id="btn-create" style="display:none;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      Создать конкурс
-    </a>
-  </div>
-
-  <div class="cr-filters">
-    <div class="cr-filter-group">
-      <span class="cr-filter-label">Статус</span>
-      <button class="cr-chip active" data-status="all">Все</button>
-      <button class="cr-chip" data-status="active">Активные</button>
-      <button class="cr-chip" data-status="finished">Завершённые</button>
-    </div>
-    <div class="cr-filter-divider"></div>
-    <div class="cr-filter-group" style="flex-wrap:wrap;">
-      <span class="cr-filter-label">Категория</span>
-      <button class="cr-chip active" data-cat="all">Все</button>
-      <button class="cr-chip" data-cat="backend">Backend</button>
-      <button class="cr-chip" data-cat="frontend">Frontend</button>
-      <button class="cr-chip" data-cat="devops">DevOps</button>
-      <button class="cr-chip" data-cat="analytics">Аналитика</button>
-      <button class="cr-chip" data-cat="design">Дизайн</button>
-    </div>
-  </div>
-
-  <div class="content-cols">
-    <section>
-      <div class="section-header">
-        <div class="section-title">Все конкурсы</div>
-        <div class="section-count" id="cat-count"></div>
+{% block title %}Конкурсы — Career{% endblock %}
+{% block styles %}
+  <link rel="stylesheet"
+        href="{% static 'css/catalog.css' %}?v={{ ASSET_V }}">
+  <link rel="stylesheet"
+        href="{% static 'contests/contests_app/catalog.css' %}?v={{ ASSET_V }}">
+{% endblock %}
+{% block navbar %}
+  {% include "partials/navbar.html" with active="contests" %}
+{% endblock %}
+{% block body %}
+  <main>
+    <div class="hero">
+      <div class="hero-label">
+        <svg width="11"
+             height="11"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round">
+          <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+          <path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4" />
+        </svg>
+        Соревнования
       </div>
-      <div class="cn-grid" id="cat-grid">
-        <div class="state-msg">Загрузка…</div>
-      </div>
-      <div class="load-more-row" id="load-more-row" style="display:none;">
-        <button class="btn-load" id="btn-load">Загрузить ещё</button>
-      </div>
-    </section>
-
-    <aside class="aside">
-      <div class="aside-card">
-        <div class="aside-title">Скоро завершатся</div>
-        <div class="trending-list" id="closing-list"></div>
-      </div>
-    </aside>
-  </div>
-
-</main>
-
-<div class="modal-backdrop" id="cat-auth-modal">
-  <div class="modal-card">
-    <div class="modal-icon">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <div class="hero-title">Конкурсы от компаний</div>
+      <div class="hero-sub">Решайте реальные кейсы, показывайте себя работодателю и получайте офферы</div>
     </div>
-    <div class="modal-title">Войдите, чтобы участвовать</div>
-    <div class="modal-sub">Регистрация на конкурс и отправка решения доступны только авторизованным пользователям.</div>
-    <div class="modal-actions">
-      <button class="modal-btn-primary" onclick="location.href='/authorization/signin/'">Войти</button>
-      <button class="modal-btn-secondary" onclick="location.href='/authorization/signup/'">Создать аккаунт</button>
-      <button class="modal-btn-cancel" id="cat-modal-close">Не сейчас</button>
+    <div class="search-row">
+      <div class="search-wrap">
+        <svg width="17"
+             height="17"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round">
+          <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.5" y2="16.5" />
+        </svg>
+        <input class="search-input"
+               id="search-input"
+               type="search"
+               placeholder="Поиск по конкурсам..."
+               autocomplete="off">
+      </div>
+      <a href="/cabinet/company/contests/new/"
+         class="btn-write"
+         id="btn-create"
+         hidden>
+        <svg width="14"
+             height="14"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2.5"
+             stroke-linecap="round">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Создать конкурс
+      </a>
+    </div>
+    <div class="cr-filters">
+      <div class="cr-filter-group">
+        <span class="cr-filter-label">Статус</span>
+        <button type="button" class="cr-chip active" data-status="all">Все</button>
+        <button type="button" class="cr-chip" data-status="active">Активные</button>
+        <button type="button" class="cr-chip" data-status="finished">Завершённые</button>
+      </div>
+      <div class="cr-filter-divider"></div>
+      <div class="cr-filter-group">
+        <span class="cr-filter-label">Категория</span>
+        <button type="button" class="cr-chip active" data-cat="all">Все</button>
+        <button type="button" class="cr-chip" data-cat="backend">Backend</button>
+        <button type="button" class="cr-chip" data-cat="frontend">Frontend</button>
+        <button type="button" class="cr-chip" data-cat="devops">DevOps</button>
+        <button type="button" class="cr-chip" data-cat="analytics">Аналитика</button>
+        <button type="button" class="cr-chip" data-cat="design">Дизайн</button>
+      </div>
+    </div>
+    <div class="content-cols">
+      <section>
+        <div class="section-header">
+          <div class="section-title">Все конкурсы</div>
+          <div class="section-count" id="cat-count"></div>
+        </div>
+        <div class="cn-grid" id="cat-grid">
+          <div class="state-msg">Загрузка…</div>
+        </div>
+        <div class="load-more-row" id="load-more-row" hidden>
+          <button type="button" class="btn-load" id="btn-load">Загрузить ещё</button>
+        </div>
+      </section>
+      <aside class="aside">
+        <div class="aside-card">
+          <div class="aside-title">Скоро завершатся</div>
+          <div class="trending-list" id="closing-list"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <div class="modal-backdrop" id="cat-auth-modal">
+    <div class="modal-card">
+      <div class="modal-icon">
+        <svg width="24"
+             height="24"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round">
+          <rect x="3" y="11" width="18" height="10" rx="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      </div>
+      <div class="modal-title">Войдите, чтобы участвовать</div>
+      <div class="modal-sub">Регистрация на конкурс и отправка решения доступны только авторизованным пользователям.</div>
+      <div class="modal-actions">
+        <a class="modal-btn-primary"
+           id="cat-signin"
+           href="/authorization/signin/">Войти</a>
+        <a class="modal-btn-secondary"
+           id="cat-signup"
+           href="/authorization/signup/">Создать аккаунт</a>
+        <button type="button" class="modal-btn-cancel" id="cat-modal-close">Не сейчас</button>
+      </div>
     </div>
   </div>
-</div>
-
-</body>
-</html>
+{% endblock %}
+{% block scripts %}
+  <script type="module"
+          src="{% static 'contests/contests_app/catalog.js' %}?v={{ ASSET_V }}"></script>
+{% endblock %}

@@ -1,51 +1,47 @@
-const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
-const USERNAME = BOOTSTRAP.username || '';
-let contestId = BOOTSTRAP.contestId || null;
+/* Конструктор конкурса: основное, кейс со стартовыми файлами, правила, формат решения. */
+import { api, byId, esc, pageData } from 'alfa/core';
 
-// Приходит из шаблона, значение задаёт core.uploads.MAX_DOCUMENT_SIZE
-const MAX_ATTACHMENT_MB = BOOTSTRAP.maxAttachmentMb || 25;
+const page = pageData();
+let contestId = page.contestId || null;
+
+// Значение задаёт core.uploads.MAX_DOCUMENT_SIZE — тот же потолок проверяет сервер
+const MAX_ATTACHMENT_MB = page.maxAttachmentMb || 25;
 const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
-
-function csrf() {
-  return document.querySelector('meta[name="csrf-token"]')?.content || '';
-}
-
-const esc = s => String(s == null ? '' : s)
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 let isDirty = false;
 let loadFailed = false;
 
-function markDirty() { isDirty = true; }
-
-/* Сообщения в шапке вместо системного alert(). */
-function setStatus(message, kind = '') {
-  const el = document.getElementById('ccon-status');
-  if (!el) return;
-  el.textContent = message || '';
-  el.className = 'ccon-status' + (kind ? ' ' + kind : '');
+function markDirty() {
+  isDirty = true;
 }
 
-async function api(url, opts = {}) {
-  const res = await fetch(url, { headers: { 'X-CSRFToken': csrf(), 'Content-Type': 'application/json' }, ...opts });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Ошибка');
-  return data;
+/* Сообщения в шапке вместо системного alert() */
+function setStatus(message = '', kind = '') {
+  const status = byId('ccon-status');
+  status.textContent = message;
+  status.className = `ccon-status${kind ? ` ${kind}` : ''}`;
 }
 
 const SECTIONS = [
-  { key: 'basics',     label: 'Основное',      icon: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>' },
-  { key: 'case',       label: 'Кейс и данные', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
-  { key: 'rules',      label: 'Правила',        icon: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
-  { key: 'submission', label: 'Решение',        icon: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/>' },
+  { key: 'basics', label: 'Основное', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>' },
+  {
+    key: 'case',
+    label: 'Кейс и данные',
+    icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  },
+  {
+    key: 'rules',
+    label: 'Правила',
+    icon: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  },
+  { key: 'submission', label: 'Решение', icon: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/>' },
 ];
 let activeSection = 'basics';
 
 const SUB_TYPES = [
-  { key: 'file', title: 'Файл',   desc: 'Загрузка PDF, архива и т.п.' },
+  { key: 'file', title: 'Файл', desc: 'Загрузка PDF, архива и т.п.' },
   { key: 'link', title: 'Ссылка', desc: 'Репозиторий, документ, деплой' },
-  { key: 'text', title: 'Текст',  desc: 'Развёрнутый текстовый ответ' },
+  { key: 'text', title: 'Текст', desc: 'Развёрнутый текстовый ответ' },
 ];
 let activeSubType = 'file';
 let rules = ['Решение принимается только до истечения дедлайна', 'Один участник может отправить решение только 1 раз'];
@@ -53,57 +49,51 @@ let attachments = [];
 let currentStatus = 'draft';
 
 function renderSections() {
-  document.getElementById('ccon-sec-list').innerHTML = SECTIONS.map((s, i) => `
+  byId('ccon-sec-list').innerHTML = SECTIONS.map(
+    (s, i) => `
     <div class="ccon-sec-item ${s.key === activeSection ? 'active' : ''}" data-sec="${s.key}">
       <span class="ccon-sec-num">${i + 1}</span>
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${s.icon}</svg>
       ${s.label}
-    </div>`).join('');
-  document.querySelectorAll('.ccon-sec-item').forEach(el => {
-    el.addEventListener('click', () => switchSection(el.dataset.sec));
-  });
+    </div>`,
+  ).join('');
 }
 
 function switchSection(key) {
   activeSection = key;
   renderSections();
-  document.querySelectorAll('.ccon-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === key));
+  document.querySelectorAll('.ccon-panel').forEach((p) => p.classList.toggle('active', p.dataset.panel === key));
 }
 
 function renderRules() {
-  document.getElementById('ccon-rules-list').innerHTML = rules.map((r, i) => `
+  byId('ccon-rules-list').innerHTML = rules
+    .map(
+      (r, i) => `
     <div class="ccon-rule-row">
       <span class="ccon-rule-num">${i + 1}</span>
       <input class="ccon-rule-inp" value="${esc(r)}" data-rule="${i}">
       <button type="button" class="ccon-btn-rm-rule" data-rm="${i}" aria-label="Убрать правило">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
-    </div>`).join('');
-  document.querySelectorAll('[data-rule]').forEach(inp => {
-    inp.addEventListener('input', () => { rules[parseInt(inp.dataset.rule, 10)] = inp.value; markDirty(); });
-  });
-  document.querySelectorAll('[data-rm]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      rules.splice(parseInt(btn.dataset.rm, 10), 1);
-      renderRules();
-      markDirty();
-    });
-  });
+    </div>`,
+    )
+    .join('');
 }
 
 function renderTypeCards() {
-  document.getElementById('ccon-type-cards').innerHTML = SUB_TYPES.map(t => `
+  byId('ccon-type-cards').innerHTML = SUB_TYPES.map(
+    (t) => `
     <div class="ccon-type-card ${t.key === activeSubType ? 'active' : ''}" data-type="${t.key}">
       <div class="ccon-type-title">${t.title}</div>
       <div class="ccon-type-desc">${t.desc}</div>
-    </div>`).join('');
-  document.querySelectorAll('.ccon-type-card').forEach(card => {
-    card.addEventListener('click', () => { activeSubType = card.dataset.type; renderTypeCards(); markDirty(); });
-  });
+    </div>`,
+  ).join('');
 }
 
 function renderAttachments() {
-  document.getElementById('ccon-attach-list').innerHTML = attachments.map((a, i) => `
+  byId('ccon-attach-list').innerHTML = attachments
+    .map(
+      (a, i) => `
     <div class="ccon-attach-row">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       <span class="ccon-attach-name">${esc(a.name)}</span>
@@ -111,14 +101,13 @@ function renderAttachments() {
       <button type="button" class="ccon-btn-rm-attach" data-ai="${i}" aria-label="Убрать файл">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
-    </div>`).join('');
-  document.querySelectorAll('[data-ai]').forEach(btn => {
-    btn.addEventListener('click', () => removeAttachment(parseInt(btn.dataset.ai)));
-  });
+    </div>`,
+    )
+    .join('');
 }
 
 function updateBadge() {
-  const badge = document.getElementById('ccon-badge');
+  const badge = byId('ccon-badge');
   if (currentStatus === 'active') {
     badge.className = 'ccon-badge-pub';
     badge.textContent = 'Опубликован';
@@ -130,33 +119,33 @@ function updateBadge() {
 
 function getFormData() {
   return {
-    title: document.getElementById('ccon-title').value,
-    category: document.getElementById('ccon-cat').value,
-    level: document.getElementById('ccon-level').value,
-    deadline: document.getElementById('ccon-deadline').value || null,
-    prize: document.getElementById('ccon-prize').value,
-    excerpt: document.getElementById('ccon-excerpt').value,
-    case_text: document.getElementById('ccon-case').value,
+    title: byId('ccon-title').value,
+    category: byId('ccon-cat').value,
+    level: byId('ccon-level').value,
+    deadline: byId('ccon-deadline').value || null,
+    prize: byId('ccon-prize').value,
+    excerpt: byId('ccon-excerpt').value,
+    case_text: byId('ccon-case').value,
     rules,
     submission_type: activeSubType,
-    submission_hint: document.getElementById('ccon-sub-hint').value,
+    submission_hint: byId('ccon-sub-hint').value,
   };
 }
 
 function fillForm(contest) {
   if (!contest) return;
-  document.getElementById('ccon-title').value = contest.title || '';
-  document.getElementById('ccon-name-display').textContent = contest.title || 'Новый конкурс';
-  document.getElementById('ccon-cat').value = contest.category || 'Backend';
-  document.getElementById('ccon-level').value = contest.level || 'Middle';
-  document.getElementById('ccon-deadline').value = contest.deadline ? contest.deadline.slice(0, 10) : '';
-  document.getElementById('ccon-prize').value = contest.prize || '';
-  document.getElementById('ccon-excerpt').value = contest.excerpt || '';
-  document.getElementById('ccon-case').value = contest.case_text || '';
-  document.getElementById('ccon-sub-hint').value = contest.submission_hint || '';
+  byId('ccon-title').value = contest.title || '';
+  byId('ccon-name-display').textContent = contest.title || 'Новый конкурс';
+  byId('ccon-cat').value = contest.category || 'Backend';
+  byId('ccon-level').value = contest.level || 'Middle';
+  byId('ccon-deadline').value = contest.deadline ? contest.deadline.slice(0, 10) : '';
+  byId('ccon-prize').value = contest.prize || '';
+  byId('ccon-excerpt').value = contest.excerpt || '';
+  byId('ccon-case').value = contest.case_text || '';
+  byId('ccon-sub-hint').value = contest.submission_hint || '';
   if (contest.rules?.length) rules = [...contest.rules];
   if (contest.submission_type) activeSubType = contest.submission_type;
-  attachments = (contest.attachments || []).map(a => ({ id: a.id, name: a.name, size: a.size_display || '' }));
+  attachments = (contest.attachments || []).map((a) => ({ id: a.id, name: a.name, size: a.size_display || '' }));
   currentStatus = contest.status || 'draft';
   updateBadge();
   renderRules();
@@ -173,27 +162,28 @@ async function doSave() {
     return false;
   }
 
-  const btn = document.getElementById('ccon-save-btn');
+  const btn = byId('ccon-save-btn');
   const body = getFormData();
   try {
     btn.textContent = 'Сохранение…';
     btn.disabled = true;
     setStatus('');
-    let res;
     if (contestId) {
-      res = await api(`/api/v1/contests/${contestId}/`, { method: 'PUT', body: JSON.stringify(body) });
+      await api.put(`/api/v1/contests/${contestId}/`, body);
     } else {
-      res = await api('/api/v1/contests/', { method: 'POST', body: JSON.stringify(body) });
-      if (res.contest?.id) {
-        contestId = res.contest.id;
-        history.replaceState({}, '', `/cabinet/company/contests/${contestId}/edit/`);
-      }
+      const { contest } = await api.post('/api/v1/contests/', body);
+      contestId = contest.id;
+      history.replaceState(null, '', `/cabinet/company/contests/${contestId}/edit/`);
     }
     await uploadPendingAttachments();
     isDirty = false;
     btn.textContent = '✓ Сохранено';
     btn.classList.add('saved');
-    setTimeout(() => { btn.textContent = 'Сохранить'; btn.classList.remove('saved'); btn.disabled = false; }, 1800);
+    setTimeout(() => {
+      btn.textContent = 'Сохранить';
+      btn.classList.remove('saved');
+      btn.disabled = false;
+    }, 1800);
     return true;
   } catch (err) {
     btn.textContent = 'Сохранить';
@@ -205,12 +195,12 @@ async function doSave() {
 
 async function doPublish() {
   // Публикация шла даже после неудачного сохранения — в бой уходила прошлая версия
-  if (!await doSave()) return;
+  if (!(await doSave())) return;
 
-  const btn = document.getElementById('ccon-publish-btn');
+  const btn = byId('ccon-publish-btn');
   btn.disabled = true;
   try {
-    await api(`/api/v1/contests/${contestId}/publish/`, { method: 'POST' });
+    await api.post(`/api/v1/contests/${contestId}/publish/`);
     currentStatus = 'active';
     updateBadge();
     setStatus('Конкурс опубликован', 'ok');
@@ -224,50 +214,78 @@ async function doPublish() {
 async function load() {
   if (!contestId) return;
   try {
-    const data = await api(`/api/v1/contests/${contestId}/`);
-    fillForm(data.contest || data);
+    const { contest } = await api.get(`/api/v1/contests/${contestId}/`);
+    fillForm(contest);
     isDirty = false;
-  } catch (err) {
+  } catch {
     // Молчаливый catch показывал пустую форму как будто это новый конкурс
     loadFailed = true;
     setStatus('Не удалось загрузить конкурс. Обновите страницу — не сохраняйте.', 'error');
   }
 }
 
-document.getElementById('ccon-title').addEventListener('input', e => {
-  document.getElementById('ccon-name-display').textContent = e.target.value || 'Новый конкурс';
+byId('ccon-title').addEventListener('input', (event) => {
+  byId('ccon-name-display').textContent = event.target.value || 'Новый конкурс';
 });
-document.getElementById('ccon-save-btn').addEventListener('click', doSave);
-document.getElementById('ccon-publish-btn').addEventListener('click', doPublish);
-document.getElementById('ccon-add-rule-btn').addEventListener('click', () => { rules.push(''); renderRules(); markDirty(); });
+byId('ccon-save-btn').addEventListener('click', doSave);
+byId('ccon-publish-btn').addEventListener('click', doPublish);
+byId('ccon-add-rule-btn').addEventListener('click', () => {
+  rules.push('');
+  renderRules();
+  markDirty();
+});
 
 // Любое поле формы помечает конкурс изменённым
-['ccon-title', 'ccon-cat', 'ccon-level', 'ccon-deadline', 'ccon-prize',
- 'ccon-excerpt', 'ccon-case', 'ccon-sub-hint'].forEach(id => {
-  const el = document.getElementById(id);
+[
+  'ccon-title',
+  'ccon-cat',
+  'ccon-level',
+  'ccon-deadline',
+  'ccon-prize',
+  'ccon-excerpt',
+  'ccon-case',
+  'ccon-sub-hint',
+].forEach((id) => {
+  const el = byId(id);
   el?.addEventListener('input', markDirty);
   el?.addEventListener('change', markDirty);
 });
 
-window.addEventListener('beforeunload', event => {
-  if (!isDirty) return;
-  event.preventDefault();
-  event.returnValue = '';
+addEventListener('beforeunload', (event) => {
+  if (isDirty) event.preventDefault();
 });
 
-document.getElementById('ccon-attach-input').addEventListener('change', e => {
+function addFiles(files) {
   const rejected = [];
-  Array.from(e.target.files).forEach(f => {
-    // Тот же потолок, что проверяет сервер (core.uploads.MAX_DOCUMENT_SIZE)
-    if (f.size > MAX_ATTACHMENT_BYTES) { rejected.push(f.name); return; }
-    attachments.push({ name: f.name, size: (f.size / 1024 / 1024).toFixed(1) + ' МБ', file: f });
-  });
-  e.target.value = '';
+  for (const file of files) {
+    if (file.size > MAX_ATTACHMENT_BYTES) rejected.push(file.name);
+    else attachments.push({ name: file.name, size: `${(file.size / 1024 / 1024).toFixed(1)} МБ`, file });
+  }
   renderAttachments();
   markDirty();
-  setStatus(rejected.length
-    ? `Не добавлены (больше ${MAX_ATTACHMENT_MB} МБ): ${rejected.join(', ')}`
-    : '', rejected.length ? 'error' : '');
+  if (rejected.length) setStatus(`Не добавлены (больше ${MAX_ATTACHMENT_MB} МБ): ${rejected.join(', ')}`, 'error');
+  else setStatus();
+}
+
+const attachInput = byId('ccon-attach-input');
+const fileDrop = byId('ccon-file-drop');
+attachInput.addEventListener('change', () => {
+  addFiles(attachInput.files);
+  attachInput.value = '';
+});
+fileDrop.addEventListener('click', () => attachInput.click());
+fileDrop.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' || event.key === ' ') attachInput.click();
+});
+fileDrop.addEventListener('dragover', (event) => {
+  event.preventDefault();
+  fileDrop.classList.add('is-dragover');
+});
+fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('is-dragover'));
+fileDrop.addEventListener('drop', (event) => {
+  event.preventDefault();
+  fileDrop.classList.remove('is-dragover');
+  addFiles(event.dataTransfer.files);
 });
 
 // Файл, уже сохранённый на сервере, удаляем и на сервере; новый — просто из списка
@@ -276,7 +294,7 @@ async function removeAttachment(index) {
   if (!item) return;
   if (item.id && contestId) {
     try {
-      await api(`/api/v1/contests/${contestId}/attachments/${item.id}/`, { method: 'DELETE' });
+      await api.delete(`/api/v1/contests/${contestId}/attachments/${item.id}/`);
     } catch (err) {
       setStatus(err.message || 'Не удалось удалить файл', 'error');
       return;
@@ -289,34 +307,58 @@ async function removeAttachment(index) {
 // Файлы уходят отдельными multipart-запросами: конкурс сохраняется JSON-ом,
 // вложить в него файл нельзя
 async function uploadPendingAttachments() {
-  const pending = attachments.filter(a => a.file && !a.id);
+  const pending = attachments.filter((a) => a.file && !a.id);
   for (const item of pending) {
     const form = new FormData();
     form.append('file', item.file);
-    const resp = await fetch(`/api/v1/contests/${contestId}/attachments/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': csrf() },
-      credentials: 'same-origin',
-      body: form,
+    const { attachment } = await api.post(`/api/v1/contests/${contestId}/attachments/`, form).catch((error) => {
+      throw new Error(`«${item.name}»: ${error.message}`);
     });
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) throw new Error(data.message || `Не удалось загрузить «${item.name}».`);
-    item.id = data.attachment.id;
-    item.size = data.attachment.size_display;
+    item.id = attachment.id;
+    item.size = attachment.size_display;
     delete item.file;
   }
   if (pending.length) renderAttachments();
 }
-document.getElementById('ccon-preview-btn').addEventListener('click', async () => {
+byId('ccon-preview-btn').addEventListener('click', async () => {
   // Несохранённые правки в предпросмотр не попадают — сохраняем и не уходим,
   // если сохранение не прошло
   if (isDirty || !contestId) {
-    if (!await doSave()) return;
+    if (!(await doSave())) return;
   }
   if (contestId) location.href = `/contests/${contestId}/`;
 });
 
-renderSections();
+// Списки перерисовываются целиком — обработчики висят на контейнерах
+byId('ccon-sec-list').addEventListener('click', (event) => {
+  const item = event.target.closest('[data-sec]');
+  if (item) switchSection(item.dataset.sec);
+});
+byId('ccon-rules-list').addEventListener('input', (event) => {
+  const input = event.target.closest('[data-rule]');
+  if (!input) return;
+  rules[Number(input.dataset.rule)] = input.value;
+  markDirty();
+});
+byId('ccon-rules-list').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-rm]');
+  if (!button) return;
+  rules.splice(Number(button.dataset.rm), 1);
+  renderRules();
+  markDirty();
+});
+byId('ccon-type-cards').addEventListener('click', (event) => {
+  const card = event.target.closest('[data-type]');
+  if (!card) return;
+  activeSubType = card.dataset.type;
+  renderTypeCards();
+  markDirty();
+});
+byId('ccon-attach-list').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-ai]');
+  if (button) removeAttachment(Number(button.dataset.ai));
+});
+
 switchSection('basics');
 renderRules();
 renderTypeCards();

@@ -1,692 +1,558 @@
-(() => {
-    const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
-    const CSRF = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
-
-    const state = {
-        testId: BOOTSTRAP.testId || null,
-        ownerUsername: BOOTSTRAP.ownerUsername || '',
-        title: '',
-        description: '',
-        level: '',
-        category: '',
-        pages: [],
-        currentIndex: -1,
-        dirty: false,
-        saving: false,
-        published: false,
-        localCounter: 0,
-    };
-
-    const TYPE_LABELS = { info: 'Инфо', text: 'Текст', quiz: 'Выбор', input: 'Ввод', code: 'Код' };
-
-    function uid() { return ++state.localCounter; }
-
-    function makeInfoPage() {
-        return { localId: uid(), type: 'info', title: 'Информация о тесте', content: '', answers: [], page_meta: {} };
-    }
-
-    async function apiFetch(url, options = {}) {
-        const res = await fetch(url, {
-            headers: { 'X-CSRFToken': CSRF(), 'Content-Type': 'application/json', ...(options.headers || {}) },
-            ...options,
-        });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.message || 'Ошибка сервера');
-        return data;
-    }
-
-    // ── Serialization ─────────────────────────────────────────────────────────
-
-    function serializeState() {
-        return {
-            owner_username: state.ownerUsername,
-            title: state.title,
-            description: state.description,
-            level: state.level,
-            category: state.category,
-            // info page is virtual — skip it
-            pages: state.pages.filter(p => p.type !== 'info').map((p, i) => ({
-                ...(p.id ? { id: p.id } : {}),
-                order: i,
-                type: p.type,
-                title: p.title,
-                content: p.content,
-                page_meta: p.page_meta || {},
-                answers: (p.answers || []).map((a, j) => ({
-                    ...(a.id ? { id: a.id } : {}),
-                    text: a.text,
-                    is_correct: a.is_correct,
-                    order: j,
-                })),
-            })),
-        };
-    }
-
-    function applyTest(test) {
-        state.testId = test.id;
-        state.title = test.title;
-        state.description = test.description || '';
-        state.level = test.level || (test.stats && test.stats.level) || '';
-        state.category = test.category || (test.stats && test.stats.category) || '';
-        state.published = test.status === 'published';
-        if (!state.ownerUsername && test.owner_username) state.ownerUsername = test.owner_username;
-        state.pages = [
-            makeInfoPage(),
-            ...(test.pages || []).map(p => ({
-                localId: uid(), id: p.id, order: p.order, type: p.type,
-                title: p.title, content: p.content, page_meta: p.page_meta || {},
-                answers: (p.answers || []).map(a => ({
-                    localId: uid(), id: a.id, text: a.text,
-                    is_correct: a.is_correct, order: a.order,
-                })),
-            })),
-        ];
-    }
-
-    function patchSavedState(savedTest) {
-        state.testId = savedTest.id;
-        state.published = savedTest.status === 'published';
-        const savedPages = savedTest.pages || [];
-        // Skip info page (index 0) when matching
-        const realPages = state.pages.filter(p => p.type !== 'info');
-        realPages.forEach((page, i) => {
-            const sp = savedPages[i];
-            if (!sp) return;
-            page.id = sp.id;
-            (page.answers || []).forEach((ans, j) => {
-                const sa = (sp.answers || [])[j];
-                if (sa) ans.id = sa.id;
-            });
-        });
-    }
-
-    // ── Save ──────────────────────────────────────────────────────────────────
-
-    function markDirty() {
-        state.dirty = true;
-        if (!state.published) setStatus('');
-        syncSaveBtn();
-    }
-
-    /* Возвращает true, только если тест действительно сохранён: публикация
-       и предпросмотр по этому признаку решают, можно ли идти дальше. */
-    async function save() {
-        if (state.saving || !state.title.trim()) return false;
-        state.saving = true;
-        state.dirty = false;
-        setStatus('Сохранение…');
-        try {
-            const payload = serializeState();
-            let data;
-            if (state.testId) {
-                data = await apiFetch(`/api/v1/tests/${state.testId}/`, { method: 'PUT', body: JSON.stringify(payload) });
-            } else {
-                data = await apiFetch('/api/v1/tests/create/', { method: 'POST', body: JSON.stringify(payload) });
-            }
-            patchSavedState(data.test);
-            history.replaceState(null, '', `/constructor/${state.testId}/`);
-            const saveBtn = document.getElementById('cst-save-btn');
-            if (saveBtn) { saveBtn.textContent = '✓ Сохранено'; saveBtn.classList.add('saved'); }
-            setStatus('Черновик');
-            setTimeout(() => {
-                const b = document.getElementById('cst-save-btn');
-                if (b) { b.textContent = 'Сохранить'; b.classList.remove('saved'); }
-            }, 1800);
-            syncSaveBtn();
-            syncPublishBtn();
-            syncPreviewBtn();
-            return true;
-        } catch (e) {
-            setStatus(e.message || 'Не удалось сохранить', 'error');
-            state.dirty = true;
-            syncSaveBtn();
-            return false;
-        } finally {
-            state.saving = false;
-        }
-    }
-
-    // ── UI sync ───────────────────────────────────────────────────────────────
-
-    function setStatus(msg, kind = '') {
-        const el = document.getElementById('cst-save-status');
-        if (!el) return;
-        el.textContent = msg || '';
-        el.className = 'save-status' + (kind ? ' ' + kind : '');
-    }
-
-    function syncSaveBtn() {
-        const btn = document.getElementById('cst-save-btn');
-        if (!btn) return;
-        btn.disabled = !state.dirty || !state.title.trim() || state.saving;
-    }
-
-    function syncPublishBtn() {
-        const btn = document.getElementById('cst-publish-btn');
-        if (!btn) return;
-        const realPages = state.pages.filter(p => p.type !== 'info');
-        if (state.published) { btn.textContent = 'Опубликован'; btn.disabled = true; }
-        else { btn.textContent = 'Опубликовать'; btn.disabled = !state.testId || realPages.length === 0; }
-    }
-
-    function syncPreviewBtn() {
-        const btn = document.getElementById('cst-preview-btn');
-        if (btn) btn.disabled = !state.testId;
-    }
-
-    function syncStatsBtn() {
-        // Статистика появляется только у опубликованного теста:
-        // у черновика нет ни одного прохождения по определению
-        const btn = document.getElementById('cst-stats-btn');
-        if (!btn) return;
-        btn.hidden = !state.testId || !state.published;
-        if (state.testId) btn.href = `/constructor/${state.testId}/stats/`;
-    }
-
-    function syncBackLink() {
-        // Кабинет зависит от роли автора
-        const href = BOOTSTRAP.backUrl || '/cabinet/user/tests/';
-        const back = document.getElementById('cst-back');
-        const backTests = document.getElementById('cst-back-tests');
-        if (back) back.href = href;
-        if (backTests) backTests.href = href;
-    }
-
-    function syncInfoToggles() {
-        document.querySelectorAll('#info-level .toggle-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.value === state.level);
-        });
-        document.querySelectorAll('#info-category .toggle-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.value === state.category);
-        });
-    }
-
-
-    // ── Page list (sidebar) ───────────────────────────────────────────────────
-
-    function renderPageList() {
-        const list = document.getElementById('cst-pages-list');
-        if (!list) return;
-        list.innerHTML = '';
-        state.pages.forEach((p, i) => {
-            const isActive = i === state.currentIndex;
-            const isInfo = p.type === 'info';
-            const el = document.createElement('div');
-            el.className = 'page-item' + (isActive ? ' active' : '');
-            const numBg = isActive ? 'var(--brand)' : 'var(--surface-2)';
-            const numColor = isActive ? '#fff' : 'var(--text-2)';
-
-            const numContent = isInfo
-                ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 1 0 20A10 10 0 0 1 12 2zm1 9h-2v6h2v-6zm0-4h-2v2h2V7z"/></svg>`
-                : String(i);
-
-            el.innerHTML = `
-                <span class="page-num" style="background:${numBg};color:${numColor};">${numContent}</span>
-                <div style="flex:1;min-width:0;">
-                    <div class="page-title">${escHtml(p.title || 'Без названия')}</div>
-                    <div class="page-type">${TYPE_LABELS[p.type] || p.type}</div>
-                </div>
-                ${isInfo ? '' : `<button type="button" class="page-del-btn" title="Удалить"
-                  style="flex-shrink:0;width:18px;height:18px;border:none;background:none;cursor:pointer;
-                  color:var(--faint);font-size:11px;display:flex;align-items:center;justify-content:center;
-                  border-radius:4px;opacity:0;transition:opacity .1s,background .1s,color .1s;">✕</button>`}
-            `;
-
-            if (!isInfo) {
-                el.addEventListener('mouseenter', () => { el.querySelector('.page-del-btn').style.opacity = '1'; });
-                el.addEventListener('mouseleave', () => { el.querySelector('.page-del-btn').style.opacity = '0'; });
-                el.querySelector('.page-del-btn').addEventListener('click', e => {
-                    e.stopPropagation();
-                    deletePage(i);
-                });
-                el.querySelector('.page-del-btn').addEventListener('mouseenter', e => {
-                    e.currentTarget.style.background = 'var(--brand-soft)';
-                    e.currentTarget.style.color = 'var(--red-text)';
-                });
-                el.querySelector('.page-del-btn').addEventListener('mouseleave', e => {
-                    e.currentTarget.style.background = '';
-                    e.currentTarget.style.color = 'var(--faint)';
-                });
-            }
-            el.addEventListener('click', () => switchPage(i));
-            list.appendChild(el);
-        });
-    }
-
-    // ── Editor ────────────────────────────────────────────────────────────────
-
-    function switchPage(idx) {
-        state.currentIndex = idx;
-        renderPageList();
-        renderEditor();
-    }
-
-    function setType(type) {
-        const page = state.pages[state.currentIndex];
-        if (!page || page.type === type || page.type === 'info') return;
-        page.type = type;
-        page.answers = [];
-        page.page_meta = type === 'code'
-            ? { language: 'python', time_limit: 5, test_cases: [] }
-            : {};
-        markDirty();
-        renderEditor();
-        renderPageList();
-    }
-
-    function renderEditor() {
-        const page = state.currentIndex >= 0 ? state.pages[state.currentIndex] : null;
-        const panelType = page ? page.type : 'empty';
-
-        // Show type tabs only for question pages
-        const typeTabs = document.getElementById('type-tabs');
-        if (typeTabs) typeTabs.style.display = (panelType === 'info' || panelType === 'empty') ? 'none' : '';
-
-        // Type tabs active state
-        document.querySelectorAll('#type-tabs .tab-btn').forEach(btn => {
-            btn.disabled = !page || page.type === 'info';
-            btn.classList.toggle('active', !!page && btn.dataset.type === page.type);
-        });
-
-        // Panels
-        document.querySelectorAll('[data-panel]').forEach(p => {
-            p.classList.toggle('active', p.dataset.panel === panelType);
-        });
-
-        if (!page) return;
-
-        if (page.type === 'info') {
-            const descEl = document.getElementById('p-info-desc');
-            if (descEl) descEl.value = state.description || '';
-            syncInfoToggles();
-            return;
-        }
-
-        if (page.type === 'text') {
-            const t = document.getElementById('p-title');
-            const c = document.getElementById('p-content');
-            if (t) t.value = page.title || '';
-            if (c) c.value = page.content || '';
-        } else if (page.type === 'quiz') {
-            const q = document.getElementById('p-question-choice');
-            if (q) q.value = page.title || '';
-            if (!page.answers.length) {
-                page.answers.push({ localId: uid(), text: '', is_correct: false, order: 0 });
-                page.answers.push({ localId: uid(), text: '', is_correct: false, order: 1 });
-                page.answers.push({ localId: uid(), text: '', is_correct: false, order: 2 });
-                page.answers.push({ localId: uid(), text: '', is_correct: false, order: 3 });
-            }
-            renderOptions();
-        } else if (page.type === 'input') {
-            const q = document.getElementById('p-question-input');
-            const a = document.getElementById('p-answer');
-            if (q) q.value = page.title || '';
-            // Все принимаемые ответы показываем одной строкой через запятую —
-            // ровно так, как обещает подсказка под полем
-            if (a) a.value = (page.answers || []).map(ans => ans.text).join(', ');
-        } else if (page.type === 'code') {
-            const q = document.getElementById('p-question-code');
-            if (q) q.value = page.content || '';
-            const meta = page.page_meta || {};
-            const langEl = document.getElementById('ed-language');
-            const timeLimitEl = document.getElementById('ed-time-limit');
-            if (langEl) langEl.value = meta.language || 'python';
-            if (timeLimitEl) timeLimitEl.value = meta.time_limit || 5;
-            renderTestCases();
-        }
-    }
-
-    // ── Options (quiz) ────────────────────────────────────────────────────────
-
-    function renderOptions() {
-        const page = state.pages[state.currentIndex];
-        const list = document.getElementById('options-list');
-        if (!list || !page) return;
-        list.innerHTML = '';
-        (page.answers || []).forEach((ans, i) => {
-            const isCorrect = ans.is_correct;
-            const row = document.createElement('div');
-            row.className = 'option-row';
-            row.innerHTML = `
-                <div class="checkbox ${isCorrect ? 'checked' : ''}" data-idx="${i}">
-                    ${isCorrect ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>' : ''}
-                </div>
-                <input class="opt-input ${isCorrect ? 'correct' : ''}" value="${escAttr(ans.text)}" placeholder="Вариант ${i + 1}">
-                <button type="button" style="height:40px;width:32px;flex-shrink:0;border:1px solid var(--line);border-radius:8px;background:none;color:var(--faint);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .15s,border-color .15s;" class="opt-del-btn">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
-            `;
-            row.querySelector('.checkbox').addEventListener('click', () => {
-                ans.is_correct = !ans.is_correct;
-                renderOptions();
-                markDirty();
-            });
-            row.querySelector('.opt-input').addEventListener('input', e => {
-                ans.text = e.target.value;
-                markDirty();
-            });
-            row.querySelector('.opt-del-btn').addEventListener('click', () => {
-                page.answers.splice(i, 1);
-                renderOptions();
-                markDirty();
-            });
-            row.querySelector('.opt-del-btn').addEventListener('mouseenter', e => {
-                e.currentTarget.style.color = 'var(--red-text)';
-                e.currentTarget.style.borderColor = 'var(--red-text)';
-            });
-            row.querySelector('.opt-del-btn').addEventListener('mouseleave', e => {
-                e.currentTarget.style.color = 'var(--faint)';
-                e.currentTarget.style.borderColor = 'var(--line)';
-            });
-            list.appendChild(row);
-        });
-    }
-
-    // ── Test cases (code) ─────────────────────────────────────────────────────
-
-    function renderTestCases() {
-        const page = state.pages[state.currentIndex];
-        const list = document.getElementById('tc-list');
-        if (!list || !page) return;
-        list.innerHTML = '';
-        const cases = (page.page_meta && page.page_meta.test_cases) || [];
-        if (!cases.length) {
-            list.innerHTML = '<div class="empty-tc">Добавьте хотя бы один тест-кейс</div>';
-            return;
-        }
-        cases.forEach((tc, i) => {
-            const row = document.createElement('div');
-            row.className = 'tc-row';
-            row.innerHTML = `
-                <div>
-                    <div class="tc-mini-label">Ввод (stdin)</div>
-                    <input class="inp-sm tc-input" value="${escAttr(tc.input)}" placeholder="пусто — если ввод не нужен">
-                </div>
-                <div>
-                    <div class="tc-mini-label">Ожидаемый вывод</div>
-                    <input class="inp-sm tc-expected" value="${escAttr(tc.expected)}" placeholder="ожидаемый stdout">
-                </div>
-                <button type="button" class="btn-remove-tc">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
-            `;
-            row.querySelector('.tc-input').addEventListener('input', e => { tc.input = e.target.value; markDirty(); });
-            row.querySelector('.tc-expected').addEventListener('input', e => { tc.expected = e.target.value; markDirty(); });
-            row.querySelector('.btn-remove-tc').addEventListener('click', () => {
-                page.page_meta.test_cases.splice(i, 1);
-                renderTestCases();
-                markDirty();
-            });
-            list.appendChild(row);
-        });
-    }
-
-    // ── Page operations ───────────────────────────────────────────────────────
-
-    function addPage() {
-        const realCount = state.pages.filter(p => p.type !== 'info').length;
-        state.pages.push({
-            localId: uid(), order: state.pages.length, type: 'quiz',
-            title: 'Вопрос ' + (realCount + 1), content: '',
-            answers: [
-                { localId: uid(), text: '', is_correct: false, order: 0 },
-                { localId: uid(), text: '', is_correct: false, order: 1 },
-                { localId: uid(), text: '', is_correct: false, order: 2 },
-                { localId: uid(), text: '', is_correct: false, order: 3 },
-            ],
-            page_meta: {},
-        });
-        switchPage(state.pages.length - 1);
-        markDirty();
-        syncPublishBtn();
-    }
-
-    function deletePage(index) {
-        if (index === 0 && state.pages[0]?.type === 'info') return;
-        const page = state.pages[index];
-        // Один промах по крестику стирал готовый вопрос без следа
-        const filled = (page.title || '').trim() || (page.content || '').trim()
-            || (page.answers || []).some(a => (a.text || '').trim());
-        if (filled && !confirm(`Удалить страницу «${page.title || 'Без названия'}»?`)) return;
-
-        state.pages.splice(index, 1);
-        // Курсор держим на той же странице: при удалении страницы выше
-        // индекс съезжал и открывалась соседняя
-        if (index < state.currentIndex) state.currentIndex -= 1;
-        if (state.currentIndex >= state.pages.length) state.currentIndex = state.pages.length - 1;
-        markDirty();
-        renderPageList();
-        renderEditor();
-        syncPublishBtn();
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    function escHtml(s) {
-        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function escAttr(s) {
-        return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-    }
-
-    // ── Init ──────────────────────────────────────────────────────────────────
-
-    async function init() {
-        syncBackLink();
-
-        // Title input
-        const titleInput = document.getElementById('cst-title');
-        titleInput?.addEventListener('input', e => {
-            state.title = e.target.value;
-            markDirty();
-        });
-
-        // Переключатель темы обрабатывает общий main/theme.js по [data-theme-toggle] —
-        // своя копия здесь расходилась с ним и не обновляла подпись кнопки
-
-        // Add page
-        document.getElementById('cst-add-page')?.addEventListener('click', addPage);
-
-        // Type tabs
-        document.querySelectorAll('#type-tabs .tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => setType(btn.dataset.type));
-        });
-
-        // Save
-        document.getElementById('cst-save-btn')?.addEventListener('click', () => save());
-
-        // Preview
-        document.getElementById('cst-preview-btn')?.addEventListener('click', async () => {
-            if (!state.testId && !state.title.trim()) return;
-            // Несохранённые правки в предпросмотр не попадут — не уходим со страницы,
-            // пока сохранение не прошло, иначе правки просто потеряются
-            if ((state.dirty || !state.testId) && !await save()) return;
-            if (state.testId) window.location.assign(`/tests/${state.testId}/?preview=1`);
-        });
-
-        // Publish
-        document.getElementById('cst-publish-btn')?.addEventListener('click', async () => {
-            if (!state.testId || state.published) return;
-            if (state.dirty && !await save()) return;
-            try {
-                setStatus('Публикация…');
-                await apiFetch(`/api/v1/tests/${state.testId}/publish/`, { method: 'POST' });
-                state.published = true;
-                setStatus('Опубликован', 'ok');
-                syncSaveBtn();
-                syncPublishBtn();
-                syncStatsBtn();
-            } catch (e) {
-                setStatus(e.message || 'Не удалось опубликовать', 'error');
-            }
-        });
-
-        // Info panel
-        document.getElementById('p-info-desc')?.addEventListener('input', e => {
-            state.description = e.target.value;
-            markDirty();
-        });
-        document.querySelectorAll('#info-level .toggle-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                state.level = btn.dataset.value;
-                syncInfoToggles();
-                markDirty();
-            });
-        });
-        document.querySelectorAll('#info-category .toggle-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                state.category = btn.dataset.value;
-                syncInfoToggles();
-                markDirty();
-            });
-        });
-
-        // Text panel fields
-        document.getElementById('p-title')?.addEventListener('input', e => {
-            const page = state.pages[state.currentIndex];
-            if (!page) return;
-            page.title = e.target.value;
-            markDirty();
-            renderPageList();
-        });
-        document.getElementById('p-content')?.addEventListener('input', e => {
-            const page = state.pages[state.currentIndex];
-            if (page) { page.content = e.target.value; markDirty(); }
-        });
-
-        // Quiz panel fields
-        document.getElementById('p-question-choice')?.addEventListener('input', e => {
-            const page = state.pages[state.currentIndex];
-            if (!page) return;
-            page.title = e.target.value;
-            markDirty();
-            renderPageList();
-        });
-        document.getElementById('btn-add-option')?.addEventListener('click', () => {
-            const page = state.pages[state.currentIndex];
-            if (!page) return;
-            page.answers.push({ localId: uid(), text: '', is_correct: false, order: page.answers.length });
-            renderOptions();
-            markDirty();
-        });
-
-        // Input panel fields
-        document.getElementById('p-question-input')?.addEventListener('input', e => {
-            const page = state.pages[state.currentIndex];
-            if (!page) return;
-            page.title = e.target.value;
-            markDirty();
-            renderPageList();
-        });
-        document.getElementById('p-answer')?.addEventListener('input', e => {
-            const page = state.pages[state.currentIndex];
-            if (!page) return;
-            /* Подсказка обещает «несколько вариантов через запятую», но строка
-               целиком клалась в один ответ: сервер сравнивает ответ участника
-               с каждым вариантом по отдельности, поэтому «flex, block» принималось
-               только если человек дословно напечатал «flex, block». Режем на варианты. */
-            page.answers = e.target.value
-                .split(',')
-                .map(text => text.trim())
-                .filter(Boolean)
-                .map((text, i) => ({ localId: uid(), text, is_correct: true, order: i }));
-            markDirty();
-        });
-
-        // Code panel fields
-        document.getElementById('p-question-code')?.addEventListener('input', e => {
-            const page = state.pages[state.currentIndex];
-            if (page) { page.content = e.target.value; markDirty(); }
-        });
-        document.getElementById('ed-language')?.addEventListener('change', e => {
-            const page = state.pages[state.currentIndex];
-            if (page) { if (!page.page_meta) page.page_meta = {}; page.page_meta.language = e.target.value; markDirty(); }
-        });
-        document.getElementById('ed-time-limit')?.addEventListener('input', e => {
-            const page = state.pages[state.currentIndex];
-            if (page) { if (!page.page_meta) page.page_meta = {}; page.page_meta.time_limit = parseInt(e.target.value, 10) || 5; markDirty(); }
-        });
-        document.getElementById('ed-add-tc')?.addEventListener('click', () => {
-            const page = state.pages[state.currentIndex];
-            if (!page) return;
-            if (!page.page_meta) page.page_meta = {};
-            if (!page.page_meta.test_cases) page.page_meta.test_cases = [];
-            page.page_meta.test_cases.push({ input: '', expected: '', is_sample: true });
-            renderTestCases();
-            markDirty();
-        });
-        document.getElementById('ed-tc-file')?.addEventListener('change', e => {
-            const page = state.pages[state.currentIndex];
-            const file = e.target.files[0];
-            if (!file || !page) return;
-            const reader = new FileReader();
-            reader.onload = ev => {
-                try {
-                    const parsed = JSON.parse(ev.target.result);
-                    if (!Array.isArray(parsed)) throw new Error('Ожидается массив');
-                    if (!page.page_meta) page.page_meta = {};
-                    page.page_meta.test_cases = parsed.map(tc => ({
-                        input: String(tc.input ?? ''), expected: String(tc.expected ?? ''), is_sample: Boolean(tc.is_sample),
-                    }));
-                    renderTestCases();
-                    markDirty();
-                    setStatus(`Загружено ${page.page_meta.test_cases.length} тест-кейсов`, 'ok');
-                } catch (err) {
-                    setStatus(`Не удалось разобрать JSON: ${err.message}`, 'error');
-                }
-                e.target.value = '';
-            };
-            reader.readAsText(file);
-        });
-
-        // Load existing test
-        if (state.testId) {
-            try {
-                setStatus('Загрузка…');
-                const data = await apiFetch(`/api/v1/tests/${state.testId}/`);
-                applyTest(data.test);
-                syncBackLink();
-                setStatus(data.test.status === 'published' ? 'Опубликован' : 'Черновик');
-            } catch (e) {
-                setStatus('Ошибка загрузки');
-            }
-        }
-
-        // New test: always start with info page + auto-name
-        if (!state.testId && state.pages.length === 0) {
-            state.pages.push(makeInfoPage());
-            if (state.ownerUsername) {
-                try {
-                    const resp = await fetch(`/api/v1/tests/?owner=${encodeURIComponent(state.ownerUsername)}`).then(r => r.json()).catch(() => ({ ok: false }));
-                    const count = resp.ok ? (resp.tests || []).length : 0;
-                    state.title = `Тест ${count + 1}`;
-                } catch (_) {
-                    state.title = 'Тест 1';
-                }
-            } else {
-                state.title = 'Тест 1';
-            }
-            state.dirty = true;
-        }
-
-        // Always open the info page first
-        state.currentIndex = 0;
-
-        if (titleInput) titleInput.value = state.title;
-        renderPageList();
-        renderEditor();
-        syncPublishBtn();
-        syncPreviewBtn();
-        syncStatsBtn();
-    }
-
-    // Тест живёт в памяти страницы до нажатия «Сохранить»
-    window.addEventListener('beforeunload', event => {
-        if (!state.dirty) return;
-        event.preventDefault();
-        event.returnValue = '';
+/* Конструктор теста: страница «Информация», вопросы трёх типов, задачи на код.
+   Тест живёт в памяти страницы до сохранения; первая страница — виртуальная
+   «Информация о тесте», на сервер она не уходит. */
+import { api, byId, confirmDialog, esc, pageData } from 'alfa/core';
+
+const page = pageData();
+const TYPE_LABELS = { info: 'Инфо', text: 'Текст', quiz: 'Выбор', input: 'Ввод', code: 'Код' };
+const DEFAULT_TIME_LIMIT = 5;
+const ICONS = {
+  info: '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 1 0 20A10 10 0 0 1 12 2zm1 9h-2v6h2v-6zm0-4h-2v2h2V7z"/></svg>',
+  remove: (size) =>
+    `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`,
+  tick: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>',
+};
+
+const state = {
+  testId: page.testId || null,
+  ownerUsername: page.ownerUsername || '',
+  title: '',
+  description: '',
+  level: '',
+  category: '',
+  pages: [],
+  current: -1,
+  dirty: false,
+  saving: false,
+  published: false,
+  // Тест не загрузился: форма пустая, и сохранение стёрло бы вопросы
+  loadFailed: false,
+};
+
+const currentPage = () => state.pages[state.current];
+const realPages = () => state.pages.filter((item) => item.type !== 'info');
+const emptyAnswers = (count = 4) =>
+  Array.from({ length: count }, (_, order) => ({ text: '', is_correct: false, order }));
+const infoPage = () => ({ type: 'info', title: 'Информация о тесте', content: '', answers: [], page_meta: {} });
+
+const serialize = () => ({
+  owner_username: state.ownerUsername,
+  title: state.title,
+  description: state.description,
+  level: state.level,
+  category: state.category,
+  pages: realPages().map((item, order) => ({
+    ...(item.id && { id: item.id }),
+    order,
+    type: item.type,
+    title: item.title,
+    content: item.content,
+    page_meta: item.page_meta ?? {},
+    answers: (item.answers ?? []).map((answer, answerOrder) => ({
+      ...(answer.id && { id: answer.id }),
+      text: answer.text,
+      is_correct: answer.is_correct,
+      order: answerOrder,
+    })),
+  })),
+});
+
+function applyTest(test) {
+  Object.assign(state, {
+    testId: test.id,
+    title: test.title,
+    description: test.description ?? '',
+    level: test.level || test.stats?.level || '',
+    category: test.category || test.stats?.category || '',
+    published: test.status === 'published',
+    ownerUsername: state.ownerUsername || test.owner_username || '',
+    pages: [
+      infoPage(),
+      ...(test.pages ?? []).map((item) => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        content: item.content,
+        page_meta: item.page_meta ?? {},
+        answers: (item.answers ?? []).map(({ id, text, is_correct: isCorrect, order }) => ({
+          id,
+          text,
+          is_correct: isCorrect,
+          order,
+        })),
+      })),
+    ],
+  });
+}
+
+/* Сервер присвоил новым страницам и вариантам id — переносим их к себе,
+   иначе следующее сохранение создало бы их заново */
+function applySavedIds(saved) {
+  state.testId = saved.id;
+  state.published = saved.status === 'published';
+  realPages().forEach((item, index) => {
+    const savedPage = saved.pages?.[index];
+    if (!savedPage) return;
+    item.id = savedPage.id;
+    item.answers?.forEach((answer, answerIndex) => {
+      const savedAnswer = savedPage.answers?.[answerIndex];
+      if (savedAnswer) answer.id = savedAnswer.id;
     });
+  });
+}
 
-    document.addEventListener('DOMContentLoaded', init);
-})();
+function setStatus(message = '', kind = '') {
+  const status = byId('cst-save-status');
+  status.textContent = message;
+  status.className = `save-status${kind ? ` ${kind}` : ''}`;
+}
+
+function syncButtons() {
+  byId('cst-save-btn').disabled = !state.dirty || !state.title.trim() || state.saving;
+  const publish = byId('cst-publish-btn');
+  publish.textContent = state.published ? 'Опубликован' : 'Опубликовать';
+  publish.disabled = state.published || !state.testId || !realPages().length;
+  byId('cst-preview-btn').disabled = !state.testId;
+  // Статистика есть только у опубликованного теста: черновик никто не проходил
+  const stats = byId('cst-stats-btn');
+  stats.hidden = !state.testId || !state.published;
+  if (state.testId) stats.href = `/constructor/${state.testId}/stats/`;
+}
+
+function markDirty() {
+  state.dirty = true;
+  if (!state.published) setStatus();
+  syncButtons();
+}
+
+/* true — только если тест действительно сохранён: публикация
+   и предпросмотр по этому признаку решают, можно ли идти дальше */
+async function save() {
+  if (state.loadFailed) {
+    setStatus('Тест не загрузился — обновите страницу, иначе сохранение сотрёт вопросы', 'error');
+    return false;
+  }
+  if (state.saving || !state.title.trim()) return false;
+  state.saving = true;
+  state.dirty = false;
+  setStatus('Сохранение…');
+  try {
+    const { test } = state.testId
+      ? await api.put(`/api/v1/tests/${state.testId}/`, serialize())
+      : await api.post('/api/v1/tests/create/', serialize());
+    applySavedIds(test);
+    history.replaceState(null, '', `/constructor/${state.testId}/`);
+    const button = byId('cst-save-btn');
+    button.textContent = '✓ Сохранено';
+    button.classList.add('saved');
+    setTimeout(() => {
+      button.textContent = 'Сохранить';
+      button.classList.remove('saved');
+    }, 1800);
+    setStatus(state.published ? 'Опубликован' : 'Черновик');
+    return true;
+  } catch (error) {
+    setStatus(error.message || 'Не удалось сохранить', 'error');
+    state.dirty = true;
+    return false;
+  } finally {
+    state.saving = false;
+    syncButtons();
+  }
+}
+
+async function publish() {
+  if (!state.testId || state.published) return;
+  if (state.dirty && !(await save())) return;
+  setStatus('Публикация…');
+  try {
+    await api.post(`/api/v1/tests/${state.testId}/publish/`);
+    state.published = true;
+    setStatus('Опубликован', 'ok');
+  } catch (error) {
+    setStatus(error.message || 'Не удалось опубликовать', 'error');
+  }
+  syncButtons();
+}
+
+function renderPageList() {
+  byId('cst-pages-list').innerHTML = state.pages
+    .map((item, index) => {
+      const isInfo = item.type === 'info';
+      return `
+      <div class="page-item ${index === state.current ? 'active' : ''}" data-page="${index}">
+        <span class="page-num">${isInfo ? ICONS.info : index}</span>
+        <div class="page-item-body">
+          <div class="page-title">${esc(item.title || 'Без названия')}</div>
+          <div class="page-type">${TYPE_LABELS[item.type] ?? item.type}</div>
+        </div>
+        ${isInfo ? '' : `<button type="button" class="page-del-btn" data-delete-page="${index}" title="Удалить" aria-label="Удалить страницу">${ICONS.remove(10)}</button>`}
+      </div>`;
+    })
+    .join('');
+}
+
+function switchPage(index) {
+  state.current = index;
+  renderPageList();
+  renderEditor();
+}
+
+function addPage() {
+  state.pages.push({
+    type: 'quiz',
+    title: `Вопрос ${realPages().length + 1}`,
+    content: '',
+    answers: emptyAnswers(),
+    page_meta: {},
+  });
+  switchPage(state.pages.length - 1);
+  markDirty();
+}
+
+async function deletePage(index) {
+  const item = state.pages[index];
+  if (!item || item.type === 'info') return;
+  // Один промах по крестику стирал готовый вопрос без следа
+  const filled = item.title?.trim() || item.content?.trim() || item.answers?.some((answer) => answer.text?.trim());
+  if (
+    filled &&
+    !(await confirmDialog({
+      title: 'Удалить страницу?',
+      text: `«${item.title || 'Без названия'}» пропадёт из теста после сохранения.`,
+      confirmLabel: 'Удалить',
+    }))
+  )
+    return;
+
+  state.pages.splice(index, 1);
+  // Курсор держим на той же странице: при удалении страницы выше индекс съезжал
+  if (index < state.current) state.current -= 1;
+  state.current = Math.min(state.current, state.pages.length - 1);
+  markDirty();
+  renderPageList();
+  renderEditor();
+}
+
+function setType(type) {
+  const item = currentPage();
+  if (!item || item.type === type || item.type === 'info') return;
+  item.type = type;
+  item.answers = [];
+  item.page_meta = type === 'code' ? { language: 'python', time_limit: DEFAULT_TIME_LIMIT, test_cases: [] } : {};
+  markDirty();
+  renderEditor();
+  renderPageList();
+}
+
+function syncInfoToggles() {
+  document
+    .querySelectorAll('#info-level .toggle-btn')
+    .forEach((button) => button.classList.toggle('active', button.dataset.value === state.level));
+  document
+    .querySelectorAll('#info-category .toggle-btn')
+    .forEach((button) => button.classList.toggle('active', button.dataset.value === state.category));
+}
+
+const EDITORS = {
+  info() {
+    byId('p-info-desc').value = state.description;
+    syncInfoToggles();
+  },
+  text(item) {
+    byId('p-title').value = item.title ?? '';
+    byId('p-content').value = item.content ?? '';
+  },
+  quiz(item) {
+    byId('p-question-choice').value = item.title ?? '';
+    if (!item.answers.length) item.answers = emptyAnswers();
+    renderOptions();
+  },
+  input(item) {
+    byId('p-question-input').value = item.title ?? '';
+    // Все принимаемые ответы — одной строкой через запятую, как обещает подсказка
+    byId('p-answer').value = (item.answers ?? []).map((answer) => answer.text).join(', ');
+  },
+  code(item) {
+    byId('p-question-code').value = item.content ?? '';
+    byId('ed-language').value = item.page_meta?.language || 'python';
+    byId('ed-time-limit').value = item.page_meta?.time_limit || DEFAULT_TIME_LIMIT;
+    renderTestCases();
+  },
+};
+
+function renderEditor() {
+  const item = currentPage();
+  const panel = item?.type ?? 'empty';
+  byId('type-tabs').hidden = panel === 'info' || panel === 'empty';
+  document.querySelectorAll('#type-tabs .tab-btn').forEach((button) => {
+    button.disabled = !item || item.type === 'info';
+    button.classList.toggle('active', button.dataset.type === item?.type);
+  });
+  document
+    .querySelectorAll('[data-panel]')
+    .forEach((element) => element.classList.toggle('active', element.dataset.panel === panel));
+  if (item) EDITORS[item.type]?.(item);
+}
+
+function renderOptions() {
+  byId('options-list').innerHTML = (currentPage()?.answers ?? [])
+    .map(
+      (answer, index) => `
+    <div class="option-row">
+      <div class="checkbox ${answer.is_correct ? 'checked' : ''}" data-toggle-correct="${index}" role="checkbox"
+           aria-checked="${answer.is_correct}" tabindex="0">${answer.is_correct ? ICONS.tick : ''}</div>
+      <input class="opt-input ${answer.is_correct ? 'correct' : ''}" data-option="${index}" value="${esc(answer.text)}" placeholder="Вариант ${index + 1}">
+      <button type="button" class="opt-del-btn" data-delete-option="${index}" aria-label="Удалить вариант">${ICONS.remove(12)}</button>
+    </div>`,
+    )
+    .join('');
+}
+
+function renderTestCases() {
+  const cases = currentPage()?.page_meta?.test_cases ?? [];
+  byId('tc-list').innerHTML = cases.length
+    ? cases
+        .map(
+          (testCase, index) => `
+      <div class="tc-row">
+        <div>
+          <div class="tc-mini-label">Ввод (stdin)</div>
+          <input class="inp-sm" data-case="${index}" data-field="input" value="${esc(testCase.input)}" placeholder="пусто — если ввод не нужен">
+        </div>
+        <div>
+          <div class="tc-mini-label">Ожидаемый вывод</div>
+          <input class="inp-sm" data-case="${index}" data-field="expected" value="${esc(testCase.expected)}" placeholder="ожидаемый stdout">
+        </div>
+        <button type="button" class="btn-remove-tc" data-delete-case="${index}" aria-label="Удалить тест-кейс">${ICONS.remove(13)}</button>
+      </div>`,
+        )
+        .join('')
+    : '<div class="empty-tc">Добавьте хотя бы один тест-кейс</div>';
+}
+
+function codeMeta() {
+  const item = currentPage();
+  item.page_meta ??= {};
+  item.page_meta.test_cases ??= [];
+  return item.page_meta;
+}
+
+async function importTestCases(file) {
+  try {
+    const parsed = JSON.parse(await file.text());
+    if (!Array.isArray(parsed)) throw new Error('ожидается массив');
+    codeMeta().test_cases = parsed.map((testCase) => ({
+      input: String(testCase.input ?? ''),
+      expected: String(testCase.expected ?? ''),
+      is_sample: Boolean(testCase.is_sample),
+    }));
+    renderTestCases();
+    markDirty();
+    setStatus(`Загружено тест-кейсов: ${parsed.length}`, 'ok');
+  } catch (error) {
+    setStatus(`Не удалось разобрать JSON: ${error.message}`, 'error');
+  }
+}
+
+/* Поле редактора → свойство текущей страницы */
+function bindField(id, apply, { refreshList = false } = {}) {
+  byId(id).addEventListener('input', (event) => {
+    const item = currentPage();
+    if (!item) return;
+    apply(item, event.target.value);
+    markDirty();
+    if (refreshList) renderPageList();
+  });
+}
+
+function bindHandlers() {
+  byId('cst-title').addEventListener('input', (event) => {
+    state.title = event.target.value;
+    markDirty();
+  });
+  byId('cst-add-page').addEventListener('click', addPage);
+  byId('cst-save-btn').addEventListener('click', save);
+  byId('cst-publish-btn').addEventListener('click', publish);
+  byId('cst-preview-btn').addEventListener('click', async () => {
+    // Несохранённые правки в предпросмотр не попадут — не уходим, пока сохранение не прошло
+    if ((state.dirty || !state.testId) && !(await save())) return;
+    location.assign(`/tests/${state.testId}/?preview=1`);
+  });
+  document
+    .querySelectorAll('#type-tabs .tab-btn')
+    .forEach((button) => button.addEventListener('click', () => setType(button.dataset.type)));
+
+  byId('cst-pages-list').addEventListener('click', (event) => {
+    const remove = event.target.closest('[data-delete-page]');
+    if (remove) {
+      deletePage(Number(remove.dataset.deletePage));
+      return;
+    }
+    const item = event.target.closest('[data-page]');
+    if (item) switchPage(Number(item.dataset.page));
+  });
+
+  // Информация о тесте
+  byId('p-info-desc').addEventListener('input', (event) => {
+    state.description = event.target.value;
+    markDirty();
+  });
+  [
+    ['info-level', 'level'],
+    ['info-category', 'category'],
+  ].forEach(([id, key]) =>
+    byId(id).addEventListener('click', (event) => {
+      const button = event.target.closest('.toggle-btn');
+      if (!button) return;
+      state[key] = button.dataset.value;
+      syncInfoToggles();
+      markDirty();
+    }),
+  );
+
+  // Текст и вопросы
+  bindField(
+    'p-title',
+    (item, value) => {
+      item.title = value;
+    },
+    { refreshList: true },
+  );
+  bindField('p-content', (item, value) => {
+    item.content = value;
+  });
+  bindField(
+    'p-question-choice',
+    (item, value) => {
+      item.title = value;
+    },
+    { refreshList: true },
+  );
+  bindField(
+    'p-question-input',
+    (item, value) => {
+      item.title = value;
+    },
+    { refreshList: true },
+  );
+  /* «Несколько вариантов через запятую»: сервер сравнивает ответ участника
+     с каждым вариантом по отдельности, поэтому строку режем на варианты */
+  bindField('p-answer', (item, value) => {
+    item.answers = value
+      .split(',')
+      .map((text) => text.trim())
+      .filter(Boolean)
+      .map((text, order) => ({ text, is_correct: true, order }));
+  });
+
+  // Варианты ответа
+  const options = byId('options-list');
+  const toggleCorrect = (target) => {
+    const box = target.closest('[data-toggle-correct]');
+    if (!box) return;
+    const answer = currentPage().answers[Number(box.dataset.toggleCorrect)];
+    answer.is_correct = !answer.is_correct;
+    renderOptions();
+    markDirty();
+  };
+  options.addEventListener('click', (event) => {
+    const remove = event.target.closest('[data-delete-option]');
+    if (remove) {
+      currentPage().answers.splice(Number(remove.dataset.deleteOption), 1);
+      renderOptions();
+      markDirty();
+      return;
+    }
+    toggleCorrect(event.target);
+  });
+  options.addEventListener('keydown', (event) => {
+    if (event.key === ' ' || event.key === 'Enter') toggleCorrect(event.target);
+  });
+  options.addEventListener('input', (event) => {
+    const input = event.target.closest('[data-option]');
+    if (!input) return;
+    currentPage().answers[Number(input.dataset.option)].text = input.value;
+    markDirty();
+  });
+  byId('btn-add-option').addEventListener('click', () => {
+    const item = currentPage();
+    item.answers.push({ text: '', is_correct: false, order: item.answers.length });
+    renderOptions();
+    markDirty();
+  });
+
+  // Задача на код
+  bindField('p-question-code', (item, value) => {
+    item.content = value;
+  });
+  byId('ed-language').addEventListener('change', (event) => {
+    codeMeta().language = event.target.value;
+    markDirty();
+  });
+  byId('ed-time-limit').addEventListener('input', (event) => {
+    codeMeta().time_limit = parseInt(event.target.value, 10) || DEFAULT_TIME_LIMIT;
+    markDirty();
+  });
+  byId('ed-add-tc').addEventListener('click', () => {
+    codeMeta().test_cases.push({ input: '', expected: '', is_sample: true });
+    renderTestCases();
+    markDirty();
+  });
+  byId('tc-list').addEventListener('input', (event) => {
+    const input = event.target.closest('[data-case]');
+    if (!input) return;
+    codeMeta().test_cases[Number(input.dataset.case)][input.dataset.field] = input.value;
+    markDirty();
+  });
+  byId('tc-list').addEventListener('click', (event) => {
+    const remove = event.target.closest('[data-delete-case]');
+    if (!remove) return;
+    codeMeta().test_cases.splice(Number(remove.dataset.deleteCase), 1);
+    renderTestCases();
+    markDirty();
+  });
+  byId('ed-tc-file').addEventListener('change', async (event) => {
+    const [file] = event.target.files;
+    if (file && currentPage()) await importTestCases(file);
+    event.target.value = '';
+  });
+
+  // Тест живёт в памяти страницы до нажатия «Сохранить»
+  addEventListener('beforeunload', (event) => {
+    if (state.dirty) event.preventDefault();
+  });
+}
+
+async function nextTestTitle() {
+  if (!state.ownerUsername) return 'Тест 1';
+  const { tests = [] } = await api
+    .get(`/api/v1/tests/?owner=${encodeURIComponent(state.ownerUsername)}`)
+    .catch(() => ({}));
+  return `Тест ${tests.length + 1}`;
+}
+
+// Кабинет, куда ведёт «назад», зависит от роли автора
+for (const id of ['cst-back', 'cst-back-tests']) byId(id).href = page.backUrl || '/cabinet/user/tests/';
+bindHandlers();
+
+if (state.testId) {
+  setStatus('Загрузка…');
+  try {
+    const { test } = await api.get(`/api/v1/tests/${state.testId}/`);
+    applyTest(test);
+    setStatus(test.status === 'published' ? 'Опубликован' : 'Черновик');
+  } catch {
+    state.loadFailed = true;
+    setStatus('Не удалось загрузить тест. Обновите страницу — не сохраняйте.', 'error');
+  }
+} else {
+  // Новый тест: страница «Информация» и название по порядку
+  state.pages = [infoPage()];
+  state.title = await nextTestTitle();
+  state.dirty = true;
+}
+
+byId('cst-title').value = state.title;
+switchPage(0);
+syncButtons();

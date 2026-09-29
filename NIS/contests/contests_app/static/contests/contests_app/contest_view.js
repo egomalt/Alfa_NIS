@@ -1,61 +1,72 @@
-const BOOTSTRAP = window.ALFA_APP_BOOTSTRAP || {};
-const CONTEST_ID = BOOTSTRAP.contestId;
+/* Страница конкурса: кейс, правила, отсчёт до дедлайна и отправка решения. */
+import {
+  api,
+  byId,
+  CONTEST_STATUSES,
+  countOf,
+  esc,
+  formatDateTime,
+  initial,
+  LEVELS,
+  pageData,
+  pluralForm,
+  statusPill,
+  SUBMISSION_STATUSES,
+  toast,
+} from 'alfa/core';
+import { refreshReportButtons } from 'alfa/report';
 
-function csrf() {
-  return document.querySelector('meta[name="csrf-token"]')?.content || '';
-}
-
-async function apiFetch(url, opts = {}) {
-  const headers = { 'X-CSRFToken': csrf() };
-  if (opts.body && typeof opts.body === 'string') headers['Content-Type'] = 'application/json';
-  const res = await fetch(url, { headers, ...opts });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Ошибка');
-  return data;
-}
-
-let contest = null;
-let me = null;
-let mySubmissions = [];
-let hasContact = false;
-let chosenFile = null;
+const { contestId } = pageData();
+// На конкурс принимается одна попытка — так же проверяет и сервер
 const MAX_ATTEMPTS = 1;
+const SUBMISSION_FORMATS = { file: 'Файл', link: 'Ссылка', text: 'Текст' };
+const ICONS = {
+  flag: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
+  file: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  upload:
+    '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6M9 15l3 3 3-3"/></svg>',
+  warning:
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  done: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>',
+  close:
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+};
 
-async function getMe() {
-  try {
-    const d = await apiFetch('/api/v1/auth/me/');
-    return d.account || null;
-  } catch (_) { return null; }
-}
+const state = {
+  contest: null,
+  me: null,
+  submissions: [],
+  file: null,
+};
+
+const hasContact = () => Boolean(state.me?.email);
 
 function setTab(key) {
-  document.querySelectorAll('.cv-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.p === key));
-  document.querySelectorAll('.cv-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === key));
+  document.querySelectorAll('.cv-tab-btn').forEach((tab) => tab.classList.toggle('active', tab.dataset.p === key));
+  document
+    .querySelectorAll('.cv-panel')
+    .forEach((panel) => panel.classList.toggle('active', panel.dataset.panel === key));
 }
 
-function renderHero(c) {
-  const statusMeta = { active: { label: 'Активен', bg: 'var(--green-soft)', color: 'var(--green-text)' }, finished: { label: 'Завершён', bg: 'var(--surface-2)', color: 'var(--muted)' }, review: { label: 'На проверке', bg: 'var(--amber-soft)', color: 'var(--amber-text)' }, draft: { label: 'Черновик', bg: 'var(--amber-soft)', color: 'var(--amber-text)' } };
-  const sm = statusMeta[c.status] || statusMeta.draft;
-  document.getElementById('cv-page-title').textContent = `${c.title || 'Конкурс'} — Career`;
-  document.getElementById('cv-hero-inner').innerHTML = `
+function renderHero(contest) {
+  const company = contest.company_name || contest.company_username || '';
+  const tags = [contest.category, LEVELS[contest.level?.toLowerCase()] ?? contest.level].filter(Boolean);
+  document.title = `${contest.title || 'Конкурс'} — Career`;
+  byId('cv-hero-inner').innerHTML = `
     <div class="cv-hero-top">
       <div class="cv-hero-main">
         <div class="cv-hero-company">
-          <span class="cv-hero-av">${(c.company_name || c.company_username || '?').charAt(0).toUpperCase()}</span>
-          <span class="cv-hero-comp">${c.company_name || c.company_username || ''}</span>
-          <span class="cv-hero-status" style="background:${sm.bg};color:${sm.color};">${sm.label}</span>
+          <span class="cv-hero-av">${esc(initial(company))}</span>
+          <span class="cv-hero-comp">${esc(company)}</span>
+          ${statusPill(CONTEST_STATUSES, contest.status)}
         </div>
-        <h1 class="cv-hero-title">${c.title || ''}</h1>
-        <p class="cv-hero-excerpt">${c.excerpt || ''}</p>
-        <div class="cv-hero-tags">
-          ${c.category ? `<span class="cv-hero-tag">${c.category}</span>` : ''}
-          ${c.level ? `<span class="cv-hero-tag">${c.level}</span>` : ''}
-        </div>
+        <h1 class="cv-hero-title">${esc(contest.title)}</h1>
+        <p class="cv-hero-excerpt">${esc(contest.excerpt)}</p>
+        <div class="cv-hero-tags">${tags.map((tag) => `<span class="cv-hero-tag">${esc(tag)}</span>`).join('')}</div>
       </div>
-      <button type="button" class="cr-report-btn cv-hero-report" data-report-type="contest" data-report-id="${c.id}"
-              data-report-author="${c.company_username || ''}" data-report-title="${(c.title || '').replace(/"/g, '&quot;')}">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-        Пожаловаться
+      <button type="button" class="cr-report-btn cv-hero-report" data-report-type="contest" data-report-id="${contest.id}"
+              data-report-author="${esc(contest.company_username)}" data-report-title="${esc(contest.title)}">
+        ${ICONS.flag} Пожаловаться
       </button>
     </div>
     <div class="cv-tabs">
@@ -63,326 +74,357 @@ function renderHero(c) {
       <button class="cv-tab-btn" data-p="rules">Правила</button>
       <button class="cv-tab-btn" data-p="submit">Отправить решение</button>
     </div>`;
-  document.querySelectorAll('.cv-tab-btn').forEach(b => b.addEventListener('click', () => setTab(b.dataset.p)));
-  window.AlfaReport?.refresh();  // кнопка жалобы появилась только сейчас
+  byId('cv-hero-inner')
+    .querySelectorAll('.cv-tab-btn')
+    .forEach((tab) => tab.addEventListener('click', () => setTab(tab.dataset.p)));
+  // Кнопка жалобы появилась только сейчас
+  refreshReportButtons();
 }
 
-function renderAttachments(c) {
-  if (!c.attachments?.length) return;
-  const box = document.getElementById('cv-attach-box');
-  box.hidden = false;
-  document.getElementById('cv-attach-list').innerHTML = c.attachments.map(a => `
+function renderAttachments({ attachments = [] }) {
+  byId('cv-attach-box').hidden = !attachments.length;
+  byId('cv-attach-list').innerHTML = attachments
+    .map(
+      (file) => `
     <div class="cv-attach-file-row">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span class="cv-attach-name">${a.name}</span>
-      <span class="cv-attach-size">${a.size_display || ''}</span>
-      <a class="cv-btn-dl" href="${a.url}" download>Скачать</a>
-    </div>`).join('');
+      ${ICONS.file}
+      <span class="cv-attach-name">${esc(file.name)}</span>
+      <span class="cv-attach-size">${esc(file.size_display)}</span>
+      <a class="cv-btn-dl" href="${esc(file.url)}" download>Скачать</a>
+    </div>`,
+    )
+    .join('');
 }
 
-function renderCase(c) {
-  // Сам контейнер уже .cv-doc — второй такой же обёртки не нужно
-  document.getElementById('cv-case-content').innerHTML = (c.case_text || '').replace(/\n/g, '<br>');
+function renderRules({ rules = [] }) {
+  byId('cv-rules-list').innerHTML = rules.length
+    ? rules
+        .map(
+          (rule, index) => `
+      <div class="cv-rule-item">
+        <span class="cv-rule-num">${index + 1}</span>
+        <span class="cv-rule-text">${esc(rule)}</span>
+      </div>`,
+        )
+        .join('')
+    : '<div class="cv-rules-empty">Правила не заданы</div>';
 }
 
-function renderRules(c) {
-  const rules = c.rules || [];
-  if (rules.length === 0) {
-    document.getElementById('cv-rules-list').innerHTML = '<div style="padding:24px;color:var(--muted);font-size:14px;">Правила не заданы</div>';
-    return;
-  }
-  document.getElementById('cv-rules-list').innerHTML = rules.map((r, i) => `
-    <div class="cv-rule-item">
-      <span class="cv-rule-num">${i + 1}</span>
-      <span style="font-size:14.5px;line-height:1.6;color:var(--text-2);padding-top:2px;">${r}</span>
-    </div>`).join('');
+function startCountdown(deadline) {
+  const units = [
+    [86400000, ['день', 'дня', 'дней']],
+    [3600000, ['час', 'часа', 'часов']],
+    [60000, ['минута', 'минуты', 'минут']],
+  ];
+  const tick = () => {
+    let rest = Math.max(0, deadline - Date.now());
+    byId('cv-countdown').innerHTML = units
+      .map(([size, forms]) => {
+        const value = Math.floor(rest / size);
+        rest %= size;
+        return `<div class="cv-cd-unit"><div class="cv-cd-num">${value}</div><div class="cv-cd-label">${pluralForm(value, forms)}</div></div>`;
+      })
+      .join('');
+  };
+  tick();
+  setInterval(tick, 60000);
 }
 
-function renderSidebar(c) {
-  const statsEl = document.getElementById('cv-stats-rows');
-  statsEl.innerHTML = [
-    ['Участников', c.participants_count || 0],
-    ['Решений прислано', c.submissions_count || 0],
-    ['Формат решения', { file: 'Файл', link: 'Ссылка', text: 'Текст' }[c.submission_type] || '—'],
-  ].map(([k, v]) => `<div class="cv-stat-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+function renderSidebar(contest) {
+  byId('cv-stats-rows').innerHTML = [
+    ['Участников', contest.participants_count || 0],
+    ['Решений прислано', contest.submissions_count || 0],
+    ['Формат решения', SUBMISSION_FORMATS[contest.submission_type] ?? '—'],
+  ]
+    .map(
+      ([label, value]) =>
+        `<div class="cv-stat-row"><span class="k">${label}</span><span class="v">${value}</span></div>`,
+    )
+    .join('');
 
-  if (c.prize) {
-    document.getElementById('cv-prize-card').hidden = false;
-    document.getElementById('cv-prize-text').textContent = c.prize;
-  }
+  byId('cv-prize-card').hidden = !contest.prize;
+  byId('cv-prize-text').textContent = contest.prize ?? '';
 
-  if (c.status === 'active' && c.deadline) {
-    const card = document.getElementById('cv-countdown-card');
-    card.hidden = false;
-    const deadline = new Date(c.deadline);
-    document.getElementById('cv-deadline-date').textContent = deadline.toLocaleString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' МСК';
-    function tick() {
-      const diff = Math.max(0, deadline - Date.now());
-      const d = Math.floor(diff / 86400000);
-      const h = Math.floor((diff % 86400000) / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      document.getElementById('cv-countdown').innerHTML = [
-        [d, 'дней'], [h, 'часов'], [m, 'минут'],
-      ].map(([n, l]) => `<div class="cv-cd-unit"><div class="cv-cd-num">${n}</div><div class="cv-cd-label">${l}</div></div>`).join('');
-    }
-    tick();
-    setInterval(tick, 60000);
-  }
+  const deadline = contest.deadline && new Date(contest.deadline);
+  if (contest.status !== 'active' || !deadline || deadline < Date.now()) return;
+  byId('cv-countdown-card').hidden = false;
+  // Срок задаётся по Москве — и показываем его по Москве, где бы ни был участник
+  byId('cv-deadline-date').textContent = `${deadline.toLocaleString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Moscow',
+  })} МСК`;
+  startCountdown(deadline);
 }
 
 function renderMySubmissions() {
-  const wrap = document.getElementById('cv-my-submissions');
-  if (mySubmissions.length === 0) { wrap.hidden = true; return; }
-  wrap.hidden = false;
-  const STATUS_LABELS = { pending: 'На проверке', accepted: 'Принято', rejected: 'Отклонено' };
-  document.getElementById('cv-ms-list').innerHTML = mySubmissions.map(s => `
+  byId('cv-my-submissions').hidden = !state.submissions.length;
+  byId('cv-ms-list').innerHTML = state.submissions
+    .map(
+      (submission) => `
     <div class="cv-ms-item">
-      <span style="color:var(--muted);">${s.submitted_at || ''}</span>
-      <span style="margin-left:auto;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--amber-soft);color:var(--amber-text);">${STATUS_LABELS[s.status] || s.status}</span>
-    </div>`).join('');
+      <span class="cv-ms-date">${formatDateTime(submission.submitted_at)}</span>
+      ${statusPill(SUBMISSION_STATUSES, submission.winner ? 'winner' : submission.status)}
+    </div>`,
+    )
+    .join('');
 }
 
-function renderSubmitArea() {
-  const bannerWrap = document.getElementById('cv-contact-banner-wrap');
-  const formWrap = document.getElementById('cv-form-wrap');
-  if (!me) {
-    formWrap.innerHTML = `<div style="text-align:center;padding:24px;">
-      <div style="font-size:15px;font-weight:600;margin-bottom:8px;">Войдите, чтобы участвовать</div>
-      <a href="/authorization/signin/" style="display:inline-flex;height:42px;align-items:center;padding:0 20px;border:none;border-radius:10px;background:var(--brand);color:var(--on-brand);font-size:14px;font-weight:600;text-decoration:none;">Войти</a>
-    </div>`;
-    return;
-  }
-  bannerWrap.innerHTML = hasContact ? '' : `
-    <div class="cv-contact-banner">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
-      <div>
-        <div style="font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:3px;">Добавьте контактные данные</div>
-        <div style="font-size:12.5px;color:var(--text-2);line-height:1.5;">Для участия в конкурсе в профиле должен быть указан email.</div>
-      </div>
-      <button class="cv-banner-btn" data-open-contact>Добавить</button>
-    </div>`;
-
-  if (mySubmissions.length >= MAX_ATTEMPTS) {
-    formWrap.innerHTML = `<div class="cv-limit-note">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
-      Вы уже отправили решение. На этот конкурс действует лимит — максимум ${MAX_ATTEMPTS} попытка на участника.
-    </div>`;
-    return;
-  }
-
-  const type = contest?.submission_type || 'file';
-  const hint = contest?.submission_hint || '';
-
-  let inputHtml = '';
+function inputHtml(type, hint) {
   if (type === 'file') {
-    inputHtml = `
-      <div class="cv-file-drop" id="cv-file-drop" onclick="document.getElementById('cv-sub-file').click()">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:10px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6M9 15l3 3 3-3"/></svg>
-        <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Нажмите или перетащите файл</div>
-        <div style="font-size:12.5px;color:var(--muted);">${hint || 'PDF, ZIP, DOCX до 25 МБ'}</div>
+    return `
+      <div class="cv-file-drop" id="cv-file-drop" role="button" tabindex="0">
+        ${ICONS.upload}
+        <div class="cv-file-drop-title">Нажмите или перетащите файл</div>
+        <div class="cv-file-drop-hint">${esc(hint || 'PDF, ZIP, DOCX до 25 МБ')}</div>
       </div>
-      <input type="file" id="cv-sub-file" style="display:none;">
+      <input type="file" id="cv-sub-file" hidden>
       <div id="cv-file-chip-wrap"></div>`;
-  } else if (type === 'link') {
-    inputHtml = `<div class="cv-submit-label">Ссылка на решение</div>
-      <input class="cv-submit-input" id="cv-sub-link" placeholder="${hint || 'https://github.com/...'}" type="url">`;
-  } else {
-    inputHtml = `<div class="cv-submit-label">Текст решения</div>
-      <textarea class="cv-submit-input" id="cv-sub-text" placeholder="${hint || 'Опишите ваше решение…'}"></textarea>`;
   }
-
-  formWrap.innerHTML = `
-    ${inputHtml}
-    <div class="cv-submit-label" style="margin-top:0;">Комментарий <span style="font-weight:400;text-transform:none;color:var(--faint);">— необязательно</span></div>
-    <textarea class="cv-submit-input" id="cv-sub-comment" placeholder="Кратко опишите подход"></textarea>
-    <button class="cv-btn-submit" id="cv-btn-submit">Отправить решение</button>
-    <div style="font-size:12px;color:var(--faint);margin-top:10px;line-height:1.5;">На этот конкурс доступна только ${MAX_ATTEMPTS} попытка — отправляйте, когда будете готовы.</div>`;
-
-  if (type === 'file') {
-    document.getElementById('cv-sub-file').addEventListener('change', e => {
-      chosenFile = e.target.files[0];
-      if (!chosenFile) return;
-      document.getElementById('cv-file-chip-wrap').innerHTML = `
-        <div class="cv-file-chip">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <span style="font-size:13.5px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${chosenFile.name}</span>
-          <button data-clear-file style="width:24px;height:24px;border:none;background:transparent;color:var(--faint);cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
-        </div>`;
-      document.getElementById('cv-file-drop').style.display = 'none';
-    });
+  if (type === 'link') {
+    return `<div class="cv-submit-label">Ссылка на решение</div>
+      <input class="cv-submit-input" id="cv-sub-answer" placeholder="${esc(hint || 'https://github.com/...')}" type="url">`;
   }
+  return `<div class="cv-submit-label">Текст решения</div>
+    <textarea class="cv-submit-input" id="cv-sub-answer" placeholder="${esc(hint || 'Опишите ваше решение…')}"></textarea>`;
+}
 
-  document.getElementById('cv-btn-submit').addEventListener('click', submitSolution);
+function chooseFile(file) {
+  state.file = file ?? null;
+  byId('cv-file-drop').hidden = Boolean(file);
+  byId('cv-file-drop').classList.remove('is-invalid');
+  byId('cv-file-chip-wrap').innerHTML = file
+    ? `
+    <div class="cv-file-chip">
+      ${ICONS.file}
+      <span class="cv-file-name">${esc(file.name)}</span>
+      <button type="button" class="cv-file-clear" data-clear-file aria-label="Убрать файл">${ICONS.close}</button>
+    </div>`
+    : '';
+}
 
-  document.querySelector('[data-clear-file]')?.addEventListener('click', () => {
-    chosenFile = null;  // важно: именно переменная модуля, а не window
-    document.getElementById('cv-file-chip-wrap').innerHTML = '';
-    document.getElementById('cv-file-drop').style.display = '';
+function setupFileInput() {
+  const drop = byId('cv-file-drop');
+  const input = byId('cv-sub-file');
+  drop.addEventListener('click', () => input.click());
+  drop.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') input.click();
+  });
+  drop.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    drop.classList.add('is-dragover');
+  });
+  drop.addEventListener('dragleave', () => drop.classList.remove('is-dragover'));
+  drop.addEventListener('drop', (event) => {
+    event.preventDefault();
+    drop.classList.remove('is-dragover');
+    chooseFile(event.dataTransfer.files[0]);
+  });
+  input.addEventListener('change', () => chooseFile(input.files[0]));
+  byId('cv-file-chip-wrap').addEventListener('click', (event) => {
+    if (!event.target.closest('[data-clear-file]')) return;
+    input.value = '';
+    chooseFile(null);
   });
 }
 
-async function submitSolution() {
-  if (!hasContact) { openContactModal(); return; }
-  const type = contest?.submission_type || 'file';
-  let submitted = false;
-  try {
-    const fd = new FormData();
-    fd.append('contest', CONTEST_ID);
-    fd.append('comment', document.getElementById('cv-sub-comment')?.value || '');
-    if (type === 'file') {
-      if (!chosenFile) { document.getElementById('cv-file-drop').style.borderColor = 'var(--brand)'; return; }
-      fd.append('file', chosenFile);
-    } else if (type === 'link') {
-      const link = document.getElementById('cv-sub-link')?.value;
-      if (!link) return;
-      fd.append('link', link);
-    } else {
-      const text = document.getElementById('cv-sub-text')?.value;
-      if (!text) return;
-      fd.append('text', text);
-    }
-    const res = await fetch(`/api/v1/contests/${CONTEST_ID}/submit/`, {
-      method: 'POST', headers: { 'X-CSRFToken': csrf() }, body: fd,
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Ошибка');
-    mySubmissions.unshift(data.submission || { status: 'pending', submitted_at: 'только что' });
-    chosenFile = null;
-    submitted = true;
-  } catch (err) {
-    alert(err.message);
+function renderSubmitArea() {
+  const formWrap = byId('cv-form-wrap');
+  if (!state.me) {
+    const next = encodeURIComponent(location.pathname);
+    formWrap.innerHTML = `
+      <div class="cv-signin">
+        <div class="cv-signin-title">Войдите, чтобы участвовать</div>
+        <a class="cr-modal-btn-primary" href="/authorization/signin/?next=${next}">Войти</a>
+      </div>`;
+    return;
   }
-  if (!submitted) return;
-  try { renderMySubmissions(); } catch (_) {}
-  try { renderSubmitArea(); } catch (_) {}
-  if (contest?.company_username) openRatingModal(contest.company_username);
+
+  byId('cv-contact-banner-wrap').innerHTML = hasContact()
+    ? ''
+    : `
+    <div class="cv-contact-banner">
+      ${ICONS.warning}
+      <div>
+        <div class="cv-banner-title">Добавьте контактные данные</div>
+        <div class="cv-banner-text">Для участия в конкурсе в профиле должен быть указан email.</div>
+      </div>
+      <button type="button" class="cv-banner-btn" data-open-contact>Добавить</button>
+    </div>`;
+
+  if (state.submissions.length >= MAX_ATTEMPTS) {
+    formWrap.innerHTML = `
+      <div class="cv-limit-note">${ICONS.done}
+        Вы уже отправили решение. На этот конкурс действует лимит — ${countOf(MAX_ATTEMPTS, ['попытка', 'попытки', 'попыток'])} на участника.
+      </div>`;
+    return;
+  }
+
+  const type = state.contest.submission_type || 'file';
+  formWrap.innerHTML = `
+    ${inputHtml(type, state.contest.submission_hint)}
+    <div class="cv-submit-label">Комментарий <span class="cv-optional">— необязательно</span></div>
+    <textarea class="cv-submit-input" id="cv-sub-comment" placeholder="Кратко опишите подход"></textarea>
+    <button type="button" class="cv-btn-submit" id="cv-btn-submit">Отправить решение</button>
+    <div class="cv-submit-note">Отправить решение можно только один раз — отправляйте, когда будете готовы.</div>`;
+
+  if (type === 'file') setupFileInput();
+  byId('cv-btn-submit').addEventListener('click', submitSolution);
+}
+
+async function submitSolution(event) {
+  if (!hasContact()) {
+    openContactModal();
+    return;
+  }
+  const type = state.contest.submission_type || 'file';
+  const form = new FormData();
+  form.append('contest', contestId);
+  form.append('comment', byId('cv-sub-comment').value);
+  if (type === 'file') {
+    if (!state.file) {
+      byId('cv-file-drop').classList.add('is-invalid');
+      toast('Прикрепите файл с решением');
+      return;
+    }
+    form.append('file', state.file);
+  } else {
+    const answer = byId('cv-sub-answer').value.trim();
+    if (!answer) {
+      byId('cv-sub-answer').focus();
+      toast(type === 'link' ? 'Укажите ссылку на решение' : 'Напишите текст решения');
+      return;
+    }
+    form.append(type, answer);
+  }
+
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    const { submission } = await api.post(`/api/v1/contests/${contestId}/submit/`, form);
+    state.submissions.unshift(submission);
+    state.file = null;
+  } catch (error) {
+    toast(error.message);
+    button.disabled = false;
+    return;
+  }
+  renderMySubmissions();
+  renderSubmitArea();
+  if (state.contest.company_username) openRatingModal(state.contest.company_username);
 }
 
 function openRatingModal(companyUsername) {
   let selected = 0;
-  const existing = document.getElementById('cv-rating-modal');
-  if (existing) existing.remove();
-
   const modal = document.createElement('div');
-  modal.id = 'cv-rating-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:16px;';
+  modal.className = 'cr-modal open';
   modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px 28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.18);">
-      <div style="font-size:22px;margin-bottom:6px;">🎉</div>
-      <div style="font-size:17px;font-weight:800;margin-bottom:6px;">Решение отправлено!</div>
-      <div style="font-size:14px;color:var(--muted);margin-bottom:20px;">Оцените организацию конкурса от 1 до 5 звёзд</div>
-      <div id="cv-stars" style="display:flex;justify-content:center;gap:8px;margin-bottom:20px;">
-        ${[1,2,3,4,5].map(i => `<button data-star="${i}" style="font-size:32px;background:none;border:none;cursor:pointer;color:var(--line-2);padding:0;line-height:1;transition:color .1s;">★</button>`).join('')}
+    <div class="cr-modal-card cv-rating-card" role="dialog" aria-modal="true">
+      <div class="cr-modal-title">Решение отправлено</div>
+      <div class="cr-modal-sub">Оцените организацию конкурса от 1 до 5 звёзд</div>
+      <div class="cv-stars">${[1, 2, 3, 4, 5]
+        .map(
+          (star) =>
+            `<button type="button" class="cv-star" data-star="${star}" aria-label="${countOf(star, ['звезда', 'звезды', 'звёзд'])}">★</button>`,
+        )
+        .join('')}
       </div>
-      <div style="display:flex;gap:10px;">
-        <button id="cv-rating-skip" style="flex:1;height:42px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--text-2);font-size:14px;font-weight:500;cursor:pointer;">Пропустить</button>
-        <button id="cv-rating-submit" style="flex:1;height:42px;border:none;border-radius:10px;background:var(--brand);color:var(--on-brand);font-size:14px;font-weight:600;cursor:pointer;opacity:.5;" disabled>Отправить</button>
+      <div class="cr-modal-error"></div>
+      <div class="cr-modal-actions">
+        <button type="button" class="cr-modal-btn-cancel" data-skip>Пропустить</button>
+        <button type="button" class="cr-modal-btn-primary" data-send disabled>Отправить</button>
       </div>
     </div>`;
-  document.body.appendChild(modal);
+  document.body.append(modal);
 
-  const stars = modal.querySelectorAll('[data-star]');
-  const submitBtn = modal.querySelector('#cv-rating-submit');
+  const stars = [...modal.querySelectorAll('[data-star]')];
+  const sendButton = modal.querySelector('[data-send]');
+  const paint = (count) => stars.forEach((star) => star.classList.toggle('is-lit', Number(star.dataset.star) <= count));
 
-  function paintStars(n) {
-    stars.forEach(s => {
-      s.style.color = Number(s.dataset.star) <= n ? 'var(--amber-text)' : 'var(--line-2)';
-    });
-  }
-
-  stars.forEach(s => {
-    s.addEventListener('mouseenter', () => paintStars(Number(s.dataset.star)));
-    s.addEventListener('mouseleave', () => paintStars(selected));
-    s.addEventListener('click', () => {
-      selected = Number(s.dataset.star);
-      paintStars(selected);
-      submitBtn.disabled = false;
-      submitBtn.style.opacity = '1';
+  stars.forEach((star) => {
+    star.addEventListener('mouseenter', () => paint(Number(star.dataset.star)));
+    star.addEventListener('mouseleave', () => paint(selected));
+    star.addEventListener('click', () => {
+      selected = Number(star.dataset.star);
+      paint(selected);
+      sendButton.disabled = false;
     });
   });
-
-  modal.querySelector('#cv-rating-skip').addEventListener('click', () => modal.remove());
-  const error = document.createElement('div');
-  error.style.cssText = 'font-size:13px;color:var(--red-text);margin-top:12px;display:none;';
-  modal.querySelector('div').appendChild(error);
-
-  submitBtn.addEventListener('click', async () => {
-    if (!selected) return;
-    submitBtn.disabled = true;
-    submitBtn.textContent = '…';
-    error.style.display = 'none';
+  modal.querySelector('[data-skip]').addEventListener('click', () => modal.remove());
+  sendButton.addEventListener('click', async () => {
+    sendButton.disabled = true;
     try {
-      const res = await fetch(`/api/v1/companies/${companyUsername}/rate/`, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': csrf(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating: selected }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!data.ok) throw new Error(data.message || 'Не удалось сохранить оценку');
+      await api.post(`/api/v1/companies/${companyUsername}/rate/`, { rating: selected });
       modal.remove();
-    } catch (err) {
+      toast('Спасибо за оценку', 'ok');
+    } catch (error) {
       // Молча закрывать окно нельзя: человек решит, что оценка учтена
-      error.textContent = err.message;
-      error.style.display = '';
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Отправить';
+      modal.querySelector('.cr-modal-error').textContent = error.message;
+      sendButton.disabled = false;
     }
   });
 }
 
-function openContactModal() { document.getElementById('cv-contact-modal').classList.add('open'); }
-function closeContactModal() { document.getElementById('cv-contact-modal').classList.remove('open'); }
+const openContactModal = () => byId('cv-contact-modal').classList.add('open');
+const closeContactModal = () => byId('cv-contact-modal').classList.remove('open');
 
 async function saveContact() {
-  const emailInput = document.getElementById('cv-contact-email');
+  const emailInput = byId('cv-contact-email');
   const email = emailInput.value.trim();
-  const phone = document.getElementById('cv-contact-phone')?.value.trim() || '';
-  if (!email) { emailInput.style.borderColor = 'var(--brand)'; return; }
-  const errEl = document.getElementById('cv-contact-error');
-  if (errEl) errEl.textContent = '';
+  const phone = byId('cv-contact-phone').value.trim();
+  const error = byId('cv-contact-error');
+  emailInput.classList.toggle('is-invalid', !email);
+  if (!email) return;
+  error.textContent = '';
   try {
-    await apiFetch(`/api/v1/candidates/${me.username}/update/`, {
-      method: 'PATCH',
-      body: JSON.stringify({ email, phone }),
-    });
+    await api.patch(`/api/v1/candidates/${state.me.username}/update/`, { email, phone });
   } catch (err) {
-    if (errEl) errEl.textContent = err.message || 'Не удалось сохранить email.';
+    error.textContent = err.message;
     return;
   }
-  me.email = email;
-  hasContact = true;
+  state.me.email = email;
   closeContactModal();
   renderSubmitArea();
 }
 
-async function init() {
-  me = await getMe();
-  try {
-    const data = await apiFetch(`/api/v1/contests/${CONTEST_ID}/`);
-    contest = data.contest || data;
-    renderHero(contest);
-    renderAttachments(contest);
-    renderCase(contest);
-    renderRules(contest);
-    renderSidebar(contest);
-
-    if (me) {
-      const subData = await apiFetch(`/api/v1/contests/${CONTEST_ID}/my-submissions/`).catch(() => ({ submissions: [] }));
-      mySubmissions = subData.submissions || [];
-      hasContact = !!me.email;
-    }
-    renderMySubmissions();
-    renderSubmitArea();
-  } catch (err) {
-    document.getElementById('cv-hero-inner').innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);">Конкурс не найден</div>`;
-  }
-}
-
-// Делегирование: баннер перерисовывается, поэтому слушатель висит на документе
-document.addEventListener('click', event => {
+// Баннер перерисовывается, поэтому слушатель висит на документе
+document.addEventListener('click', (event) => {
   if (event.target.closest('[data-open-contact]')) openContactModal();
 });
-document.getElementById('cv-contact-cancel').addEventListener('click', closeContactModal);
-document.getElementById('cv-contact-save').addEventListener('click', saveContact);
+byId('cv-contact-cancel').addEventListener('click', closeContactModal);
+byId('cv-contact-save').addEventListener('click', saveContact);
+byId('cv-contact-modal').addEventListener('click', (event) => {
+  if (event.target === event.currentTarget) closeContactModal();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeContactModal();
+});
 
-init();
+state.me = await api
+  .get('/api/v1/auth/me/')
+  .then(({ account }) => account)
+  .catch(() => null);
+try {
+  ({ contest: state.contest } = await api.get(`/api/v1/contests/${contestId}/`));
+} catch {
+  byId('cv-hero-inner').innerHTML = '<div class="cr-list-empty">Конкурс не найден</div>';
+}
+
+if (state.contest) {
+  renderHero(state.contest);
+  renderAttachments(state.contest);
+  // Кейс — обычный текст: экранируем и сохраняем переносы строк
+  byId('cv-case-content').innerHTML = esc(state.contest.case_text).replace(/\n/g, '<br>');
+  renderRules(state.contest);
+  renderSidebar(state.contest);
+  if (state.me) {
+    ({ submissions: state.submissions = [] } = await api
+      .get(`/api/v1/contests/${contestId}/my-submissions/`)
+      .catch(() => ({})));
+  }
+  renderMySubmissions();
+  renderSubmitArea();
+}

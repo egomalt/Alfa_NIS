@@ -1,178 +1,287 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="csrf-token" content="{{ csrf_token }}">
-  <script>(function(){var k='alfa_theme',t='light';try{var s=localStorage.getItem(k);if(s==='dark'||s==='light')t=s;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}catch(e){if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)t='dark';}document.documentElement.setAttribute('data-theme',t);})();</script>
-  <title>Админ-панель — Alfa Career</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/career.css' %}?v={{ ASSET_V }}">
-  <link rel="stylesheet" href="{% static 'administration/dashboard.css' %}?v={{ ASSET_V }}">
-  <script src="{% static 'main/theme.js' %}?v={{ ASSET_V }}" defer></script>
-  <script src="{% static 'js/career.js' %}?v={{ ASSET_V }}" defer></script>
-</head>
-<body>
-
-{# Шапка общая с остальным сайтом: логотип, разделы, тема и чип аккаунта #}
-{% include 'partials/navbar.html' %}
-
-<button type="button" class="ap-burger" id="ap-sidebar-burger" aria-label="Разделы">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-  Разделы
-</button>
-
-<div class="ap-layout">
-  <div class="ap-scrim" id="ap-scrim"></div>
-  <aside class="ap-sidebar">
-    <div class="ap-company-chip">
-      <span class="ap-company-avatar">A</span>
-      <div><div class="ap-company-name">Модерация</div><div class="ap-company-role">Панель администратора</div></div>
+{% block title %}Админ-панель — Alfa Career{% endblock %}
+{% block styles %}
+  <link rel="stylesheet"
+        href="{% static 'administration/dashboard.css' %}?v={{ ASSET_V }}">
+{% endblock %}
+{% block body %}
+  {# Шапка общая с остальным сайтом: логотип, разделы, тема и чип аккаунта #}
+  <button type="button"
+          class="ap-burger"
+          id="ap-sidebar-burger"
+          aria-label="Разделы">
+    <svg width="16"
+         height="16"
+         viewBox="0 0 24 24"
+         fill="none"
+         stroke="currentColor"
+         stroke-width="2"
+         stroke-linecap="round">
+      <path d="M3 6h18M3 12h18M3 18h18" />
+    </svg>
+    Разделы
+  </button>
+  <div class="ap-layout">
+    <div class="ap-scrim" id="ap-scrim"></div>
+    <aside class="ap-sidebar">
+      <div class="ap-company-chip">
+        <span class="ap-company-avatar">A</span>
+        <div>
+          <div class="ap-company-name">Модерация</div>
+          <div class="ap-company-role">Панель администратора</div>
+        </div>
+      </div>
+      <button type="button" class="ap-side-link active" data-tab="overview">
+        <svg width="16"
+             height="16"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round">
+          <path d="M3 3v18h18" />
+          <path d="M18 17V9M13 17V5M8 17v-4" />
+        </svg>Обзор
+      </button>
+      <button type="button" class="ap-side-link" data-tab="verify">
+        <svg width="16"
+             height="16"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round">
+          <path d="M9 12l2 2 4-4" />
+          <path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7z" />
+        </svg>Верификация компаний<span class="ap-side-badge" id="ap-badge-verify" hidden></span>
+      </button>
+      <button type="button" class="ap-side-link" data-tab="users">
+        <svg width="16"
+             height="16"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>Пользователи
+      </button>
+      <button type="button" class="ap-side-link" data-tab="reports">
+        <svg width="16"
+             height="16"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round">
+          <path d="M12 9v4M12 17h.01" />
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+        </svg>Жалобы<span class="ap-side-badge" id="ap-badge-reports" hidden></span>
+      </button>
+      <div class="ap-side-spacer"></div>
+      <a href="/" class="ap-side-link">
+        <svg width="16"
+             height="16"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round">
+          <path d="M19 12H5" />
+          <path d="M11 6l-6 6 6 6" />
+        </svg>На главную</a>
+        <button type="button" class="ap-side-link ap-side-link-danger" id="ap-logout">
+          <svg width="16"
+               height="16"
+               viewBox="0 0 24 24"
+               fill="none"
+               stroke="currentColor"
+               stroke-width="2"
+               stroke-linecap="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="M16 17l5-5-5-5" />
+            <path d="M21 12H9" />
+          </svg>Выйти
+        </button>
+      </aside>
+      <main class="ap-main">
+        <div class="ap-tab-panel active" id="ap-panel-overview">
+          <div class="ap-page-header">
+            <div>
+              <div class="ap-page-title">Обзор</div>
+              <div class="ap-page-sub">Сводка очередей модерации</div>
+            </div>
+            <a href="/export/admin/statistics.pdf"
+               class="ap-btn-secondary ap-btn-link">
+              <svg width="14"
+                   height="14"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   stroke-width="2"
+                   stroke-linecap="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <path d="M7 10l5 5 5-5" />
+                <path d="M12 15V3" />
+              </svg>
+              Экспорт в PDF
+            </a>
+          </div>
+          <div class="ap-stats-row">
+            <div class="ap-stat-card" data-goto="verify">
+              <div class="ap-stat-value" id="ap-ov-verify">—</div>
+              <div class="ap-stat-label">Заявок на верификацию</div>
+            </div>
+            <div class="ap-stat-card" data-goto="reports">
+              <div class="ap-stat-value" id="ap-ov-reports">—</div>
+              <div class="ap-stat-label">Открытых жалоб</div>
+            </div>
+            <div class="ap-stat-card" data-goto="reports">
+              <div class="ap-stat-value ap-danger-text" id="ap-ov-escalated">—</div>
+              <div class="ap-stat-label">Эскалировано (3+ жалоб)</div>
+            </div>
+            <div class="ap-stat-card" data-goto="users">
+              <div class="ap-stat-value" id="ap-ov-users">—</div>
+              <div class="ap-stat-label">Всего пользователей</div>
+            </div>
+            <div class="ap-stat-card" data-goto="users">
+              <div class="ap-stat-value" id="ap-ov-banned">—</div>
+              <div class="ap-stat-label">Забанено</div>
+            </div>
+          </div>
+          <div class="ap-section">
+            <div class="ap-section-head">
+              <div class="ap-section-title">Заявки на верификацию</div>
+              <span class="ap-link-more" data-goto="verify">Все заявки →</span>
+            </div>
+            <div id="ap-overview-verify"></div>
+          </div>
+          <div class="ap-section">
+            <div class="ap-section-head">
+              <div class="ap-section-title">Новые жалобы</div>
+              <span class="ap-link-more" data-goto="reports">Все жалобы →</span>
+            </div>
+            <div id="ap-overview-reports"></div>
+          </div>
+        </div>
+        <div class="ap-tab-panel" id="ap-panel-verify">
+          <div class="ap-page-header">
+            <div>
+              <div class="ap-page-title">Верификация компаний</div>
+              <div class="ap-page-sub">Проверка документов, подтверждающих деятельность компании</div>
+            </div>
+          </div>
+          <div class="ap-filters" id="ap-verify-filters">
+            <button type="button" class="ap-filter-btn active" data-vf="pending">На проверке</button>
+            <button type="button" class="ap-filter-btn" data-vf="approved">Одобренные</button>
+            <button type="button" class="ap-filter-btn" data-vf="rejected">Отклонённые</button>
+            <span class="ap-filter-count" id="ap-vf-count"></span>
+          </div>
+          <div id="ap-verify-list"></div>
+          <div class="cr-pager" id="ap-verify-pager"></div>
+        </div>
+        <div class="ap-tab-panel" id="ap-panel-users">
+          <div class="ap-page-header">
+            <div>
+              <div class="ap-page-title">Пользователи</div>
+              <div class="ap-page-sub">Кандидаты и компании платформы</div>
+            </div>
+          </div>
+          <div class="ap-filters" id="ap-users-filters">
+            <button type="button" class="ap-filter-btn active" data-uf="all">Все</button>
+            <button type="button" class="ap-filter-btn" data-uf="user">Кандидаты</button>
+            <button type="button" class="ap-filter-btn" data-uf="company">Компании</button>
+            <button type="button" class="ap-filter-btn" data-uf="banned">Забаненные</button>
+            <input class="ap-search-input"
+                   id="ap-user-search"
+                   placeholder="Поиск по имени…">
+            <span class="ap-filter-count" id="ap-u-count"></span>
+          </div>
+          <div class="ap-table" id="ap-users-table"></div>
+          <div class="cr-pager" id="ap-users-pager"></div>
+        </div>
+        <div class="ap-tab-panel" id="ap-panel-reports">
+          <div class="ap-page-header">
+            <div>
+              <div class="ap-page-title">Жалобы</div>
+              <div class="ap-page-sub">Обращения пользователей на контент и других участников</div>
+            </div>
+          </div>
+          <div class="ap-filters" id="ap-reports-filters">
+            <button type="button" class="ap-filter-btn active" data-rf="new">Новые</button>
+            <button type="button" class="ap-filter-btn" data-rf="resolved">Рассмотренные</button>
+            <button type="button" class="ap-filter-btn" data-rf="dismissed">Отклонённые</button>
+            <span class="ap-filter-count" id="ap-r-count"></span>
+          </div>
+          <div id="ap-reports-list"></div>
+          <div class="cr-pager" id="ap-reports-pager"></div>
+        </div>
+      </main>
     </div>
-    <button class="ap-side-link active" data-tab="overview"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-4"/></svg>Обзор</button>
-    <button class="ap-side-link" data-tab="verify"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 12l2 2 4-4"/><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7z"/></svg>Верификация компаний<span class="ap-side-badge" id="ap-badge-verify" style="display:none;"></span></button>
-    <button class="ap-side-link" data-tab="users"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Пользователи</button>
-    <button class="ap-side-link" data-tab="reports"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>Жалобы<span class="ap-side-badge" id="ap-badge-reports" style="display:none;"></span></button>
-    <div class="ap-side-spacer"></div>
-    <a href="/" class="ap-side-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>На главную</a>
-    <button class="ap-side-link" id="ap-logout" style="color:var(--red-text);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Выйти</button>
-  </aside>
-
-  <main class="ap-main">
-    <!-- ОБЗОР -->
-    <div class="ap-tab-panel active" id="ap-panel-overview">
-      <div class="ap-page-header">
-        <div><div class="ap-page-title">Обзор</div><div class="ap-page-sub">Сводка очередей модерации</div></div>
-        <a href="/export/admin/statistics.pdf" class="ap-btn-secondary" style="display:inline-flex;align-items:center;gap:7px;text-decoration:none;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-          Экспорт в PDF
-        </a>
-      </div>
-      <div class="ap-stats-row">
-        <div class="ap-stat-card" data-goto="verify"><div class="ap-stat-value" id="ap-ov-verify">—</div><div class="ap-stat-label">Заявок на верификацию</div></div>
-        <div class="ap-stat-card" data-goto="reports"><div class="ap-stat-value" id="ap-ov-reports">—</div><div class="ap-stat-label">Открытых жалоб</div></div>
-        <div class="ap-stat-card" data-goto="reports"><div class="ap-stat-value" id="ap-ov-escalated" style="color:var(--red-text);">—</div><div class="ap-stat-label">Эскалировано (3+ жалоб)</div></div>
-        <div class="ap-stat-card" data-goto="users"><div class="ap-stat-value" id="ap-ov-users">—</div><div class="ap-stat-label">Всего пользователей</div></div>
-        <div class="ap-stat-card" data-goto="users"><div class="ap-stat-value" id="ap-ov-banned">—</div><div class="ap-stat-label">Забанено</div></div>
-      </div>
-      <div class="ap-section">
-        <div class="ap-section-head"><div class="ap-section-title">Заявки на верификацию</div><span class="ap-link-more" data-goto="verify">Все заявки →</span></div>
-        <div id="ap-overview-verify"></div>
-      </div>
-      <div class="ap-section">
-        <div class="ap-section-head"><div class="ap-section-title">Новые жалобы</div><span class="ap-link-more" data-goto="reports">Все жалобы →</span></div>
-        <div id="ap-overview-reports"></div>
+    <div class="ap-modal-backdrop" id="ap-reason-modal">
+      <div class="ap-modal">
+        <div class="ap-modal-title" id="ap-reason-modal-title">Причина</div>
+        <div id="ap-modal-duration-field" class="ap-duration-field" hidden>
+          <div class="ap-detail-label ap-duration-label">Срок бана</div>
+          <div class="ap-duration-row">
+            <input type="number"
+                   id="ap-duration-days"
+                   class="ap-search-input ap-duration-input"
+                   min="1"
+                   max="3650"
+                   value="7">
+            <span class="ap-duration-unit">дней</span>
+            <button class="ap-filter-btn" id="ap-duration-perm-btn" type="button">Навсегда</button>
+          </div>
+        </div>
+        <textarea id="ap-reason-text"
+                  placeholder="Опишите причину — заявитель / пользователь увидит этот текст"></textarea>
+        <div class="ap-modal-actions">
+          <button type="button" class="ap-btn-secondary" id="ap-reason-cancel">Отмена</button>
+          <button type="button" class="ap-btn-primary" id="ap-reason-confirm">Подтвердить</button>
+        </div>
       </div>
     </div>
-
-    <!-- ВЕРИФИКАЦИЯ -->
-    <div class="ap-tab-panel" id="ap-panel-verify">
-      <div class="ap-page-header">
-        <div><div class="ap-page-title">Верификация компаний</div><div class="ap-page-sub">Проверка документов, подтверждающих деятельность компании</div></div>
-      </div>
-      <div class="ap-filters" id="ap-verify-filters">
-        <button class="ap-filter-btn active" data-vf="pending">На проверке</button>
-        <button class="ap-filter-btn" data-vf="approved">Одобренные</button>
-        <button class="ap-filter-btn" data-vf="rejected">Отклонённые</button>
-        <span class="ap-filter-count" id="ap-vf-count"></span>
-      </div>
-      <div id="ap-verify-list"></div>
-      <div class="cr-pager" id="ap-verify-pager"></div>
-    </div>
-
-    <!-- ПОЛЬЗОВАТЕЛИ -->
-    <div class="ap-tab-panel" id="ap-panel-users">
-      <div class="ap-page-header">
-        <div><div class="ap-page-title">Пользователи</div><div class="ap-page-sub">Кандидаты и компании платформы</div></div>
-      </div>
-      <div class="ap-filters" id="ap-users-filters">
-        <button class="ap-filter-btn active" data-uf="all">Все</button>
-        <button class="ap-filter-btn" data-uf="user">Кандидаты</button>
-        <button class="ap-filter-btn" data-uf="company">Компании</button>
-        <button class="ap-filter-btn" data-uf="banned">Забаненные</button>
-        <input class="ap-search-input" id="ap-user-search" placeholder="Поиск по имени…">
-        <span class="ap-filter-count" id="ap-u-count"></span>
-      </div>
-      <div class="ap-table" id="ap-users-table"></div>
-      <div class="cr-pager" id="ap-users-pager"></div>
-    </div>
-
-    <!-- ЖАЛОБЫ -->
-    <div class="ap-tab-panel" id="ap-panel-reports">
-      <div class="ap-page-header">
-        <div><div class="ap-page-title">Жалобы</div><div class="ap-page-sub">Обращения пользователей на контент и других участников</div></div>
-      </div>
-      <div class="ap-filters" id="ap-reports-filters">
-        <button class="ap-filter-btn active" data-rf="new">Новые</button>
-        <button class="ap-filter-btn" data-rf="resolved">Рассмотренные</button>
-        <button class="ap-filter-btn" data-rf="dismissed">Отклонённые</button>
-        <span class="ap-filter-count" id="ap-r-count"></span>
-      </div>
-      <div id="ap-reports-list"></div>
-      <div class="cr-pager" id="ap-reports-pager"></div>
-    </div>
-  </main>
-</div>
-
-<!-- Модалка причины (отклонение заявки или бан) -->
-<div class="ap-modal-backdrop" id="ap-reason-modal">
-  <div class="ap-modal">
-    <div class="ap-modal-title" id="ap-reason-modal-title">Причина</div>
-    <div id="ap-modal-duration-field" style="display:none;margin-bottom:16px;">
-      <div class="ap-detail-label" style="margin-bottom:8px;width:auto;">Срок бана</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <input type="number" id="ap-duration-days" class="ap-search-input" style="width:90px;" min="1" value="7">
-        <span style="font-size:13px;color:var(--text-2);">дней</span>
-        <button class="ap-filter-btn" id="ap-duration-perm-btn" type="button">Навсегда</button>
+    <div class="ap-modal-backdrop" id="ap-doc-modal">
+      <div class="ap-modal ap-modal-wide">
+        <div class="ap-modal-title">Просмотр документа</div>
+        <div class="ap-doc-preview-name">
+          <svg width="15"
+               height="15"
+               viewBox="0 0 24 24"
+               fill="none"
+               stroke="currentColor"
+               stroke-width="2"
+               stroke-linecap="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          <span id="ap-doc-modal-name"></span>
+        </div>
+        <iframe class="ap-doc-frame"
+                id="ap-doc-frame"
+                title="Регистрационный документ"></iframe>
+        <div class="ap-doc-missing" id="ap-doc-missing" hidden>Документ не загружен.</div>
+        <div class="ap-modal-actions">
+          <button type="button" class="ap-btn-secondary" id="ap-doc-close">Закрыть</button>
+          <a class="ap-btn-primary ap-btn-link"
+             id="ap-doc-open"
+             href="#"
+             target="_blank"
+             rel="noopener">Открыть файл</a>
+        </div>
       </div>
     </div>
-    <textarea id="ap-reason-text" placeholder="Опишите причину — заявитель / пользователь увидит этот текст"></textarea>
-    <div class="ap-modal-actions">
-      <button class="ap-btn-secondary" id="ap-reason-cancel">Отмена</button>
-      <button class="ap-btn-primary" id="ap-reason-confirm">Подтвердить</button>
-    </div>
-  </div>
-</div>
-
-<!-- Модалка подтверждения необратимого действия -->
-<div class="ap-modal-backdrop" id="ap-confirm-modal">
-  <div class="ap-modal">
-    <div class="ap-modal-title" id="ap-confirm-title">Подтвердите действие</div>
-    <div class="ap-modal-text" id="ap-confirm-text"></div>
-    <div class="ap-modal-actions">
-      <button class="ap-btn-secondary" id="ap-confirm-cancel">Отмена</button>
-      <button class="ap-btn-primary" id="ap-confirm-ok">Подтвердить</button>
-    </div>
-  </div>
-</div>
-
-<!-- Сообщения об ошибках действий -->
-<div class="ap-toasts" id="ap-toasts" aria-live="polite"></div>
-
-<!-- Модалка просмотра документа -->
-<div class="ap-modal-backdrop" id="ap-doc-modal">
-  <div class="ap-modal ap-modal-wide">
-    <div class="ap-modal-title">Просмотр документа</div>
-    <div class="ap-doc-preview-name">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span id="ap-doc-modal-name"></span>
-    </div>
-    <iframe class="ap-doc-frame" id="ap-doc-frame" title="Регистрационный документ"></iframe>
-    <div class="ap-doc-missing" id="ap-doc-missing" style="display:none;">Документ не загружен.</div>
-    <div class="ap-modal-actions">
-      <button class="ap-btn-secondary" id="ap-doc-close">Закрыть</button>
-      <a class="ap-btn-primary" id="ap-doc-open" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none;">Открыть файл</a>
-    </div>
-  </div>
-</div>
-
-<script src="{% static 'js/pager.js' %}?v={{ ASSET_V }}"></script>
-<script src="{% static 'administration/dashboard.js' %}?v={{ ASSET_V }}"></script>
-<script src="{% static 'administration/overview.js' %}?v={{ ASSET_V }}"></script>
-<script src="{% static 'administration/verification.js' %}?v={{ ASSET_V }}"></script>
-<script src="{% static 'administration/users.js' %}?v={{ ASSET_V }}"></script>
-<script src="{% static 'administration/reports.js' %}?v={{ ASSET_V }}"></script>
-</body>
-</html>
+    <script type="module"
+            src="{% static 'administration/overview.js' %}?v={{ ASSET_V }}"></script>
+    <script type="module"
+            src="{% static 'administration/verification.js' %}?v={{ ASSET_V }}"></script>
+    <script type="module"
+            src="{% static 'administration/users.js' %}?v={{ ASSET_V }}"></script>
+    <script type="module"
+            src="{% static 'administration/reports.js' %}?v={{ ASSET_V }}"></script>
+{% endblock %}

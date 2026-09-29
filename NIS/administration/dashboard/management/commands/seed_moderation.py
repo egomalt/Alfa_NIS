@@ -164,7 +164,6 @@ class Command(BaseCommand):
 
         targets = self._targets()
         created = 0
-        now = timezone.now()
 
         for target_type, reasons in REASONS.items():
             target = targets.get(target_type)

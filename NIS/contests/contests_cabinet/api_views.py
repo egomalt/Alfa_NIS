@@ -144,7 +144,7 @@ def _sub_to_dict(s, cards=None):
         'liked': s.liked,
         'winner': s.winner,
         'attempt': s.attempt,
-        'submitted_at': s.created_at.strftime('%d.%m.%Y %H:%M'),
+        'submitted_at': s.created_at.isoformat(),
     }
 
 

@@ -16,7 +16,6 @@ from reportlab.platypus import (
     Table, TableStyle,
 )
 
-# ── Шрифты с кириллицей ──────────────────────────────────────────────────
 FONT = 'DejaVu'
 FONT_BOLD = 'DejaVu-Bold'
 _FONTS_DIR = os.path.join(os.path.dirname(__file__), 'fonts')
@@ -33,7 +32,6 @@ def _ensure_fonts():
     _fonts_ready = True
 
 
-# ── Палитра (из career.css) ──────────────────────────────────────────────
 BRAND = colors.HexColor('#D62839')
 TEXT = colors.HexColor('#161A22')
 TEXT_2 = colors.HexColor('#3C434F')
@@ -81,18 +79,18 @@ def fit_column_widths(headers, widths):
              for word in str(h).upper().split()), default=0) + CELL_PADDING
         for h in headers
     ]
-    deficit = sum(max(m - w, 0) for m, w in zip(minimums, widths))
+    deficit = sum(max(m - w, 0) for m, w in zip(minimums, widths, strict=True))
     if not deficit:
         return widths
 
-    slack = [max(w - m, 0) for w, m in zip(widths, minimums)]
+    slack = [max(w - m, 0) for w, m in zip(widths, minimums, strict=True)]
     total_slack = sum(slack)
     if total_slack < deficit:
         # Ужимать некуда: в такой таблице колонок больше, чем помещается
         return widths
     return [
         max(w, m) - (s / total_slack * deficit if s else 0)
-        for w, m, s in zip(widths, minimums, slack)
+        for w, m, s in zip(widths, minimums, slack, strict=True)
     ]
 
 
@@ -106,7 +104,6 @@ def plural(number, forms):
     return forms[2]
 
 
-# ── Графики ──────────────────────────────────────────────────────────────
 # Рисуем на канве вручную: у Flowable координаты идут от левого нижнего угла.
 
 
@@ -274,7 +271,7 @@ class ReportBuilder:
         vs, ls = self.styles['kpi_value'], self.styles['kpi_label']
         for i in range(0, len(items), per_row):
             chunk = items[i:i + per_row]
-            row = [[Paragraph(str(v), vs), Paragraph(str(l), ls)] for v, l in chunk]
+            row = [[Paragraph(str(v), vs), Paragraph(str(label), ls)] for v, label in chunk]
             # добиваем пустыми ячейками до per_row, чтобы ширина колонок была ровной
             while len(row) < per_row:
                 row.append('')
@@ -383,7 +380,7 @@ class ReportBuilder:
         canvas.setFillColor(FAINT)
         canvas.setFont(FONT, 8)
         canvas.drawString(MARGIN, fy, 'Career · сгенерировано ' + self.generated.strftime('%d.%m.%Y %H:%M'))
-        canvas.drawRightString(PAGE_W - MARGIN, fy, 'стр. %d' % doc.page)
+        canvas.drawRightString(PAGE_W - MARGIN, fy, f'стр. {doc.page}')
         canvas.restoreState()
 
     def build(self):
@@ -413,7 +410,7 @@ class ReportBuilder:
 def pdf_response(filename, data):
     """Готовый HttpResponse со скачиванием PDF."""
     resp = HttpResponse(data, content_type='application/pdf')
-    resp['Content-Disposition'] = 'attachment; filename="%s"' % filename
+    resp['Content-Disposition'] = f'attachment; filename="{filename}"'
     return resp
 
 

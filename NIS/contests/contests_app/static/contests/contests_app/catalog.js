@@ -1,261 +1,223 @@
 /* Каталог конкурсов. Полоса слева показывает срочность,
    вместо даты выводится обратный отсчёт до дедлайна. */
-const PER_PAGE = 9;
+import {
+  api,
+  byId,
+  CONTEST_CATEGORIES,
+  CONTEST_STATUSES,
+  countOf,
+  esc,
+  formatDateShort,
+  initial,
+  pluralForm,
+  statusPill,
+  WORDS,
+} from 'alfa/core';
 
-const STATUS_LABELS = { active: 'Активен', review: 'На проверке', finished: 'Завершён' };
-const CAT_LABELS = {
-  backend: 'Backend', frontend: 'Frontend', devops: 'DevOps',
-  analytics: 'Аналитика', design: 'Дизайн',
+const PAGE_SIZE = 9;
+const DAY_MS = 86400000;
+const ICONS = {
+  clock:
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  people:
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>',
+  cup: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"/></svg>',
+  arrow:
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
 };
 
-const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const initial = name => (name || '?').trim()[0].toUpperCase();
-const el = id => document.getElementById(id);
+const daysLeft = (deadline) => (deadline ? Math.ceil((new Date(deadline) - Date.now()) / DAY_MS) : null);
 
-const ICON_CLOCK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
-const ICON_PEOPLE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>';
-const ICON_CUP = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"/></svg>';
-const ICON_ARROW = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
-
-/* ── Срок и срочность ─────────────────────────────────────────────── */
-
-function daysLeft(deadline) {
-  if (!deadline) return null;
-  const diff = new Date(deadline) - Date.now();
-  return Math.ceil(diff / 86400000);
-}
-
-// Приём открыт, только если статус активен И срок не вышел:
-// сервер отклоняет работы после дедлайна
+// Приём открыт, только если статус активен И срок не вышел: сервер отклоняет работы после дедлайна
 function isOpen(contest) {
-  if (contest.status !== 'active') return false;
   const left = daysLeft(contest.deadline);
-  return left === null || left >= 0;
+  return contest.status === 'active' && (left === null || left >= 0);
 }
 
 function urgencyOf(contest) {
   if (!isOpen(contest)) return 'closed';
   const left = daysLeft(contest.deadline);
-  if (left === null) return 'calm';
-  if (left <= 3) return 'urgent';
-  if (left <= 7) return 'soon';
-  return 'calm';
+  if (left === null || left > 7) return 'calm';
+  return left <= 3 ? 'urgent' : 'soon';
 }
 
 function deadlineLabel(contest) {
   if (!contest.deadline) return 'без срока';
-  if (contest.status !== 'active') {
-    return 'закрыт ' + new Date(contest.deadline).toLocaleDateString('ru-RU',
-      { day: 'numeric', month: 'short' });
-  }
-
+  if (contest.status !== 'active') return `закрыт ${formatDateShort(contest.deadline)}`;
   const left = daysLeft(contest.deadline);
   if (left < 0) return 'срок вышел';
   if (left === 0) return 'последний день';
-
-  const m10 = left % 10, m100 = left % 100;
-  if (m100 >= 11 && m100 <= 19) return `осталось ${left} дней`;
-  if (m10 === 1) return `остался ${left} день`;
-  if (m10 >= 2 && m10 <= 4) return `осталось ${left} дня`;
-  return `осталось ${left} дней`;
+  return `${pluralForm(left, ['остался', 'осталось', 'осталось'])} ${countOf(left, WORDS.days)}`;
 }
 
-function contestsLabel(n) {
-  const m10 = n % 10, m100 = n % 100;
-  if (m100 >= 11 && m100 <= 19) return `${n} конкурсов`;
-  if (m10 === 1) return `${n} конкурс`;
-  if (m10 >= 2 && m10 <= 4) return `${n} конкурса`;
-  return `${n} конкурсов`;
-}
-
-function participantsLabel(n) {
-  if (!n) return 'пока никого';
-  const m10 = n % 10, m100 = n % 100;
-  if (m100 >= 11 && m100 <= 19) return `${n} участников`;
-  if (m10 === 1) return `${n} участник`;
-  if (m10 >= 2 && m10 <= 4) return `${n} участника`;
-  return `${n} участников`;
-}
-
-/* ── Состояние ────────────────────────────────────────────────────── */
+/* Фильтры живут и в адресе, чтобы F5 и ссылка их сохраняли */
 
 const params = new URLSearchParams(location.search);
-let me = null;
-let all = [];
-let status = params.get('status') || 'all';
-let category = params.get('cat') || 'all';
-let query = (params.get('q') || '').trim().toLowerCase();
-let shown = PER_PAGE;
+const state = {
+  me: null,
+  contests: [],
+  status: params.get('status') || 'all',
+  category: params.get('cat') || 'all',
+  query: params.get('q') || '',
+  shown: PAGE_SIZE,
+};
 
-function visible() {
-  return all.filter(c => {
-    if (status !== 'all' && c.status !== status) return false;
-    if (category !== 'all' && (c.category || '').toLowerCase() !== category) return false;
-    if (!query) return true;
-    return `${c.title} ${c.excerpt} ${c.company_name} ${c.prize}`.toLowerCase().includes(query);
-  });
+function syncUrl() {
+  const next = new URLSearchParams();
+  if (state.status !== 'all') next.set('status', state.status);
+  if (state.category !== 'all') next.set('cat', state.category);
+  if (state.query.trim()) next.set('q', state.query.trim());
+  history.replaceState(null, '', `${location.pathname}${next.size ? `?${next}` : ''}`);
 }
 
-/* ── Отрисовка ────────────────────────────────────────────────────── */
+function filtered() {
+  const query = state.query.trim().toLowerCase();
+  return state.contests.filter(
+    (contest) =>
+      (state.status === 'all' || contest.status === state.status) &&
+      (state.category === 'all' || (contest.category ?? '').toLowerCase() === state.category) &&
+      (!query ||
+        `${contest.title} ${contest.excerpt} ${contest.company_name} ${contest.prize}`.toLowerCase().includes(query)),
+  );
+}
 
-function cardHtml(contest) {
+function card(contest) {
   const urgency = urgencyOf(contest);
-  const statusKey = STATUS_LABELS[contest.status] ? contest.status : 'finished';
-  const catLabel = CAT_LABELS[(contest.category || '').toLowerCase()] || contest.category || '';
-  const excerpt = contest.excerpt || 'Компания не добавила краткое описание кейса.';
+  const company = contest.company_name || contest.company_username || '';
+  const category = CONTEST_CATEGORIES[(contest.category ?? '').toLowerCase()] ?? contest.category ?? '';
+  const status = CONTEST_STATUSES[contest.status] ? contest.status : 'finished';
+  const participants = contest.participants_count
+    ? countOf(contest.participants_count, WORDS.participants)
+    : 'пока никого';
   const open = isOpen(contest);
-  const action = open ? 'Участвовать' : 'Смотреть конкурс';
-
   return `
     <article class="card cn-card" data-urgency="${urgency}">
       <div class="cn-head">
-        <span class="cn-company-av">${esc(initial(contest.company_name || contest.company_username))}</span>
-        <span class="cn-company">${esc(contest.company_name || contest.company_username || '')}</span>
-        <span class="cn-status cn-status-${statusKey}">${STATUS_LABELS[statusKey]}</span>
+        <span class="cn-company-av">${esc(initial(company))}</span>
+        <span class="cn-company">${esc(company)}</span>
+        ${statusPill(CONTEST_STATUSES, status, 'cn-status')}
       </div>
       <div class="card-title">${esc(contest.title || 'Конкурс')}</div>
-      <div class="card-excerpt">${esc(excerpt)}</div>
-      ${contest.prize ? `<div class="cn-prize">${ICON_CUP}${esc(contest.prize)}</div>` : ''}
+      <div class="card-excerpt">${esc(contest.excerpt || 'Компания не добавила краткое описание кейса.')}</div>
+      ${contest.prize ? `<div class="cn-prize">${ICONS.cup}${esc(contest.prize)}</div>` : ''}
       <div class="cn-meta">
-        <span class="cn-deadline${urgency === 'urgent' ? ' urgent' : ''}">${ICON_CLOCK}${esc(deadlineLabel(contest))}</span>
-        <span class="cn-deadline">${ICON_PEOPLE}${esc(participantsLabel(contest.participants_count))}</span>
-        ${catLabel ? `<span class="cn-cat">${esc(catLabel)}</span>` : ''}
+        <span class="cn-deadline ${urgency === 'urgent' ? 'urgent' : ''}">${ICONS.clock}${esc(deadlineLabel(contest))}</span>
+        <span class="cn-deadline">${ICONS.people}${participants}</span>
+        ${category ? `<span class="cn-cat">${esc(category)}</span>` : ''}
       </div>
-      <button class="cn-start" data-join="${contest.id}" data-open="${open ? '1' : '0'}">
-        ${action}${ICON_ARROW}
+      <button class="cn-start" data-join="${contest.id}" data-open="${open}">
+        ${open ? 'Участвовать' : 'Смотреть конкурс'}${ICONS.arrow}
       </button>
     </article>`;
 }
 
 function renderGrid() {
-  const list = visible();
-  const grid = el('cat-grid');
-
-  el('cat-count').textContent = list.length ? contestsLabel(list.length) : '';
-
-  if (!list.length) {
-    grid.innerHTML = `<div class="state-msg">${
-      query ? `По запросу «${esc(query)}» ничего не нашлось` : 'Под выбранные фильтры ничего не подходит'
-    }</div>`;
-    el('load-more-row').style.display = 'none';
-    return;
-  }
-
-  grid.innerHTML = list.slice(0, shown).map(cardHtml).join('');
-  el('load-more-row').style.display = list.length > shown ? '' : 'none';
+  const list = filtered();
+  byId('cat-count').textContent = list.length ? countOf(list.length, WORDS.contests) : '';
+  byId('cat-grid').innerHTML = list.length
+    ? list.slice(0, state.shown).map(card).join('')
+    : `<div class="state-msg">${
+        state.query.trim()
+          ? `По запросу «${esc(state.query.trim())}» ничего не нашлось`
+          : 'Под выбранные фильтры ничего не подходит'
+      }</div>`;
+  byId('load-more-row').hidden = state.shown >= list.length;
 }
 
 function renderClosing() {
-  const soon = all
-    .filter(c => isOpen(c) && c.deadline)
+  const soon = state.contests
+    .filter((contest) => isOpen(contest) && contest.deadline)
     .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
     .slice(0, 5);
-  const list = el('closing-list');
-
-  if (!soon.length) {
-    list.innerHTML = '<div style="font-size:13px;color:var(--muted);">Активных конкурсов со сроком нет</div>';
-    return;
-  }
-
-  list.innerHTML = soon.map((c, i) => `
-    <a class="trending-item" href="/contests/${c.id}/">
-      <span class="trending-num">${i + 1}</span>
-      <span style="min-width:0;">
-        <div class="trending-title">${esc(c.title || 'Конкурс')}</div>
-        <div class="trending-meta">${esc(deadlineLabel(c))}</div>
-      </span>
-    </a>`).join('');
+  byId('closing-list').innerHTML = soon.length
+    ? soon
+        .map(
+          (contest, index) => `
+      <a class="trending-item" href="/contests/${contest.id}/">
+        <span class="trending-num">${index + 1}</span>
+        <span class="trending-body">
+          <span class="trending-title">${esc(contest.title || 'Конкурс')}</span>
+          <span class="trending-meta">${esc(deadlineLabel(contest))}</span>
+        </span>
+      </a>`,
+        )
+        .join('')
+    : '<div class="trending-empty">Активных конкурсов со сроком нет</div>';
 }
 
 function syncChips() {
-  document.querySelectorAll('[data-status]').forEach(b => {
-    if (b.dataset.status !== undefined && b.classList.contains('cr-chip')) {
-      b.classList.toggle('active', b.dataset.status === status);
-    }
-  });
-  document.querySelectorAll('[data-cat]').forEach(b =>
-    b.classList.toggle('active', b.dataset.cat === category));
-  const input = el('search-input');
-  if (input && !input.value) input.value = params.get('q') || '';
+  document
+    .querySelectorAll('.cr-chip[data-status]')
+    .forEach((chip) => chip.classList.toggle('active', chip.dataset.status === state.status));
+  document
+    .querySelectorAll('.cr-chip[data-cat]')
+    .forEach((chip) => chip.classList.toggle('active', chip.dataset.cat === state.category));
 }
 
-/* ── Обработчики ──────────────────────────────────────────────────── */
+function applyFilters(changes) {
+  Object.assign(state, changes, { shown: PAGE_SIZE });
+  syncChips();
+  syncUrl();
+  renderGrid();
+}
 
-document.querySelectorAll('.cr-chip[data-status]').forEach(button => {
-  button.addEventListener('click', () => {
-    status = button.dataset.status;
-    shown = PER_PAGE;
-    syncChips();
-    renderGrid();
-  });
-});
+document
+  .querySelectorAll('.cr-chip[data-status]')
+  .forEach((chip) => chip.addEventListener('click', () => applyFilters({ status: chip.dataset.status })));
+document
+  .querySelectorAll('.cr-chip[data-cat]')
+  .forEach((chip) => chip.addEventListener('click', () => applyFilters({ category: chip.dataset.cat })));
 
-document.querySelectorAll('.cr-chip[data-cat]').forEach(button => {
-  button.addEventListener('click', () => {
-    category = button.dataset.cat;
-    shown = PER_PAGE;
-    syncChips();
-    renderGrid();
-  });
-});
+const searchInput = byId('search-input');
+searchInput.value = state.query;
+searchInput.addEventListener('input', () => applyFilters({ query: searchInput.value }));
 
-el('search-input').addEventListener('input', event => {
-  query = event.target.value.trim().toLowerCase();
-  shown = PER_PAGE;
+byId('btn-load').addEventListener('click', () => {
+  state.shown += PAGE_SIZE;
   renderGrid();
 });
 
-el('btn-load').addEventListener('click', () => {
-  shown += PER_PAGE;
-  renderGrid();
-});
+const authModal = byId('cat-auth-modal');
+const closeAuthModal = () => authModal.classList.remove('open');
 
-// Участие требует входа — анониму показываем окно с предложением войти
-el('cat-grid').addEventListener('click', event => {
+// Участие требует входа — анониму предлагаем войти и вернуться к конкурсу
+byId('cat-grid').addEventListener('click', (event) => {
   const button = event.target.closest('[data-join]');
   if (!button) return;
-  const id = button.dataset.join;
-  if (button.dataset.open === '1' && !me) {
-    el('cat-auth-modal').classList.add('open');
+  const url = `/contests/${button.dataset.join}/`;
+  if (button.dataset.open === 'true' && !state.me) {
+    const next = `?next=${encodeURIComponent(url)}`;
+    byId('cat-signin').search = next;
+    byId('cat-signup').search = next;
+    authModal.classList.add('open');
     return;
   }
-  location.href = `/contests/${id}/`;
+  location.href = url;
 });
 
-// Закрытие окна: кнопка «Не сейчас», клик по затемнению и Esc
-el('cat-modal-close').addEventListener('click', closeAuthModal);
-el('cat-auth-modal').addEventListener('click', event => {
-  if (event.target.id === 'cat-auth-modal') closeAuthModal();
+// Закрытие окна: «Не сейчас», клик по затемнению и Esc
+byId('cat-modal-close').addEventListener('click', closeAuthModal);
+authModal.addEventListener('click', (event) => {
+  if (event.target === authModal) closeAuthModal();
 });
-document.addEventListener('keydown', event => {
+document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeAuthModal();
 });
 
-function closeAuthModal() {
-  el('cat-auth-modal').classList.remove('open');
-}
-
-/* ── Запуск ───────────────────────────────────────────────────────── */
-
-fetch('/api/v1/auth/me/')
-  .then(r => r.json())
-  .then(data => {
-    me = data.ok ? data.account : null;
+api
+  .get('/api/v1/auth/me/')
+  .then(({ account }) => {
+    state.me = account;
     // Создавать конкурсы могут только компании
-    if (me && me.role === 'company') el('btn-create').style.display = '';
+    byId('btn-create').hidden = account?.role !== 'company';
   })
-  .catch(() => {});
+  .catch(() => null);
 
-fetch('/api/v1/contests/catalog/')
-  .then(r => r.json())
-  .then(data => {
-    if (!data.ok) throw new Error();
-    all = data.contests || [];
-    syncChips();
-    renderClosing();
-    renderGrid();
-  })
-  .catch(() => {
-    el('cat-grid').innerHTML = '<div class="state-msg">Не удалось загрузить конкурсы</div>';
-  });
+syncChips();
+try {
+  ({ contests: state.contests = [] } = await api.get('/api/v1/contests/catalog/'));
+  renderClosing();
+  renderGrid();
+} catch {
+  byId('cat-grid').innerHTML = '<div class="state-msg">Не удалось загрузить конкурсы</div>';
+}

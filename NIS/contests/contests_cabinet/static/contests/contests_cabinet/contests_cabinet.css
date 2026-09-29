@@ -4,97 +4,591 @@
  * Карточки статистики тоже берут .cp-stat-* — у них уже есть брейкпоинты.
  */
 
-/* ── Список конкурсов ───────────────────────────────────────────────── */
-
 /* Чипы фильтров — общий компонент .cr-filters/.cr-chip из career.css:
    здесь лежали две их копии, отличавшиеся от остального сайта формой. */
-
 
 /* Рамку, фон и скругление даёт общая .list-card из career.css — та же,
    что у списка тестов. Здесь только прокрутка: строки не сжимаются ниже
    min-width, а обрезать их нельзя (body стоит с overflow-x: clip). */
-.cc-scroll { overflow-x: auto; }
-.cc-thead, .cc-trow { display: grid; grid-template-columns: minmax(150px, 1.4fr) 100px 84px 84px 96px 108px; gap: 10px; min-width: 640px; }
-.cc-thead { padding: 11px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
-.cc-thead span { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
-.cc-trow { padding: 14px 16px; align-items: center; border-bottom: 1px solid var(--line); transition: background .12s; cursor: pointer; }
-.cc-trow:last-child { border-bottom: none; }
-.cc-trow:hover { background: var(--surface-2); }
+.cc-scroll {
+  overflow-x: auto;
+}
+.cc-thead,
+.cc-trow {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.4fr) 100px 84px 84px 96px 108px;
+  gap: 10px;
+  min-width: 640px;
+}
+.cc-thead {
+  padding: 11px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.cc-thead span {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+.cc-trow {
+  padding: 14px 16px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.12s;
+  cursor: pointer;
+}
+.cc-trow:last-child {
+  border-bottom: none;
+}
+.cc-trow:hover {
+  background: var(--surface-2);
+}
 /* Срок на исходе. Янтарный, а не фирменный красный: красный на сайте
    означает бренд и опасные действия (удалить, выйти), и когда им же
    подсвечена дата, строка начинает пестрить без нужды. */
-.cc-deadline { font-size: 13px; }
-.cc-deadline.urgent { color: var(--amber-text); font-weight: 600; }
+.cc-deadline {
+  font-size: 13px;
+}
+.cc-deadline.urgent {
+  color: var(--amber-text);
+  font-weight: 600;
+}
 /* Три кнопки по 26px с зазорами не влезали в колонку 68px и
    упирались в правый край таблицы */
-.cc-actions { display: flex; gap: 6px; justify-content: flex-end; }
-.cc-icon-btn { flex-shrink: 0; width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color .12s, border-color .12s; }
-.cc-icon-btn:hover { color: var(--brand-text); border-color: var(--brand-text); }
-.cc-icon-btn.danger:hover { color: var(--red-text); border-color: var(--red-text); }
-.cc-empty { padding: 64px; text-align: center; border: 2px dashed var(--line-2); border-radius: 16px; }
+.cc-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.cc-icon-btn {
+  flex-shrink: 0;
+  text-decoration: none;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+.cc-icon-btn:hover {
+  color: var(--brand-text);
+  border-color: var(--brand-text);
+}
+.cc-icon-btn.danger:hover {
+  color: var(--red-text);
+  border-color: var(--red-text);
+}
+.cc-empty {
+  padding: 64px;
+  text-align: center;
+  border: 2px dashed var(--line-2);
+  border-radius: 16px;
+}
+.cc-empty-title,
+.cs-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.cc-empty-sub,
+.cs-empty-sub {
+  font-size: 14px;
+  color: var(--muted);
+}
+.cc-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.cc-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+.cc-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text-2);
+}
 
-/* ── Решения участников ─────────────────────────────────────────────── */
-
-
-.cs-sub-card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 18px 20px; margin-bottom: 12px; }
-.cs-sub-card.liked { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
+.cs-sub-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+}
+.cs-sub-card.liked {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand) inset;
+}
 /* Аватар + имя + статус + ♥ в одну строку на 360px не помещаются */
-.cs-sub-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; row-gap: 8px; }
-.cs-cand-av { width: 36px; height: 36px; border-radius: 9px; background: var(--surface-2); color: var(--text-2); font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.cs-status-pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; margin-left: auto; white-space: nowrap; }
-.cs-btn-like { width: 34px; height: 34px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface); color: var(--faint); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .12s; flex-shrink: 0; }
-.cs-btn-like:hover { border-color: var(--brand); color: var(--brand-text); }
-.cs-btn-like.liked { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-text); }
-.cs-sub-body { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
-.cs-file-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--bg); margin-bottom: 10px; flex-wrap: wrap; }
-.cs-file-row svg { flex-shrink: 0; color: var(--muted); }
-.cs-btn-download { height: 28px; padding: 0 11px; border: 1px solid var(--line-2); border-radius: 7px; background: var(--surface); color: var(--text-2); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .12s; text-decoration: none; display: inline-flex; align-items: center; }
-.cs-btn-download:hover { border-color: var(--brand); color: var(--brand-text); }
-.cs-btn-accept { height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: var(--green-text); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; font-family: inherit; }
-.cs-btn-accept:hover { opacity: .88; }
-.cs-btn-reject { height: 34px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .12s; font-family: inherit; }
-.cs-btn-reject:hover { border-color: var(--red-text); color: var(--red-text); }
-.cs-btn-winner { height: 34px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .12s; font-family: inherit; }
-.cs-btn-winner:hover { border-color: var(--amber-text); color: var(--amber-text); }
-.cs-btn-winner.is-winner { background: var(--amber-soft); border-color: var(--amber-text); color: var(--amber-text); }
-.cs-winner-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--amber-soft); color: var(--amber-text); }
-.cs-empty { padding: 64px; text-align: center; border: 2px dashed var(--line-2); border-radius: 16px; }
-.cs-btn-contact { height: 34px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .12s; font-family: inherit; }
-.cs-btn-contact:hover { border-color: var(--brand); color: var(--brand-text); }
+.cs-sub-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.cs-cand-av {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cs-btn-like {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+.cs-btn-like:hover {
+  border-color: var(--brand);
+  color: var(--brand-text);
+}
+.cs-btn-like.liked {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand-text);
+}
+.cs-sub-body {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.cs-file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--bg);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.cs-file-row svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.cs-btn-download {
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.cs-btn-download:hover {
+  border-color: var(--brand);
+  color: var(--brand-text);
+}
+.cs-btn-accept {
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--green-text);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  font-family: inherit;
+}
+.cs-btn-accept:hover {
+  opacity: 0.88;
+}
+.cs-btn-reject {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: inherit;
+}
+.cs-btn-reject:hover {
+  border-color: var(--red-text);
+  color: var(--red-text);
+}
+.cs-btn-winner:hover {
+  border-color: var(--amber-text);
+  color: var(--amber-text);
+}
+.cs-btn-winner.is-winner {
+  background: var(--amber-soft);
+  border-color: var(--amber-text);
+  color: var(--amber-text);
+}
+.cs-winner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--amber-soft);
+  color: var(--amber-text);
+}
+.cs-empty {
+  padding: 64px;
+  text-align: center;
+  border: 2px dashed var(--line-2);
+  border-radius: 16px;
+}
+.cs-back {
+  margin-bottom: 16px;
+}
+.cs-page-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cs-cand-main {
+  min-width: 0;
+}
+.cs-cand-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+.cs-cand-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+/* Статус и «понравилось» переносятся на узком экране вместе, справа */
+.cs-sub-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.cs-link {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--brand-text);
+  word-break: break-all;
+}
+.cs-file-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.cs-text {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+  margin-bottom: 10px;
+  padding: 12px 16px;
+  background: var(--bg);
+  border-radius: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cs-comment {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+  margin-bottom: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cs-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cs-decided {
+  font-size: 13px;
+  color: var(--muted);
+}
+.cs-winner-badge svg,
+.cs-btn-winner svg {
+  flex-shrink: 0;
+}
+.cs-btn-winner {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cs-popup-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.cs-popup-av {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cs-popup-name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.cs-popup-login {
+  font-size: 12.5px;
+  color: var(--brand-text);
+  text-decoration: none;
+}
+.cs-popup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.cs-popup-row svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.cs-popup-row a {
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.cs-popup-muted {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.cs-popup-bio {
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.cs-popup-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+.cs-popup-skill {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  font-weight: 500;
+}
+.cs-btn-contact {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.12s;
+  font-family: inherit;
+}
+.cs-btn-contact:hover {
+  border-color: var(--brand);
+  color: var(--brand-text);
+}
 /* Ширина попапа не должна превышать экран: позицию считает JS, а вылезший
    за край контент обрезается без прокрутки */
-#cs-contact-popup { position: absolute; z-index: 999; width: min(260px, calc(100vw - 24px)); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+#cs-contact-popup {
+  position: absolute;
+  z-index: 999;
+  width: min(260px, calc(100vw - 24px));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
 
-/* ── Воронка и подача по дням ───────────────────────────────────────── */
+/* minmax(0, …): иначе график по дням с подписями дат не даёт колонке
+   сжаться уже своего содержимого, и панель вылезает за экран телефона */
+.cs-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.cs-panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 18px 20px;
+}
+.cs-panel-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.cs-panel-note {
+  font-size: 12px;
+  color: var(--faint);
+  line-height: 1.45;
+  margin-bottom: 16px;
+}
 
-.cs-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
-.cs-panel { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 18px 20px; }
-.cs-panel-title { font-size: 14.5px; font-weight: 700; margin-bottom: 4px; }
-.cs-panel-note { font-size: 12px; color: var(--faint); line-height: 1.45; margin-bottom: 16px; }
+.cs-step {
+  margin-bottom: 12px;
+}
+.cs-step:last-child {
+  margin-bottom: 0;
+}
+.cs-step-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.cs-step-name {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.cs-step-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  margin-left: auto;
+}
+.cs-step-pct {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.cs-step-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.cs-step-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--brand);
+  transition: width 0.4s;
+}
+.cs-step-fill.done {
+  background: var(--green-text);
+}
 
-.cs-step { margin-bottom: 12px; }
-.cs-step:last-child { margin-bottom: 0; }
-.cs-step-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
-.cs-step-name { font-size: 13px; color: var(--text-2); }
-.cs-step-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; margin-left: auto; }
-.cs-step-pct { font-size: 11.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
-.cs-step-track { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
-.cs-step-fill { height: 100%; border-radius: 999px; background: var(--brand); transition: width .4s; }
-.cs-step-fill.done { background: var(--green-text); }
-
-.cs-daily { display: flex; align-items: flex-end; gap: 4px; height: 120px; }
-.cs-daily-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
-.cs-daily-bars { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
-.cs-daily-bar { width: 70%; max-width: 16px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--brand); transition: height .35s; }
-.cs-daily-col:last-child .cs-daily-bar { background: var(--amber-text); }
-.cs-daily-label { font-size: 10px; color: var(--faint); white-space: nowrap; }
-.cs-daily-col:not(:first-child):not(:last-child) .cs-daily-label { visibility: hidden; }
-.cs-panel-empty { font-size: 13px; color: var(--muted); }
-
-/* ── Адаптив ────────────────────────────────────────────────────────── */
+.cs-daily {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 120px;
+}
+.cs-daily-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+}
+.cs-daily-bars {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.cs-daily-bar {
+  width: 70%;
+  max-width: 16px;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--brand);
+  transition: height 0.35s;
+}
+.cs-daily-col:last-child .cs-daily-bar {
+  background: var(--amber-text);
+}
+.cs-daily-label {
+  font-size: 10px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.cs-daily-col:not(:first-child):not(:last-child) .cs-daily-label {
+  visibility: hidden;
+}
+.cs-panel-empty {
+  font-size: 13px;
+  color: var(--muted);
+}
 
 @media (max-width: 900px) {
-  .cs-panels { grid-template-columns: 1fr; }
+  .cs-panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* Телефон: таблицу разворачиваем в карточки.
@@ -102,8 +596,12 @@
    а её min-width: 640px — единственное, что может распереть страницу.
    В карточном виде ширины хватает любой, и переполнение невозможно. */
 @media (max-width: 680px) {
-  .cc-scroll { overflow-x: visible; }
-  .cc-thead { display: none; }
+  .cc-scroll {
+    overflow-x: visible;
+  }
+  .cc-thead {
+    display: none;
+  }
   .cc-trow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     min-width: 0;
@@ -111,12 +609,23 @@
     padding: 16px;
   }
   /* Название — на всю ширину, действия — отдельной строкой справа */
-  .cc-trow > *:nth-child(1) { grid-column: 1 / -1; }
-  .cc-trow > .cc-actions { grid-column: 1 / -1; justify-content: flex-end; }
+  .cc-trow > *:nth-child(1) {
+    grid-column: 1 / -1;
+  }
+  .cc-trow > .cc-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
   /* Числовые колонки без шапки непонятны — подписываем их */
-  .cc-trow > *:nth-child(2)::before { content: 'Дедлайн'; }
-  .cc-trow > *:nth-child(3)::before { content: 'Участники'; }
-  .cc-trow > *:nth-child(4)::before { content: 'Решения'; }
+  .cc-trow > *:nth-child(2)::before {
+    content: 'Дедлайн';
+  }
+  .cc-trow > *:nth-child(3)::before {
+    content: 'Участники';
+  }
+  .cc-trow > *:nth-child(4)::before {
+    content: 'Решения';
+  }
   .cc-trow > *:nth-child(2)::before,
   .cc-trow > *:nth-child(3)::before,
   .cc-trow > *:nth-child(4)::before {
@@ -125,17 +634,37 @@
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: .05em;
+    letter-spacing: 0.05em;
     color: var(--faint);
     margin-bottom: 2px;
   }
 }
 
 @media (max-width: 560px) {
-  .cc-empty, .cs-empty { padding: 40px 20px; }
-  .cr-filter-count { flex-basis: 100%; margin-left: 0; }
+  .cc-empty,
+  .cs-empty {
+    padding: 40px 20px;
+  }
+  .cr-filter-count {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
   /* Счётчик отфильтрованных не влезает в строку с чипами */
-  .cs-daily { height: 96px; gap: 2px; }
-  .cs-daily-label { font-size: 9px; }
-  .cs-sub-card { padding: 16px; }
+  .cs-daily {
+    height: 96px;
+    gap: 2px;
+  }
+  .cs-daily-label {
+    font-size: 9px;
+  }
+  .cs-sub-card {
+    padding: 16px;
+  }
+}
+/* Видны только подписи первого и последнего дня — прижимаем их к краям графика */
+.cs-daily-col:first-child .cs-daily-label {
+  align-self: flex-start;
+}
+.cs-daily-col:last-child .cs-daily-label {
+  align-self: flex-end;
 }

@@ -1,132 +1,85 @@
-(function () {
-  'use strict';
+/* Все публикации кандидата — публичный список с фильтром по тегам. */
+import { api, byId, countOf, esc, formatDateShort, initial, pageData, WORDS } from 'alfa/core';
 
-  var username = (window.ALFA_APP_BOOTSTRAP || {}).username || '';
-  var allArticles = [];
-  var activeTag = 'all';
+const { username = '' } = pageData();
 
-  var COVERS = [
-    'linear-gradient(135deg,#1e3a5f 0%,#2d6a9f 100%)',
-    'linear-gradient(135deg,#D62839 0%,#7a1020 100%)',
-    'linear-gradient(135deg,#134e5e 0%,#1a7a6e 100%)',
-  ];
+const ICONS = {
+  lines:
+    '<svg class="ua-card-cover-icon" viewBox="0 0 48 48" fill="none"><path d="M8 10h32M8 18h24M8 26h20M8 34h16" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>',
+  clock:
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  eye: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  // Стрелка, а не сердце: у статей голосование «за/против», рейтинг бывает отрицательным
+  arrow:
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>',
+};
 
-  function esc(s) {
-    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+let articles = [];
+let activeTag = 'all';
 
-  function fmtDate(iso) {
-    if (!iso) return '';
-    try { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }); }
-    catch (e) { return ''; }
-  }
+function card(article) {
+  const date = formatDateShort(article.published_at);
+  const tags = (article.tags ?? []).map((tag) => `<span class="ua-card-tag">${esc(tag)}</span>`).join('');
+  const meta = [
+    article.read_time && `<span class="ua-card-mono">${ICONS.clock}${article.read_time} мин</span>`,
+    date && `<span class="ua-card-meta">${esc(date)}</span>`,
+  ]
+    .filter(Boolean)
+    .join('<span class="ua-card-dot">·</span>');
+  return `
+    <a class="ua-card" href="/articles/${esc(article.id)}/">
+      <div class="ua-card-cover ${article.cover ? '' : 'is-empty'}" ${article.cover ? `style="background:${esc(article.cover)}"` : ''}>${ICONS.lines}</div>
+      <div class="ua-card-body">
+        ${tags ? `<div class="ua-card-tags">${tags}</div>` : ''}
+        <div class="ua-card-title">${esc(article.title)}</div>
+        ${article.excerpt ? `<div class="ua-card-excerpt">${esc(article.excerpt)}</div>` : ''}
+        <div class="ua-card-footer">
+          ${meta}
+          <div class="ua-card-footer-right">
+            <span class="ua-stat-pill">${ICONS.eye}${article.views || 0}</span>
+            <span class="ua-stat-pill" title="Рейтинг статьи">${ICONS.arrow}${article.likes || 0}</span>
+          </div>
+        </div>
+      </div>
+    </a>`;
+}
 
-  function apiFetch(url) {
-    return fetch(url, { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (d) { if (!d.ok) throw new Error(d.message || 'Ошибка'); return d; });
-  }
+function render() {
+  const tags = [...new Set(articles.flatMap((article) => article.tags ?? []))];
+  const visible = activeTag === 'all' ? articles : articles.filter((article) => article.tags?.includes(activeTag));
+  const chip = (value, label) =>
+    `<button class="ua-filter-btn ${activeTag === value ? 'active' : ''}" data-tag="${esc(value)}">${esc(label)}</button>`;
 
-  function renderFilters() {
-    var tags = [];
-    allArticles.forEach(function (a) {
-      (a.tags || []).forEach(function (t) { if (tags.indexOf(t) === -1) tags.push(t); });
-    });
-    var filtersEl = document.getElementById('ua-filters');
-    var html = '<button class="ua-filter-btn' + (activeTag === 'all' ? ' active' : '') + '" data-tag="all">Все</button>';
-    tags.forEach(function (t) {
-      html += '<button class="ua-filter-btn' + (activeTag === t ? ' active' : '') + '" data-tag="' + esc(t) + '">' + esc(t) + '</button>';
-    });
-    html += '<span class="ua-filter-count" id="ua-count"></span>';
-    filtersEl.innerHTML = html;
-    filtersEl.querySelectorAll('.ua-filter-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        activeTag = btn.dataset.tag;
-        renderGrid();
-        renderFilters();
-      });
-    });
-  }
+  byId('ua-filters').innerHTML = `${chip('all', 'Все')}${tags.map((tag) => chip(tag, tag)).join('')}
+    <span class="ua-filter-count">${visible.length} из ${articles.length}</span>`;
+  byId('ua-grid').innerHTML = visible.length
+    ? visible.map(card).join('')
+    : '<div class="cr-list-empty">Нет статей.</div>';
+}
 
-  function renderGrid() {
-    var list = activeTag === 'all'
-      ? allArticles
-      : allArticles.filter(function (a) { return (a.tags || []).indexOf(activeTag) !== -1; });
+byId('ua-filters').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-tag]');
+  if (!button) return;
+  activeTag = button.dataset.tag;
+  render();
+});
 
-    var countEl = document.getElementById('ua-count');
-    if (countEl) countEl.textContent = list.length + ' из ' + allArticles.length;
+try {
+  const [candidateData, articlesData] = await Promise.all([
+    api.get(`/api/v1/candidates/${username}/`),
+    api.get(`/api/v1/candidates/${username}/articles/`),
+  ]);
+  const candidate = candidateData.candidate;
+  articles = articlesData.articles ?? [];
 
-    var grid = document.getElementById('ua-grid');
-    if (!list.length) {
-      grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted);">Нет статей.</div>';
-      return;
-    }
-
-    grid.innerHTML = list.map(function (a) {
-      var covBg = COVERS[a.cover_index % COVERS.length] || COVERS[0];
-      var dateStr = fmtDate(a.published_at);
-      var tagsHtml = (a.tags || []).map(function (t) { return '<span class="ua-card-tag">' + esc(t) + '</span>'; }).join('');
-      return '<a class="ua-card" href="/articles/' + esc(a.id) + '/">'
-        + '<div class="ua-card-cover" style="background:' + covBg + ';">'
-        + '<svg class="ua-card-cover-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:44px;height:44px;"><path d="M8 10h32M8 18h24M8 26h20M8 34h16" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>'
-        + '</div>'
-        + '<div class="ua-card-body">'
-        + (tagsHtml ? '<div class="ua-card-tags">' + tagsHtml + '</div>' : '')
-        + '<div class="ua-card-title">' + esc(a.title) + '</div>'
-        + (a.excerpt ? '<div class="ua-card-excerpt">' + esc(a.excerpt) + '</div>' : '')
-        + '<div class="ua-card-footer">'
-        // Время чтения показываем, только если автор его задал
-        + (a.read_time ? '<span class="ua-card-mono"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' + a.read_time + ' мин</span>' : '')
-        + (dateStr ? (a.read_time ? '<span class="ua-card-dot">·</span>' : '') + '<span class="ua-card-meta">' + dateStr + '</span>' : '')
-        + '<div class="ua-card-footer-right">'
-        + '<span class="ua-stat-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' + (a.views || 0) + '</span>'
-        // Стрелка, а не сердце: у статей голосование «за/против», и счётчик
-        // бывает отрицательным — рядом с сердцем «−3» выглядело бы бессмыслицей
-        + '<span class="ua-stat-pill" title="Рейтинг статьи"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>' + (a.likes || 0) + '</span>'
-        + '</div>'
-        + '</div>'
-        + '</div>'
-        + '</a>';
-    }).join('');
-  }
-
-  function init() {
-    var backLink = document.getElementById('ua-back-link');
-    if (backLink) backLink.href = '/' + username + '/';
-
-    Promise.all([
-      apiFetch('/api/v1/candidates/' + username + '/'),
-      apiFetch('/api/v1/candidates/' + username + '/articles/'),
-    ]).then(function (results) {
-      var candidate = results[0].candidate;
-      allArticles = results[1].articles || [];
-
-      var avEl = document.getElementById('ua-author-av');
-      if (avEl) {
-        if (candidate.avatar) {
-          avEl.innerHTML = '<img src="' + esc(candidate.avatar) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">';
-        } else {
-          avEl.textContent = (candidate.name || '?')[0].toUpperCase();
-        }
-      }
-
-      var titleEl = document.getElementById('ua-page-title');
-      if (titleEl) titleEl.textContent = 'Публикации ' + (candidate.name || username);
-
-      var subEl = document.getElementById('ua-page-sub');
-      if (subEl) subEl.textContent = allArticles.length + ' опубликованных статей';
-
-      renderFilters();
-      renderGrid();
-    }).catch(function (e) {
-      var grid = document.getElementById('ua-grid');
-      if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted);">' + esc(e.message) + '</div>';
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
+  const avatar = byId('ua-author-av');
+  if (candidate.avatar) avatar.innerHTML = `<img src="${esc(candidate.avatar)}" alt="">`;
+  else avatar.textContent = initial(candidate.name);
+  byId('ua-page-title').textContent = `Публикации ${candidate.name || username}`;
+  byId('ua-page-sub').textContent = `${countOf(articles.length, WORDS.articles)} опубликовано`;
+  byId('ua-back-link').href = `/${username}/`;
+  render();
+} catch (error) {
+  byId('ua-page-sub').textContent = '';
+  byId('ua-grid').innerHTML = `<div class="cr-list-empty">${esc(error.message)}</div>`;
+}

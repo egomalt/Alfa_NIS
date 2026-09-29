@@ -102,11 +102,12 @@ class Account(AbstractBaseUser):
 
     def refresh_ban_state(self):
         """Снимает бан, если срок истёк. Возвращает True, если что-то поменялось."""
-        if self.status == STATUS_BANNED and self.ban_until is not None:
-            if timezone.now() >= self.ban_until:
-                self.status = STATUS_ACTIVE
-                self.ban_until = None
-                self.ban_reason = ''
-                self.save(update_fields=['status', 'ban_until', 'ban_reason'])
-                return True
-        return False
+        expired = (self.status == STATUS_BANNED and self.ban_until is not None
+                   and timezone.now() >= self.ban_until)
+        if not expired:
+            return False
+        self.status = STATUS_ACTIVE
+        self.ban_until = None
+        self.ban_reason = ''
+        self.save(update_fields=['status', 'ban_until', 'ban_reason'])
+        return True

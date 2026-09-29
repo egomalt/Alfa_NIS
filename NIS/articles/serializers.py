@@ -43,6 +43,8 @@ def serialize_article(article, with_author=True, with_status=False, author_names
         'excerpt': article.excerpt,
         'tags': article.tags or [],
         'cover_index': article.cover_index,
+        # Готовый градиент: список обложек живёт только здесь, фронтенд его не дублирует
+        'cover': cover_gradient(article.cover_index),
         'read_time': article.read_time,
         'views': article.views,
         'likes': article.likes,
