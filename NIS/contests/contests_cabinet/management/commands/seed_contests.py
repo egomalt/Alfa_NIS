@@ -9,6 +9,7 @@
     manage.py seed_contests --company vk-demo
     manage.py seed_contests --clear          # удалить созданное этой командой
 """
+
 import random
 from datetime import timedelta
 
@@ -35,8 +36,12 @@ RULES = [
 # (заголовок, категория, уровень, дней до дедлайна, приз, формат, подсказка, описание, кейс)
 CONTESTS = [
     (
-        'Сервис коротких ссылок', 'Backend', 'Junior', 5,
-        'Оффер на стажировку', 'link',
+        'Сервис коротких ссылок',
+        'Backend',
+        'Junior',
+        5,
+        'Оффер на стажировку',
+        'link',
         'Ссылка на публичный репозиторий с README',
         'Спроектируйте и реализуйте сокращатель ссылок с ограничением частоты запросов.',
         'Нужен HTTP-сервис, который принимает длинный URL и возвращает короткий код.\n\n'
@@ -49,8 +54,12 @@ CONTESTS = [
         'как вы объясняете принятые решения.',
     ),
     (
-        'Дашборд продаж за квартал', 'Аналитика', 'Middle', 21,
-        '60 000 ₽', 'file',
+        'Дашборд продаж за квартал',
+        'Аналитика',
+        'Middle',
+        21,
+        '60 000 ₽',
+        'file',
         'PDF или архив с ноутбуком и выгрузкой',
         'По сырой выгрузке заказов соберите дашборд и найдите причину падения выручки.',
         'Во вложении — выгрузка заказов за четыре квартала.\n\n'
@@ -62,8 +71,12 @@ CONTESTS = [
         'Важнее вывод, чем количество графиков.',
     ),
     (
-        'Разбор инцидента в проде', 'DevOps', 'Senior', 2,
-        '', 'text',
+        'Разбор инцидента в проде',
+        'DevOps',
+        'Senior',
+        2,
+        '',
+        'text',
         'Текст разбора: что случилось, почему и что менять',
         'По логам и метрикам восстановите картину аварии и предложите меры.',
         'Ночью сервис оплаты отвечал ошибкой 503 в течение 40 минут.\n\n'
@@ -74,8 +87,12 @@ CONTESTS = [
         'Поиск виноватых не нужен — нужен разбор.',
     ),
     (
-        'Редизайн формы отклика', 'Дизайн', 'Middle', -9,
-        'Оффер на стажировку', 'file',
+        'Редизайн формы отклика',
+        'Дизайн',
+        'Middle',
+        -9,
+        'Оффер на стажировку',
+        'file',
         'PDF или ссылка на макет',
         'Конкурс завершён. Участники предлагали, как сократить путь кандидата до отклика.',
         'Форма отклика состоит из четырёх экранов, до конца доходит меньше половины кандидатов.\n\n'
@@ -86,30 +103,68 @@ CONTESTS = [
 
 # (название, уровень, категория, завершённых прохождений, вопросы)
 TESTS = [
-    ('Основы HTTP и REST', 'junior', 'backend', 48, [
-        ('quiz', 'Какой код ответа вернуть, если ресурс не найден?',
-         [('404 Not Found', True), ('204 No Content', False), ('400 Bad Request', False), ('500', False)]),
-        ('quiz', 'Какие методы считаются идемпотентными?',
-         [('GET', True), ('PUT', True), ('DELETE', True), ('POST', False)]),
-        ('input', 'Каким заголовком клиент сообщает желаемый формат ответа?',
-         [('Accept', True)]),
-    ]),
-    ('SQL: выборки и соединения', 'middle', 'analytics', 23, [
-        ('quiz', 'Что вернёт LEFT JOIN, если справа нет совпадений?',
-         [('Строку левой таблицы с NULL справа', True), ('Ничего', False),
-          ('Ошибку', False), ('Строку правой таблицы', False)]),
-        ('input', 'Какое ключевое слово убирает дубликаты в выборке?',
-         [('DISTINCT', True)]),
-        ('quiz', 'Чем HAVING отличается от WHERE?',
-         [('Фильтрует уже сгруппированные строки', True),
-          ('Работает быстрее', False), ('Ничем', False), ('Применим только к JOIN', False)]),
-    ]),
-    ('Python: коллекции и сложность', 'middle', 'backend', 7, [
-        ('quiz', 'Какая сложность у проверки вхождения в set?',
-         [('O(1) в среднем', True), ('O(n)', False), ('O(log n)', False), ('O(n log n)', False)]),
-        ('input', 'Как называется структура из collections для очереди с двух концов?',
-         [('deque', True), ('collections.deque', True)]),
-    ]),
+    (
+        'Основы HTTP и REST',
+        'junior',
+        'backend',
+        48,
+        [
+            (
+                'quiz',
+                'Какой код ответа вернуть, если ресурс не найден?',
+                [('404 Not Found', True), ('204 No Content', False), ('400 Bad Request', False), ('500', False)],
+            ),
+            ('quiz', 'Какие методы считаются идемпотентными?', [('GET', True), ('PUT', True), ('DELETE', True), ('POST', False)]),
+            ('input', 'Каким заголовком клиент сообщает желаемый формат ответа?', [('Accept', True)]),
+        ],
+    ),
+    (
+        'SQL: выборки и соединения',
+        'middle',
+        'analytics',
+        23,
+        [
+            (
+                'quiz',
+                'Что вернёт LEFT JOIN, если справа нет совпадений?',
+                [
+                    ('Строку левой таблицы с NULL справа', True),
+                    ('Ничего', False),
+                    ('Ошибку', False),
+                    ('Строку правой таблицы', False),
+                ],
+            ),
+            ('input', 'Какое ключевое слово убирает дубликаты в выборке?', [('DISTINCT', True)]),
+            (
+                'quiz',
+                'Чем HAVING отличается от WHERE?',
+                [
+                    ('Фильтрует уже сгруппированные строки', True),
+                    ('Работает быстрее', False),
+                    ('Ничем', False),
+                    ('Применим только к JOIN', False),
+                ],
+            ),
+        ],
+    ),
+    (
+        'Python: коллекции и сложность',
+        'middle',
+        'backend',
+        7,
+        [
+            (
+                'quiz',
+                'Какая сложность у проверки вхождения в set?',
+                [('O(1) в среднем', True), ('O(n)', False), ('O(log n)', False), ('O(n log n)', False)],
+            ),
+            (
+                'input',
+                'Как называется структура из collections для очереди с двух концов?',
+                [('deque', True), ('collections.deque', True)],
+            ),
+        ],
+    ),
 ]
 
 
@@ -117,10 +172,8 @@ class Command(BaseCommand):
     help = 'Создаёт демонстрационные конкурсы и тесты для компании (для локальной работы).'
 
     def add_arguments(self, parser):
-        parser.add_argument('--company', default=DEFAULT_COMPANY,
-                            help=f'Логин компании (по умолчанию {DEFAULT_COMPANY})')
-        parser.add_argument('--clear', action='store_true',
-                            help='Удалить конкурсы и тесты, созданные этой командой')
+        parser.add_argument('--company', default=DEFAULT_COMPANY, help=f'Логин компании (по умолчанию {DEFAULT_COMPANY})')
+        parser.add_argument('--clear', action='store_true', help='Удалить конкурсы и тесты, созданные этой командой')
 
     def handle(self, *args, **options):
         username = options['company']
@@ -174,8 +227,7 @@ class Command(BaseCommand):
                 build_pages(test, questions)
                 tests += 1
 
-        self.stdout.write(self.style.SUCCESS(
-            f'Компания «{company.name}»: создано конкурсов {contests}, тестов {tests}.'))
+        self.stdout.write(self.style.SUCCESS(f'Компания «{company.name}»: создано конкурсов {contests}, тестов {tests}.'))
         self.stdout.write(f'Профиль: /{username}/   Удалить: manage.py seed_contests --company {username} --clear')
 
     def _make_submissions(self, contest, finished):
@@ -194,9 +246,9 @@ class Command(BaseCommand):
             if finished:
                 status = ContestSubmission.STATUS_ACCEPTED if i == 0 else ContestSubmission.STATUS_REJECTED
             else:
-                status = rng.choice([ContestSubmission.STATUS_PENDING,
-                                     ContestSubmission.STATUS_PENDING,
-                                     ContestSubmission.STATUS_ACCEPTED])
+                status = rng.choice(
+                    [ContestSubmission.STATUS_PENDING, ContestSubmission.STATUS_PENDING, ContestSubmission.STATUS_ACCEPTED]
+                )
             submission = ContestSubmission.objects.create(
                 contest=contest,
                 candidate_username=takers[i],
@@ -219,6 +271,9 @@ class Command(BaseCommand):
         if not Test.objects.filter(description__contains=MARK).exists():
             UserProfile.objects.filter(username__startswith=TAKER_PREFIX).delete()
             takers = Account.objects.filter(username__startswith=TAKER_PREFIX).delete()[0]
-        self.stdout.write(self.style.SUCCESS(
-            f'Удалено записей: конкурсов {contests}, тестов {tests} '
-            f'(со страницами и прохождениями), демо-кандидатов {takers}.'))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Удалено записей: конкурсов {contests}, тестов {tests} '
+                f'(со страницами и прохождениями), демо-кандидатов {takers}.'
+            )
+        )

@@ -9,6 +9,10 @@ def contests_catalog(request):
 
 @ensure_csrf_cookie
 def contest_view(request, contest_id):
-    return render(request, 'contests/contests_app/contest_view.html', {
-        'contest_id': contest_id,
-    })
+    return render(
+        request,
+        'contests/contests_app/contest_view.html',
+        {
+            'contest_id': contest_id,
+        },
+    )

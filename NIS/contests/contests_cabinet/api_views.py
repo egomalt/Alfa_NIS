@@ -8,16 +8,16 @@ from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_http_methods
 
 from authorization import bans
-from authorization.models import Account, ROLE_COMPANY, ROLE_USER
+from authorization.models import ROLE_COMPANY, ROLE_USER, Account
 from authorization.views import get_current_account
 from companies.models import Company
 from core.auth import api_login_required, ban_block
-
-from . import statistics
 from core.pagination import paginate
 from core.uploads import UploadError, human_size, validate_attachment
 from core.utils import load_json_body
 from users.models import UserProfile
+
+from . import statistics
 from .models import Contest, ContestAttachment, ContestSubmission
 
 MAX_ATTACHMENTS = 10
@@ -29,8 +29,15 @@ MAX_COMMENT_LENGTH = 2000
 PUBLIC_STATUSES = [Contest.STATUS_ACTIVE, Contest.STATUS_FINISHED, Contest.STATUS_REVIEW]
 
 EDITABLE_FIELDS = (
-    'title', 'excerpt', 'case_text', 'rules', 'category',
-    'level', 'prize', 'submission_type', 'submission_hint',
+    'title',
+    'excerpt',
+    'case_text',
+    'rules',
+    'category',
+    'level',
+    'prize',
+    'submission_type',
+    'submission_hint',
 )
 
 
@@ -83,9 +90,7 @@ def _contest_to_dict(c, full=False, submissions_count=None):
         'participants_count': c.participants_count,
         'created_at': c.created_at.isoformat(),
         'company_username': c.company_username,
-        'submissions_count': (
-            submissions_count if submissions_count is not None else c.submissions.count()
-        ),
+        'submissions_count': (submissions_count if submissions_count is not None else c.submissions.count()),
     }
     if full:
         d['case_text'] = c.case_text
@@ -99,9 +104,7 @@ def _candidate_cards(usernames):
     """Карточки кандидатов одним запросом на модель."""
     usernames = list({u for u in usernames if u})
     emails = dict(Account.objects.filter(username__in=usernames).values_list('username', 'email'))
-    profiles = {
-        p.username: p for p in UserProfile.objects.filter(username__in=usernames)
-    }
+    profiles = {p.username: p for p in UserProfile.objects.filter(username__in=usernames)}
     # У заблокированного прячем личность и контакты, но не саму работу
     hidden = bans.banned_usernames()
     cards = {}
@@ -164,11 +167,13 @@ def api_company_contests(request):
     }
 
     contests = _with_counts(qs)
-    return JsonResponse({
-        'ok': True,
-        'contests': [_contest_to_dict(c, submissions_count=c.subs) for c in contests],
-        'stats': stats,
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'contests': [_contest_to_dict(c, submissions_count=c.subs) for c in contests],
+            'stats': stats,
+        }
+    )
 
 
 @require_http_methods(['POST'])
@@ -238,9 +243,7 @@ def api_contest_attachment_upload(request, contest_id):
         return _not_found()
 
     if contest.attachments.count() >= MAX_ATTACHMENTS:
-        return JsonResponse(
-            {'ok': False, 'message': f'Можно приложить не больше {MAX_ATTACHMENTS} файлов.'}, status=400
-        )
+        return JsonResponse({'ok': False, 'message': f'Можно приложить не больше {MAX_ATTACHMENTS} файлов.'}, status=400)
 
     try:
         uploaded = validate_attachment(request.FILES.get('file'))
@@ -282,9 +285,7 @@ def api_contest_publish(request, contest_id):
     # Публикует только подтверждённая компания — как и в разделе тестов
     company = Company.objects.filter(username=request.account.username).first()
     if company is None or not company.is_verified:
-        return JsonResponse(
-            {'ok': False, 'message': 'Сначала подтвердите компанию.'}, status=403
-        )
+        return JsonResponse({'ok': False, 'message': 'Сначала подтвердите компанию.'}, status=403)
 
     # Завершённый конкурс не воскрешаем: иначе он снова начнёт принимать работы
     if c.status == Contest.STATUS_FINISHED:
@@ -298,9 +299,7 @@ def api_contest_publish(request, contest_id):
     if not c.deadline:
         missing.append('срок приёма работ')
     if missing:
-        return JsonResponse(
-            {'ok': False, 'message': 'Заполните перед публикацией: ' + ', '.join(missing) + '.'}, status=400
-        )
+        return JsonResponse({'ok': False, 'message': 'Заполните перед публикацией: ' + ', '.join(missing) + '.'}, status=400)
     if c.deadline <= timezone.now():
         return JsonResponse({'ok': False, 'message': 'Срок приёма работ должен быть в будущем.'}, status=400)
 
@@ -367,9 +366,7 @@ def api_submission_winner(request, contest_id, sub_id):
 
 @require_http_methods(['GET'])
 def api_contests_catalog(request):
-    qs = (Contest.objects
-          .filter(status__in=PUBLIC_STATUSES)
-          .exclude(company_username__in=bans.banned_usernames()))
+    qs = Contest.objects.filter(status__in=PUBLIC_STATUSES).exclude(company_username__in=bans.banned_usernames())
     if request.GET.get('status'):
         qs = qs.filter(status=request.GET['status'])
     if request.GET.get('category'):
@@ -378,8 +375,7 @@ def api_contests_catalog(request):
     contests, page_meta = paginate(request, _with_counts(qs).order_by('-created_at'), CATALOG_PER_PAGE)
 
     company_names = {
-        co.username: co.name or co.username
-        for co in Company.objects.filter(username__in=[c.company_username for c in contests])
+        co.username: co.name or co.username for co in Company.objects.filter(username__in=[c.company_username for c in contests])
     }
 
     result = []
@@ -433,14 +429,11 @@ def api_contest_submit(request, contest_id):
         locked = Contest.objects.select_for_update().get(id=c.id)
         used = ContestSubmission.objects.filter(contest=locked, candidate_username=account.username).count()
         if used >= MAX_SUBMISSION_ATTEMPTS:
-            return JsonResponse(
-                {'ok': False, 'message': 'Вы уже отправили решение на этот конкурс.'}, status=409
-            )
+            return JsonResponse({'ok': False, 'message': 'Вы уже отправили решение на этот конкурс.'}, status=409)
         sub.attempt = used + 1
         sub.save()
         locked.participants_count = (
-            ContestSubmission.objects.filter(contest=locked)
-            .values('candidate_username').distinct().count()
+            ContestSubmission.objects.filter(contest=locked).values('candidate_username').distinct().count()
         )
         locked.save(update_fields=['participants_count'])
 
@@ -451,9 +444,7 @@ def api_contest_submit(request, contest_id):
 @api_login_required()
 def api_my_submissions(request, contest_id):
     account = request.account
-    subs = list(ContestSubmission.objects.filter(
-        contest_id=contest_id, candidate_username=account.username
-    ))
+    subs = list(ContestSubmission.objects.filter(contest_id=contest_id, candidate_username=account.username))
     cards = _candidate_cards(s.candidate_username for s in subs)
     return JsonResponse({'ok': True, 'submissions': [_sub_to_dict(s, cards) for s in subs]})
 
@@ -463,31 +454,26 @@ def api_my_submissions(request, contest_id):
 def api_user_contest_history(request):
     account = request.account
     subs = list(
-        ContestSubmission.objects
-        .filter(candidate_username=account.username)
-        .select_related('contest')
-        .order_by('-created_at')
+        ContestSubmission.objects.filter(candidate_username=account.username).select_related('contest').order_by('-created_at')
     )
-    names = dict(
-        Company.objects
-        .filter(username__in={s.contest.company_username for s in subs})
-        .values_list('username', 'name')
-    )
+    names = dict(Company.objects.filter(username__in={s.contest.company_username for s in subs}).values_list('username', 'name'))
     result = []
     for s in subs:
         c = s.contest
-        result.append({
-            'id': s.id,
-            'contest_id': c.id,
-            'contest_title': c.title,
-            'company_username': c.company_username,
-            'company_name': names.get(c.company_username) or c.company_username,
-            'contest_status': c.status,
-            'deadline': c.deadline.isoformat() if c.deadline else None,
-            'status': s.status,
-            'winner': s.winner,
-            'submitted_at': s.created_at.isoformat(),
-        })
+        result.append(
+            {
+                'id': s.id,
+                'contest_id': c.id,
+                'contest_title': c.title,
+                'company_username': c.company_username,
+                'company_name': names.get(c.company_username) or c.company_username,
+                'contest_status': c.status,
+                'deadline': c.deadline.isoformat() if c.deadline else None,
+                'status': s.status,
+                'winner': s.winner,
+                'submitted_at': s.created_at.isoformat(),
+            }
+        )
     return JsonResponse({'ok': True, 'submissions': result})
 
 
@@ -496,75 +482,71 @@ def api_user_contest_history(request):
 def api_user_submission(request, sub_id):
     """Одно своё решение целиком: что отправили и чем ответила компания."""
     submission = (
-        ContestSubmission.objects
-        .filter(id=sub_id, candidate_username=request.account.username)
-        .select_related('contest')
-        .first()
+        ContestSubmission.objects.filter(id=sub_id, candidate_username=request.account.username).select_related('contest').first()
     )
     if submission is None:
         return JsonResponse({'ok': False, 'message': 'Решение не найдено.'}, status=404)
 
     contest = submission.contest
     company = Company.objects.filter(username=contest.company_username).first()
-    return JsonResponse({
-        'ok': True,
-        'submission': {
-            'id': submission.id,
-            'status': submission.status,
-            'winner': submission.winner,
-            'liked': submission.liked,
-            'attempt': submission.attempt,
-            'comment': submission.comment,
-            'text': submission.text,
-            'link': submission.link,
-            'file_url': submission.file.url if submission.file else '',
-            'file_name': submission.file.name.split('/')[-1] if submission.file else '',
-            'submitted_at': submission.created_at.isoformat(),
-        },
-        'contest': {
-            'id': contest.id,
-            'title': contest.title,
-            'category': contest.category,
-            'level': contest.level,
-            'status': contest.status,
-            'prize': contest.prize,
-            'deadline': contest.deadline.isoformat() if contest.deadline else None,
-            'submission_type': contest.submission_type,
-            'company_username': contest.company_username,
-            'company_name': (company.name if company else '') or contest.company_username,
-        },
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'submission': {
+                'id': submission.id,
+                'status': submission.status,
+                'winner': submission.winner,
+                'liked': submission.liked,
+                'attempt': submission.attempt,
+                'comment': submission.comment,
+                'text': submission.text,
+                'link': submission.link,
+                'file_url': submission.file.url if submission.file else '',
+                'file_name': submission.file.name.split('/')[-1] if submission.file else '',
+                'submitted_at': submission.created_at.isoformat(),
+            },
+            'contest': {
+                'id': contest.id,
+                'title': contest.title,
+                'category': contest.category,
+                'level': contest.level,
+                'status': contest.status,
+                'prize': contest.prize,
+                'deadline': contest.deadline.isoformat() if contest.deadline else None,
+                'submission_type': contest.submission_type,
+                'company_username': contest.company_username,
+                'company_name': (company.name if company else '') or contest.company_username,
+            },
+        }
+    )
 
 
 @require_http_methods(['GET'])
 def api_user_public_contests(request, username):
-    subs = (
-        ContestSubmission.objects
-        .filter(candidate_username=username)
-        .select_related('contest')
-        .order_by('-created_at')
-    )
+    subs = ContestSubmission.objects.filter(candidate_username=username).select_related('contest').order_by('-created_at')
     result = []
     for s in subs:
         c = s.contest
-        result.append({
-            'id': s.id,
-            'contest_id': c.id,
-            'contest_title': c.title,
-            'company_username': c.company_username,
-            'status': s.status,
-            'winner': s.winner,
-            'submitted_at': s.created_at.isoformat(),
-        })
+        result.append(
+            {
+                'id': s.id,
+                'contest_id': c.id,
+                'contest_title': c.title,
+                'company_username': c.company_username,
+                'status': s.status,
+                'winner': s.winner,
+                'submitted_at': s.created_at.isoformat(),
+            }
+        )
     return JsonResponse({'ok': True, 'submissions': result})
 
 
 @require_http_methods(['GET'])
 def api_company_public_contests(request, username):
-    qs = _with_counts(
-        Contest.objects.filter(company_username=username, status__in=PUBLIC_STATUSES)
-    ).order_by('-created_at')
-    return JsonResponse({
-        'ok': True,
-        'contests': [_contest_to_dict(c, submissions_count=c.subs) for c in qs],
-    })
+    qs = _with_counts(Contest.objects.filter(company_username=username, status__in=PUBLIC_STATUSES)).order_by('-created_at')
+    return JsonResponse(
+        {
+            'ok': True,
+            'contests': [_contest_to_dict(c, submissions_count=c.subs) for c in qs],
+        }
+    )

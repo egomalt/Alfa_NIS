@@ -17,7 +17,6 @@ button {
 textarea {
   resize: vertical;
 }
-
 /* Layout */
 .app {
   display: flex;
@@ -25,7 +24,6 @@ textarea {
   height: 100vh;
   overflow: hidden;
 }
-
 /* Topbar */
 .topbar {
   height: 56px;
@@ -93,34 +91,6 @@ textarea {
   border-radius: 999px;
   white-space: nowrap;
   flex-shrink: 0;
-}
-.sel-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-.sel-wrap select {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 30px;
-  padding: 0 28px 0 10px;
-  border: 1px solid var(--line-2);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.sel-wrap select:focus {
-  border-color: var(--brand);
-}
-.sel-wrap svg {
-  position: absolute;
-  right: 8px;
-  pointer-events: none;
 }
 .actions {
   display: flex;
@@ -234,7 +204,6 @@ textarea {
 .btn-help + .btn-theme {
   margin-left: 0;
 }
-
 /* Body */
 .body {
   display: grid;
@@ -243,7 +212,6 @@ textarea {
   min-height: 0;
   overflow: hidden;
 }
-
 /* Sidebar */
 .sidebar {
   border-right: 1px solid var(--line);
@@ -334,7 +302,6 @@ textarea {
   border-color: var(--brand);
   color: var(--brand-text);
 }
-
 /* Editor */
 .editor {
   display: flex;
@@ -392,7 +359,6 @@ textarea {
   flex-direction: column;
   gap: 18px;
 }
-
 /* Fields */
 .field-label {
   font-size: 12px;
@@ -479,7 +445,6 @@ textarea {
   flex-direction: column;
   gap: 18px;
 }
-
 /* Choice options */
 .options-list {
   display: flex;
@@ -530,7 +495,6 @@ textarea {
 .opt-input.correct {
   background: var(--brand-soft);
 }
-
 /* Test cases */
 .test-cases-header {
   display: flex;
@@ -702,7 +666,6 @@ textarea {
   font-size: 13px;
   color: var(--faint);
 }
-
 /* Panels */
 [data-panel] {
   display: none;
@@ -712,7 +675,6 @@ textarea {
 [data-panel].active {
   display: flex;
 }
-
 /* Theme button icon toggle */
 [data-theme='dark'] .icon-moon {
   display: none;
@@ -720,7 +682,6 @@ textarea {
 [data-theme='light'] .icon-sun {
   display: none;
 }
-
 /* Scrollbar */
 * {
   box-sizing: border-box;
@@ -740,7 +701,6 @@ textarea {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 /* Info page toggles */
 .toggle-group {
   display: flex;
@@ -768,7 +728,6 @@ textarea {
   border-color: var(--brand);
   color: var(--on-brand);
 }
-
 /* Info page locked badge */
 .info-locked {
   display: inline-flex;
@@ -781,7 +740,6 @@ textarea {
   border-radius: 999px;
   align-self: flex-start;
 }
-
 /* Строка состояния: сохранение, загрузка, публикация и их ошибки */
 .save-status {
   font-size: 12.5px;
@@ -795,11 +753,9 @@ textarea {
 .save-status.ok {
   color: var(--green-text);
 }
-
 /* Раскладка была жёстко двухколоночной (268px + редактор) с фиксированной
    высотой и внутренними скроллами. Ниже 1000px список страниц переезжает
    наверх горизонтальной лентой, ниже 760px перестраивается шапка. */
-
 @media (max-width: 1000px) {
   .app {
     height: auto;
@@ -811,7 +767,6 @@ textarea {
     flex-direction: column;
     overflow: visible;
   }
-
   .sidebar {
     border-right: none;
     border-bottom: 1px solid var(--line);
@@ -839,7 +794,6 @@ textarea {
     width: 100%;
     justify-content: center;
   }
-
   .editor {
     overflow: visible;
   }
@@ -859,7 +813,6 @@ textarea {
     flex-shrink: 0;
   }
 }
-
 /* Когда кнопки не помещаются рядом с названием, шапка становится
    двухстрочной: наверху «Назад», название, помощь и тема, ниже — действия */
 @media (max-width: 1100px) {
@@ -875,7 +828,6 @@ textarea {
     justify-content: flex-end;
   }
 }
-
 /* На телефоне действия встают сеткой 2×2 */
 @media (max-width: 760px) {
   .topbar {
@@ -889,7 +841,6 @@ textarea {
   .logo {
     display: none;
   }
-
   /* Название и статус сохранения делят первую строку с «Назад» и темой */
   .meta-area {
     flex: 1 1 140px;
@@ -906,7 +857,6 @@ textarea {
     flex-basis: 100%;
     white-space: normal;
   }
-
   .actions {
     order: 3;
     flex-basis: 100%;
@@ -921,7 +871,6 @@ textarea {
     justify-content: center;
     text-align: center;
   }
-
   .editor-content {
     padding: 18px 14px 52px;
   }
@@ -937,7 +886,6 @@ textarea {
     gap: 8px;
   }
 }
-
 @media (max-width: 460px) {
   .toggle-btn {
     height: 30px;

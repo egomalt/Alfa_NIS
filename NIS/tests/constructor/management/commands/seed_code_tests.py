@@ -16,6 +16,7 @@
 
     docker pull python:3.11-alpine node:20-alpine gcc:12
 """
+
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -56,55 +57,107 @@ MAX_CASES = [
 
 # (название, уровень, категория, завершённых прохождений, страницы)
 TESTS = [
-    ('Python: разбор ввода и вывода', 'junior', 'backend', 12, [
-        ('text', 'Как устроен раздел',
-         {'content': 'Решение запускается в контейнере и проверяется тест-кейсами. '
-                     'Часть из них видна как примеры, остальные скрыты.'}),
-        ('code', 'Сумма двух чисел', {
-            'language': 'python',
-            'time_limit': 5,
-            'content': 'В одной строке через пробел заданы два целых числа. '
-                       'Выведите их сумму.',
-            'test_cases': SUM_CASES,
-        }),
-        ('code', 'Сколько раз встречается самое частое число', {
-            'language': 'python',
-            'time_limit': 5,
-            'content': 'В первой строке число N, во второй — N целых чисел через пробел. '
-                       'Выведите, сколько раз встречается самое частое из них.',
-            'test_cases': COUNT_CASES,
-        }),
-    ]),
-    ('JavaScript: работа со строками', 'junior', 'frontend', 7, [
-        ('code', 'Перевернуть строку', {
-            'language': 'javascript',
-            'time_limit': 5,
-            'content': 'На вход подаётся одна строка. Выведите её задом наперёд.',
-            'test_cases': REVERSE_CASES,
-        }),
-    ]),
-    ('C++: базовые алгоритмы', 'middle', 'backend', 5, [
-        ('code', 'Максимум в массиве', {
-            'language': 'cpp',
-            'time_limit': 5,
-            'content': 'В первой строке число N, во второй — N целых чисел. '
-                       'Выведите наибольшее из них.',
-            'test_cases': MAX_CASES,
-        }),
-    ]),
-    ('Смешанный формат: теория и практика', 'junior', 'backend', 9, [
-        ('quiz', 'Какая сложность у поиска максимума в неотсортированном массиве?',
-         [('O(n)', True), ('O(log n)', False), ('O(1)', False), ('O(n log n)', False)]),
-        ('input', 'Какой структурой данных удобнее всего считать частоты?',
-         [('словарь', True), ('словарём', True), ('хеш-таблица', True)]),
-        ('code', 'Сумма двух чисел', {
-            'language': 'python',
-            'time_limit': 5,
-            'content': 'В одной строке через пробел заданы два целых числа. '
-                       'Выведите их сумму.',
-            'test_cases': SUM_CASES,
-        }),
-    ]),
+    (
+        'Python: разбор ввода и вывода',
+        'junior',
+        'backend',
+        12,
+        [
+            (
+                'text',
+                'Как устроен раздел',
+                {
+                    'content': 'Решение запускается в контейнере и проверяется тест-кейсами. '
+                    'Часть из них видна как примеры, остальные скрыты.'
+                },
+            ),
+            (
+                'code',
+                'Сумма двух чисел',
+                {
+                    'language': 'python',
+                    'time_limit': 5,
+                    'content': 'В одной строке через пробел заданы два целых числа. Выведите их сумму.',
+                    'test_cases': SUM_CASES,
+                },
+            ),
+            (
+                'code',
+                'Сколько раз встречается самое частое число',
+                {
+                    'language': 'python',
+                    'time_limit': 5,
+                    'content': 'В первой строке число N, во второй — N целых чисел через пробел. '
+                    'Выведите, сколько раз встречается самое частое из них.',
+                    'test_cases': COUNT_CASES,
+                },
+            ),
+        ],
+    ),
+    (
+        'JavaScript: работа со строками',
+        'junior',
+        'frontend',
+        7,
+        [
+            (
+                'code',
+                'Перевернуть строку',
+                {
+                    'language': 'javascript',
+                    'time_limit': 5,
+                    'content': 'На вход подаётся одна строка. Выведите её задом наперёд.',
+                    'test_cases': REVERSE_CASES,
+                },
+            ),
+        ],
+    ),
+    (
+        'C++: базовые алгоритмы',
+        'middle',
+        'backend',
+        5,
+        [
+            (
+                'code',
+                'Максимум в массиве',
+                {
+                    'language': 'cpp',
+                    'time_limit': 5,
+                    'content': 'В первой строке число N, во второй — N целых чисел. Выведите наибольшее из них.',
+                    'test_cases': MAX_CASES,
+                },
+            ),
+        ],
+    ),
+    (
+        'Смешанный формат: теория и практика',
+        'junior',
+        'backend',
+        9,
+        [
+            (
+                'quiz',
+                'Какая сложность у поиска максимума в неотсортированном массиве?',
+                [('O(n)', True), ('O(log n)', False), ('O(1)', False), ('O(n log n)', False)],
+            ),
+            (
+                'input',
+                'Какой структурой данных удобнее всего считать частоты?',
+                [('словарь', True), ('словарём', True), ('хеш-таблица', True)],
+            ),
+            (
+                'code',
+                'Сумма двух чисел',
+                {
+                    'language': 'python',
+                    'time_limit': 5,
+                    'content': 'В одной строке через пробел заданы два целых числа. Выведите их сумму.',
+                    'test_cases': SUM_CASES,
+                },
+            ),
+        ],
+    ),
 ]
 
 
@@ -112,10 +165,8 @@ class Command(BaseCommand):
     help = 'Заводит демонстрационные тесты с задачами на код (Python, JavaScript, C++).'
 
     def add_arguments(self, parser):
-        parser.add_argument('--owner', default=DEFAULT_OWNER,
-                            help=f'Логин автора тестов (по умолчанию {DEFAULT_OWNER})')
-        parser.add_argument('--clear', action='store_true',
-                            help='Удалить тесты, созданные этой командой')
+        parser.add_argument('--owner', default=DEFAULT_OWNER, help=f'Логин автора тестов (по умолчанию {DEFAULT_OWNER})')
+        parser.add_argument('--clear', action='store_true', help='Удалить тесты, созданные этой командой')
 
     def handle(self, *args, **options):
         owner = options['owner'].strip().lower()

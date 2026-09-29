@@ -1,4 +1,5 @@
 """Запуск решений задач на код в одноразовом контейнере."""
+
 import json
 import shutil
 import subprocess
@@ -12,14 +13,16 @@ from tests.constructor.models import TestPage
 
 from .base import BaseCase
 
+
 class CodeExecutorTests(SimpleTestCase):
     """Запуск решения в контейнере. Без Docker тесты пропускаются."""
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.has_docker = shutil.which('docker') is not None and subprocess.run(
-            ['docker', 'info'], capture_output=True).returncode == 0
+        cls.has_docker = (
+            shutil.which('docker') is not None and subprocess.run(['docker', 'info'], capture_output=True).returncode == 0
+        )
 
     def setUp(self):
         if not self.has_docker:
@@ -29,7 +32,7 @@ class CodeExecutorTests(SimpleTestCase):
         cases = {
             'python': 'a,b=map(int,input().split()); print(a+b)',
             'javascript': 'const s=require("fs").readFileSync(0,"utf8").trim();'
-                          'const [a,b]=s.split(" ").map(Number); console.log(a+b);',
+            'const [a,b]=s.split(" ").map(Number); console.log(a+b);',
             'cpp': '#include <iostream>\nint main(){int a,b;std::cin>>a>>b;std::cout<<a+b;}',
         }
         for language, code in cases.items():
@@ -52,12 +55,14 @@ class CodeExecutorTests(SimpleTestCase):
         self.assertTrue(result['timed_out'])
 
     def test_network_is_closed(self):
-        code = ('import socket\n'
-                'try:\n'
-                '    socket.create_connection(("1.1.1.1", 53), timeout=3)\n'
-                '    print("ЕСТЬ СЕТЬ")\n'
-                'except OSError:\n'
-                '    print("сети нет")\n')
+        code = (
+            'import socket\n'
+            'try:\n'
+            '    socket.create_connection(("1.1.1.1", 53), timeout=3)\n'
+            '    print("ЕСТЬ СЕТЬ")\n'
+            'except OSError:\n'
+            '    print("сети нет")\n'
+        )
         result = run_in_docker('python', code, time_limit=10)
         self.assertEqual(result['stdout'].strip(), 'сети нет')
 
@@ -80,16 +85,23 @@ class CodeRunBudgetTests(BaseCase):
     def _code_page(self, cases):
         test = self.make_test(owner='firma', with_quiz=False)
         return TestPage.objects.create(
-            test=test, order=0, type=TestPage.TYPE_CODE, title='Задача',
+            test=test,
+            order=0,
+            type=TestPage.TYPE_CODE,
+            title='Задача',
             page_meta={'language': 'python', 'time_limit': 10, 'test_cases': cases},
         )
 
     def _run(self, page, sample_only=False):
-        return self.login('kandidat').post(
-            f'/api/v1/tests/pages/{page.id}/run/',
-            json.dumps({'code': 'print(1)', 'sample_only': sample_only}),
-            'application/json',
-        ).json()
+        return (
+            self.login('kandidat')
+            .post(
+                f'/api/v1/tests/pages/{page.id}/run/',
+                json.dumps({'code': 'print(1)', 'sample_only': sample_only}),
+                'application/json',
+            )
+            .json()
+        )
 
     def test_run_stops_when_the_budget_is_spent(self):
         page = self._code_page([{'input': '', 'expected': '1', 'is_sample': False}] * 5)
@@ -98,10 +110,13 @@ class CodeRunBudgetTests(BaseCase):
         def slow_run(*args, **kwargs):
             slow_run.clock[0] += views.MAX_TOTAL_RUN_SECONDS + 1
             return {'ok': True, 'stdout': '1', 'stderr': '', 'exit_code': 0, 'timed_out': False}
+
         slow_run.clock = [0.0]
 
-        with mock.patch.object(views, 'run_in_docker', slow_run), \
-             mock.patch.object(views.time, 'monotonic', lambda: slow_run.clock[0]):
+        with (
+            mock.patch.object(views, 'run_in_docker', slow_run),
+            mock.patch.object(views.time, 'monotonic', lambda: slow_run.clock[0]),
+        ):
             data = self._run(page)
 
         self.assertTrue(data['ok'])
@@ -113,8 +128,9 @@ class CodeRunBudgetTests(BaseCase):
     def test_full_run_is_not_marked_interrupted(self):
         page = self._code_page([{'input': '', 'expected': '1', 'is_sample': True}] * 3)
 
-        with mock.patch.object(views, 'run_in_docker', return_value={
-                'ok': True, 'stdout': '1', 'stderr': '', 'exit_code': 0, 'timed_out': False}):
+        with mock.patch.object(
+            views, 'run_in_docker', return_value={'ok': True, 'stdout': '1', 'stderr': '', 'exit_code': 0, 'timed_out': False}
+        ):
             data = self._run(page, sample_only=True)
 
         self.assertFalse(data['interrupted'])
@@ -127,14 +143,17 @@ class CodeRunBudgetTests(BaseCase):
         def slow_run(*args, **kwargs):
             slow_run.clock[0] += views.MAX_TOTAL_RUN_SECONDS + 1
             return {'ok': True, 'stdout': '1', 'stderr': '', 'exit_code': 0, 'timed_out': False}
+
         slow_run.clock = [0.0]
 
         client = self.login('kandidat')
-        with mock.patch.object(views, 'run_in_docker', slow_run), \
-             mock.patch.object(views.time, 'monotonic', lambda: slow_run.clock[0]):
-            client.post(f'/api/v1/tests/pages/{page.id}/run/',
-                        json.dumps({'code': 'print(1)', 'sample_only': False}), 'application/json')
+        with (
+            mock.patch.object(views, 'run_in_docker', slow_run),
+            mock.patch.object(views.time, 'monotonic', lambda: slow_run.clock[0]),
+        ):
+            client.post(
+                f'/api/v1/tests/pages/{page.id}/run/', json.dumps({'code': 'print(1)', 'sample_only': False}), 'application/json'
+            )
 
-        result = client.post(f'/api/v1/tests/{page.test.id}/submit/',
-                             json.dumps({'answers': {}}), 'application/json').json()
+        result = client.post(f'/api/v1/tests/{page.test.id}/submit/', json.dumps({'answers': {}}), 'application/json').json()
         self.assertEqual(result['score'], 0)

@@ -7,6 +7,7 @@
 конкурса и созданный материал (тест или статья). Открыть тест и уйти —
 не то, чем стоит закрашивать день.
 """
+
 from datetime import timedelta
 
 from django.db.models import Count
@@ -22,11 +23,7 @@ WINDOW_DAYS = 182
 
 
 def _add(counts, queryset, field):
-    rows = (queryset
-            .annotate(day=TruncDate(field))
-            .values('day')
-            .annotate(n=Count('id'))
-            .values_list('day', 'n'))
+    rows = queryset.annotate(day=TruncDate(field)).values('day').annotate(n=Count('id')).values_list('day', 'n')
     for day, n in rows:
         if day is not None:
             key = day.isoformat()
@@ -37,14 +34,10 @@ def daily(username, days=WINDOW_DAYS):
     """{'2026-09-17': 3, …} — сколько событий в каждый день окна."""
     since = timezone.now() - timedelta(days=days)
     counts = {}
-    _add(counts, TestAttempt.objects.filter(
-        candidate_username=username, finished_at__gte=since), 'finished_at')
-    _add(counts, ContestSubmission.objects.filter(
-        candidate_username=username, created_at__gte=since), 'created_at')
-    _add(counts, Article.objects.filter(
-        author_username=username, created_at__gte=since), 'created_at')
-    _add(counts, Test.objects.filter(
-        owner_username=username, created_at__gte=since), 'created_at')
+    _add(counts, TestAttempt.objects.filter(candidate_username=username, finished_at__gte=since), 'finished_at')
+    _add(counts, ContestSubmission.objects.filter(candidate_username=username, created_at__gte=since), 'created_at')
+    _add(counts, Article.objects.filter(author_username=username, created_at__gte=since), 'created_at')
+    _add(counts, Test.objects.filter(owner_username=username, created_at__gte=since), 'created_at')
     return counts
 
 
@@ -56,10 +49,7 @@ def streaks(counts):
     сутки прошли без событий.
     """
     today = timezone.localdate()
-    days = [
-        counts.get((today - timedelta(days=back)).isoformat(), 0)
-        for back in range(WINDOW_DAYS - 1, -1, -1)
-    ]
+    days = [counts.get((today - timedelta(days=back)).isoformat(), 0) for back in range(WINDOW_DAYS - 1, -1, -1)]
 
     best = run = 0
     for n in days:

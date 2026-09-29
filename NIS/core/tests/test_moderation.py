@@ -1,4 +1,5 @@
 """Модерация: жалобы, баны, верификация компаний и зачистка контента."""
+
 import json
 import re
 import shutil
@@ -14,7 +15,7 @@ from django.utils import timezone
 from administration.moderation.api_views import MAX_BAN_DAYS
 from administration.reports.models import ESCALATION_THRESHOLD, Report
 from articles.constructor.models import Article
-from authorization.models import Account, STATUS_ACTIVE, STATUS_BANNED
+from authorization.models import STATUS_ACTIVE, STATUS_BANNED, Account
 from companies.models import Company
 
 from .base import BaseCase
@@ -23,9 +24,17 @@ from .base import BaseCase
 class ReportCreationTests(BaseCase):
     def _report(self, user, target_type, target_id, reason='Спам и оскорбления'):
         client = self.login(user) if user else Client()
-        return client.post('/api/v1/reports/', json.dumps({
-            'target_type': target_type, 'target_id': target_id, 'reason': reason,
-        }), 'application/json')
+        return client.post(
+            '/api/v1/reports/',
+            json.dumps(
+                {
+                    'target_type': target_type,
+                    'target_id': target_id,
+                    'reason': reason,
+                }
+            ),
+            'application/json',
+        )
 
     def test_anonymous_cannot_report(self):
         article = self.make_article()
@@ -79,9 +88,13 @@ class TakedownTests(BaseCase):
 
     def _make_report(self, article):
         return Report.objects.create(
-            target_type='article', target_id=str(article.id), target_title=article.title,
-            target_url=f'/articles/{article.id}/', author_username=article.author_username,
-            reporter_username='drugoy', reason='нарушение',
+            target_type='article',
+            target_id=str(article.id),
+            target_title=article.title,
+            target_url=f'/articles/{article.id}/',
+            author_username=article.author_username,
+            reporter_username='drugoy',
+            reason='нарушение',
         )
 
     def test_takedown_deletes_content(self):
@@ -96,20 +109,29 @@ class TakedownTests(BaseCase):
         article = self.make_article(author='kandidat')
         report = self._make_report(article)
         Report.objects.create(
-            target_type='article', target_id=str(article.id), target_title=article.title,
-            author_username='kandidat', reporter_username='firma', reason='ещё одна',
+            target_type='article',
+            target_id=str(article.id),
+            target_title=article.title,
+            author_username='kandidat',
+            reporter_username='firma',
+            reason='ещё одна',
         )
         self.login('moder').post(f'/api/v1/admin/reports/{report.id}/takedown/')
-        self.assertEqual(Report.objects.filter(target_type='article', target_id=str(article.id),
-                                               status=Report.STATUS_NEW).count(), 0)
+        self.assertEqual(
+            Report.objects.filter(target_type='article', target_id=str(article.id), status=Report.STATUS_NEW).count(), 0
+        )
 
     def test_takedown_does_not_touch_other_types_with_same_id(self):
         article = self.make_article(author='kandidat')
         contest = self.make_contest()
         report = self._make_report(article)
         Report.objects.create(
-            target_type='contest', target_id=str(contest.id), target_title=contest.title,
-            author_username='firma', reporter_username='drugoy', reason='другое',
+            target_type='contest',
+            target_id=str(contest.id),
+            target_title=contest.title,
+            author_username='firma',
+            reporter_username='drugoy',
+            reason='другое',
         )
         self.login('moder').post(f'/api/v1/admin/reports/{report.id}/takedown/')
         self.assertEqual(Report.objects.filter(target_type='contest', status=Report.STATUS_NEW).count(), 1)
@@ -120,8 +142,12 @@ class TakedownTests(BaseCase):
         report = self._make_report(article)
         for reporter in ('firma', 'konkurent'):
             Report.objects.create(
-                target_type='article', target_id=str(article.id), target_title=article.title,
-                author_username='kandidat', reporter_username=reporter, reason='ещё одна',
+                target_type='article',
+                target_id=str(article.id),
+                target_title=article.title,
+                author_username='kandidat',
+                reporter_username=reporter,
+                reason='ещё одна',
             )
 
         response = self.login('moder').post(f'/api/v1/admin/reports/{report.id}/dismiss/')
@@ -139,8 +165,7 @@ class TakedownTests(BaseCase):
         self.assertEqual(client.post(f'/api/v1/admin/reports/{report.id}/dismiss/').status_code, 200)
         for action in ('dismiss', 'resolve', 'takedown'):
             with self.subTest(action=action):
-                self.assertEqual(
-                    client.post(f'/api/v1/admin/reports/{report.id}/{action}/').status_code, 400)
+                self.assertEqual(client.post(f'/api/v1/admin/reports/{report.id}/{action}/').status_code, 400)
         self.assertTrue(Article.objects.filter(id=article.id).exists())
 
     def test_takedown_is_moderator_only(self):
@@ -193,7 +218,7 @@ class BanStateTests(BaseCase):
         """int из формы уходит в timedelta: без потолка это OverflowError и 500."""
         response = self.login('moder').post(
             '/api/v1/admin/users/kandidat/ban/',
-            json.dumps({'reason': 'Спам', 'duration': 10 ** 9}),
+            json.dumps({'reason': 'Спам', 'duration': 10**9}),
             'application/json',
         )
         self.assertEqual(response.status_code, 200)
@@ -255,7 +280,7 @@ class DocumentAccessTests(BaseCase):
         self.assertEqual(data['verifications'][0]['document_url'], self.URL)
 
     def test_outsiders_do_not_get_the_file(self):
-        self.assertEqual(Client().get(self.URL).status_code, 302)       # на форму входа
+        self.assertEqual(Client().get(self.URL).status_code, 302)  # на форму входа
         self.assertEqual(self.login('drugoy').get(self.URL).status_code, 404)
         self.assertEqual(self.login('konkurent').get(self.URL).status_code, 404)
 
@@ -278,8 +303,7 @@ class DocumentAccessTests(BaseCase):
     def test_upload_lands_outside_media(self):
         """Загрузка из кабинета кладёт документ в приватную папку, не в media/."""
         upload = SimpleUploadedFile('ustav-new.pdf', b'%PDF-1.4 new', content_type='application/pdf')
-        response = self.login('firma').post(
-            '/api/v1/companies/firma/verification/', {'registration_document': upload})
+        response = self.login('firma').post('/api/v1/companies/firma/verification/', {'registration_document': upload})
         self.assertEqual(response.status_code, 200)
 
         name = Company.objects.get(username='firma').registration_document.name
@@ -327,8 +351,8 @@ class PanelMarkupTests(BaseCase):
 
     def test_panel_has_no_fake_document_preview(self):
         """Серые полоски вместо документа выдавали себя за его содержимое."""
-        markup = (Path(settings.BASE_DIR)
-                  / 'administration/dashboard/templates/administration/dashboard.html'
-                  ).read_text(encoding='utf-8')
+        markup = (Path(settings.BASE_DIR) / 'administration/dashboard/templates/administration/dashboard.html').read_text(
+            encoding='utf-8'
+        )
         self.assertNotIn('ap-doc-preview-page', markup)
         self.assertIn('ap-doc-frame', markup)

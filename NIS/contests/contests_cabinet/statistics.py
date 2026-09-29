@@ -4,6 +4,7 @@
 по дням имеют смысл только в привязке к одному дедлайну. Сводка по компании
 целиком живёт в companies/statistics.py.
 """
+
 from datetime import timedelta
 
 from django.conf import settings
@@ -29,16 +30,11 @@ def _daily(contest):
     last = (timezone.localtime(contest.deadline) if settings.USE_TZ else contest.deadline).date()
     first = last - timedelta(days=WINDOW_DAYS - 1)
 
-    rows = (contest.submissions
-            .annotate(day=TruncDate('created_at'))
-            .values('day')
-            .annotate(n=Count('id'))
-            .values_list('day', 'n'))
+    rows = contest.submissions.annotate(day=TruncDate('created_at')).values('day').annotate(n=Count('id')).values_list('day', 'n')
     by_day = {day: n for day, n in rows if day is not None}
 
     series = [
-        {'day': (first + timedelta(days=offset)).isoformat(),
-         'count': by_day.get(first + timedelta(days=offset), 0)}
+        {'day': (first + timedelta(days=offset)).isoformat(), 'count': by_day.get(first + timedelta(days=offset), 0)}
         for offset in range(WINDOW_DAYS)
     ]
     # Решения, присланные до начала окна, — чтобы сумма на графике не врала

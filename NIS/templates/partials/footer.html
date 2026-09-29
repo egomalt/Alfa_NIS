@@ -1,6 +1,6 @@
 <footer class="cr-footer">
   <div class="cr-footer-inner">
-    <a href="/" class="cr-footer-brand">
+    <a href="{% url 'home_page' %}" class="cr-footer-brand">
       <span class="cr-brand-mark cr-brand-mark-sm">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff">
           <rect x="3.5" y="13" width="4.3" height="8" rx="1.4" /><rect x="9.85" y="8" width="4.3" height="13" rx="1.4" /><rect x="16.2" y="3" width="4.3" height="18" rx="1.4" />
@@ -9,9 +9,9 @@
       <span>Career</span>
     </a>
     <nav class="cr-footer-links">
-      <a href="/help/">Помощь</a>
-      <a href="/companies/">Компании</a>
-      <a href="/tests/">Тесты</a>
+      <a href="{% url 'help_page' %}">Помощь</a>
+      <a href="{% url 'companies_list_page' %}">Компании</a>
+      <a href="{% url 'tests_catalog' %}">Тесты</a>
     </nav>
     <div class="cr-footer-copy">© 2026 · HR-решение для IT-собеседований</div>
   </div>

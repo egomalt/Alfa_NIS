@@ -1,6 +1,6 @@
 /* Раздел «Тесты» кабинета компании.
    Профиль компании живёт отдельно — в cabinet/static/cabinet/company.js. */
-import { api, byId, confirmDialog, esc, formatDateLong, pageData, statusPill, TEST_STATUSES, toast } from 'alfa/core';
+import { api, byId, confirmDialog, esc, formatDateMedium, pageData, statusPill, TEST_STATUSES, toast } from 'alfa/core';
 
 const { username = '' } = pageData();
 const ICONS = {
@@ -23,7 +23,7 @@ function row(test) {
       <td data-label="Статус">${statusPill(TEST_STATUSES, test.status)}</td>
       <td data-label="Страниц">${test.page_count ?? 0}</td>
       <td data-label="Прохождений">${test.submissions ?? 0}</td>
-      <td data-label="Создан">${formatDateLong(test.created_at) || '—'}</td>
+      <td data-label="Создан">${formatDateMedium(test.created_at) || '—'}</td>
       <td>
         <div class="action-row">
           ${test.status === 'published' ? `<a class="action-icon-btn" href="${esc(test.edit_url)}stats/" title="Как проходят тест">${ICONS.stats}</a>` : ''}

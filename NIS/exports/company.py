@@ -4,6 +4,7 @@
 за 12 недель, тот же портрет участников и то же распределение оценок. Числа
 приходят из companies.statistics — единственного места, где они считаются.
 """
+
 from datetime import date
 
 from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Q
@@ -45,8 +46,7 @@ def contest_rows(username, limit=TOP_CONTESTS):
     на десятке конкурсов он занимал страницу, ничего не объясняя.
     """
     return list(
-        Contest.objects
-        .filter(company_username=username)
+        Contest.objects.filter(company_username=username)
         .annotate(submission_total=Count('submissions'))
         .order_by('-submission_total', '-created_at')[:limit]
     )
@@ -58,17 +58,14 @@ def test_rows(username, limit=TOP_TESTS):
     Обе агрегации идут по одной связи attempts, поэтому строки не множатся;
     distinct в счётчике всё равно нужен — так же считает кабинет.
     """
-    percent = ExpressionWrapper(
-        F('attempts__score') * 100.0 / F('attempts__max_score'), output_field=FloatField())
+    percent = ExpressionWrapper(F('attempts__score') * 100.0 / F('attempts__max_score'), output_field=FloatField())
     return list(
-        Test.objects
-        .filter(owner_username=username)
+        Test.objects.filter(owner_username=username)
         .annotate(
             finished_attempts=attempts.finished_count(),
             # max_score = 0 бывает у теста без вопросов: такие попытки
             # в среднем участвовать не должны, иначе деление на ноль
-            avg_percent=Avg(percent, filter=Q(
-                attempts__finished_at__isnull=False, attempts__max_score__gt=0)),
+            avg_percent=Avg(percent, filter=Q(attempts__finished_at__isnull=False, attempts__max_score__gt=0)),
         )
         .order_by('-finished_attempts', '-created_at')[:limit]
     )
@@ -90,8 +87,10 @@ def _activity(r, weekly):
         r.empty_note('За последние 12 недель активности не было.')
         return
     sub_total, att_total = sum(subs), sum(atts)
-    total = (f"Всего за период: {sub_total} {plural(sub_total, ('решение', 'решения', 'решений'))} "
-             f"и {att_total} {plural(att_total, ('прохождение', 'прохождения', 'прохождений'))}.")
+    total = (
+        f'Всего за период: {sub_total} {plural(sub_total, ("решение", "решения", "решений"))} '
+        f'и {att_total} {plural(att_total, ("прохождение", "прохождения", "прохождений"))}.'
+    )
     r.columns(
         [_week_label(w['week']) for w in weekly],
         [('решения на конкурсы', BRAND, subs), ('прохождения тестов', AMBER, atts)],
@@ -109,7 +108,8 @@ def _skills(r, skills):
         [(s['name'], str(s['count']), s['count'] / peak) for s in skills],
         title='Кто к вам приходит',
         note='Навыки из профилей тех, кто присылал решения на ваши конкурсы.',
-        label_w=150, color=GREEN,
+        label_w=150,
+        color=GREEN,
     )
 
 
@@ -118,11 +118,12 @@ def _rating(r, totals, dist):
         return
     count = totals['rating_count']
     r.bars(
-        [(f'{star} ★', f'{dist.get(star, 0)}%', dist.get(star, 0) / 100)
-         for star in (5, 4, 3, 2, 1)],
+        [(f'{star} ★', f'{dist.get(star, 0)}%', dist.get(star, 0) / 100) for star in (5, 4, 3, 2, 1)],
         title='Рейтинг компании',
-        note=(f"{totals['avg_rating']:.1f} из 5 — средняя оценка по {count} "
-              f"{plural(count, ('отзыву', 'отзывам', 'отзывам'))} кандидатов."),
+        note=(
+            f'{totals["avg_rating"]:.1f} из 5 — средняя оценка по {count} '
+            f'{plural(count, ("отзыву", "отзывам", "отзывам"))} кандидатов.'
+        ),
         label_w=40,
     )
 
@@ -137,18 +138,22 @@ def build_company_pdf(company):
     r.note(f'@{company.username} · отчёт за всё время работы на платформе')
     r.spacer(6)
 
-    r.kpi([
-        (totals['contests'], 'Конкурсов создано'),
-        (totals['published_tests'], 'Тестов опубликовано'),
-        (totals['participants'], 'Участников привлечено'),
-        (rating_str, f"Оценка ({totals['rating_count']} отз.)"),
-    ])
-    r.kpi([
-        (totals['submissions'], 'Решений прислано'),
-        (totals['winners'], 'Победителей выбрано'),
-        (totals['pending_submissions'], 'Ждут проверки'),
-        (totals['test_attempts'], 'Прохождений тестов'),
-    ])
+    r.kpi(
+        [
+            (totals['contests'], 'Конкурсов создано'),
+            (totals['published_tests'], 'Тестов опубликовано'),
+            (totals['participants'], 'Участников привлечено'),
+            (rating_str, f'Оценка ({totals["rating_count"]} отз.)'),
+        ]
+    )
+    r.kpi(
+        [
+            (totals['submissions'], 'Решений прислано'),
+            (totals['winners'], 'Победителей выбрано'),
+            (totals['pending_submissions'], 'Ждут проверки'),
+            (totals['test_attempts'], 'Прохождений тестов'),
+        ]
+    )
 
     _activity(r, data['weekly'])
     _skills(r, data['skills'])
@@ -157,16 +162,22 @@ def build_company_pdf(company):
     r.section('Конкурсы с наибольшим откликом')
     contests = contest_rows(company.username)
     if contests:
-        rows = [[
-            c.title or f'Конкурс #{c.id}',
-            c.category or '—',
-            CONTEST_STATUS.get(c.status, c.status),
-            c.participants_count or 0,
-            c.submission_total,
-            fmt_date(c.deadline),
-        ] for c in contests]
-        r.table(['Название', 'Категория', 'Статус', 'Участники', 'Решения', 'Дедлайн'], rows,
-                col_ratios=[3.0, 1.6, 1.4, 1.1, 1.0, 1.3])
+        rows = [
+            [
+                c.title or f'Конкурс #{c.id}',
+                c.category or '—',
+                CONTEST_STATUS.get(c.status, c.status),
+                c.participants_count or 0,
+                c.submission_total,
+                fmt_date(c.deadline),
+            ]
+            for c in contests
+        ]
+        r.table(
+            ['Название', 'Категория', 'Статус', 'Участники', 'Решения', 'Дедлайн'],
+            rows,
+            col_ratios=[3.0, 1.6, 1.4, 1.1, 1.0, 1.3],
+        )
         more = _shown_of(totals['contests'], TOP_CONTESTS)
         if more:
             r.note(more)
@@ -176,15 +187,17 @@ def build_company_pdf(company):
     r.section('Самые проходимые тесты')
     tests = test_rows(company.username)
     if tests:
-        rows = [[
-            t.title or f'Тест #{t.id}',
-            TEST_STATUS.get(t.status, t.status),
-            attempts.count_for(t),
-            f'{round(t.avg_percent)}%' if t.avg_percent is not None else '—',
-            fmt_date(t.created_at),
-        ] for t in tests]
-        r.table(['Название', 'Статус', 'Прохождения', 'Средний результат', 'Создан'], rows,
-                col_ratios=[3.0, 1.4, 1.2, 1.5, 1.2])
+        rows = [
+            [
+                t.title or f'Тест #{t.id}',
+                TEST_STATUS.get(t.status, t.status),
+                attempts.count_for(t),
+                f'{round(t.avg_percent)}%' if t.avg_percent is not None else '—',
+                fmt_date(t.created_at),
+            ]
+            for t in tests
+        ]
+        r.table(['Название', 'Статус', 'Прохождения', 'Средний результат', 'Создан'], rows, col_ratios=[3.0, 1.4, 1.2, 1.5, 1.2])
         more = _shown_of(totals['tests'], TOP_TESTS)
         if more:
             r.note(more)

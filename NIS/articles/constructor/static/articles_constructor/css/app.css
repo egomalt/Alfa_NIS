@@ -14,13 +14,11 @@ select,
 button {
   font-family: inherit;
 }
-
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
 }
-
 /* Topbar */
 .topbar {
   height: 56px;
@@ -211,7 +209,6 @@ button {
 [data-theme='light'] .icon-sun {
   display: none;
 }
-
 /* Body split */
 .body {
   display: flex;
@@ -219,7 +216,6 @@ button {
   min-height: 0;
   overflow: hidden;
 }
-
 /* Editor area */
 .editor-area {
   flex: 1;
@@ -230,7 +226,6 @@ button {
   max-width: 680px;
   margin: 0 auto;
 }
-
 /* Cover zone */
 .cover-zone {
   position: relative;
@@ -329,7 +324,6 @@ button {
 .cover-remove-btn:hover {
   background: rgba(200, 30, 45, 0.7);
 }
-
 /* Title */
 .title-input {
   width: 100%;
@@ -350,7 +344,6 @@ button {
 .title-input::placeholder {
   color: var(--faint);
 }
-
 /* Lead */
 .lead-input {
   width: 100%;
@@ -369,7 +362,6 @@ button {
 .lead-input::placeholder {
   color: var(--faint);
 }
-
 /* Divider */
 .divider {
   display: flex;
@@ -385,7 +377,6 @@ button {
 .divider-icon {
   color: var(--faint);
 }
-
 /* Body editor */
 .body-editor {
   outline: none;
@@ -465,7 +456,6 @@ button {
 .body-editor li {
   margin-bottom: 0.35em;
 }
-
 /* Floating toolbar */
 .floating-toolbar {
   position: fixed;
@@ -521,7 +511,6 @@ button {
   border: 5px solid transparent;
   border-top-color: #1a1e26;
 }
-
 /* Settings panel */
 .settings {
   width: 280px;
@@ -598,35 +587,6 @@ button {
   font-size: 11.5px;
   color: var(--faint);
 }
-.sp-select-wrap {
-  position: relative;
-}
-.sp-select-wrap select {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 38px;
-  padding: 0 32px 0 12px;
-  border: 1px solid var(--line-2);
-  border-radius: 9px;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 13.5px;
-  font-family: 'Onest', sans-serif;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.sp-select-wrap select:focus {
-  border-color: var(--brand);
-}
-.sp-select-wrap svg {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
 .sp-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -649,30 +609,6 @@ button {
   color: var(--muted);
   margin-top: 2px;
 }
-.danger-btn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  height: 36px;
-  width: 100%;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 13px;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    color 0.15s,
-    background 0.15s;
-}
-.danger-btn:hover {
-  border-color: var(--red-text);
-  color: var(--red-text);
-  background: var(--red-soft);
-}
-
 /* Сообщение о результате сохранения/публикации */
 .status-msg {
   font-size: 12.5px;
@@ -691,7 +627,6 @@ button {
 .status-msg.ok {
   color: var(--green-text);
 }
-
 /* Scrollbar */
 * {
   box-sizing: border-box;
@@ -711,11 +646,9 @@ button {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 /* Раскладка была намертво двухколоночной: редактор + панель 280px, и шапка
    в одну нерезиновую строку. Ниже 1000px панель настроек уходит под текст,
    ниже 760px шапка разбивается на две строки. */
-
 @media (max-width: 1000px) {
   /* Высота перестаёт быть фиксированной: страница скроллится целиком,
      иначе на телефоне две области со своим скроллом воюют друг с другом */
@@ -742,7 +675,6 @@ button {
     grid-template-columns: repeat(4, 1fr);
   }
 }
-
 /* Когда кнопки не помещаются рядом с названием, шапка становится
    двухстрочной: наверху «Назад», название, помощь и тема, ниже — действия.
    Центрирование снимаем: при нехватке места оно выталкивало заголовок
@@ -763,7 +695,6 @@ button {
     justify-content: flex-end;
   }
 }
-
 /* На телефоне: «Назад» и значки, ниже название, ещё ниже действия */
 @media (max-width: 760px) {
   .topbar {
@@ -787,7 +718,6 @@ button {
   .topbar-title {
     max-width: 100%;
   }
-
   .editor-area {
     padding: 24px 16px 56px;
   }
@@ -812,7 +742,6 @@ button {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-
 @media (max-width: 460px) {
   .topbar-actions {
     display: grid;

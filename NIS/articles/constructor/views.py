@@ -4,9 +4,9 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from authorization.models import ROLE_USER
 from articles.sanitize import clean_article_html
 from articles.serializers import COVERS, cover_gradient
+from authorization.models import ROLE_USER
 from core.auth import api_login_required, page_login_required
 from core.utils import load_json_body
 
@@ -26,7 +26,7 @@ def article_constructor(request, article_id=None):
     if article_id is not None:
         article = Article.objects.filter(id=article_id, author_username=account.username).first()
         if not article:
-            return redirect('/cabinet/user/articles/')
+            return redirect('user_articles')
         article_data = {
             'id': article.id,
             'title': article.title,
@@ -37,12 +37,16 @@ def article_constructor(request, article_id=None):
             'cover_index': article.cover_index,
         }
 
-    return render(request, 'articles_constructor/constructor.html', {
-        'username': account.username,
-        'article_id': article_id,
-        'article_data': article_data,
-        'covers': COVERS,
-    })
+    return render(
+        request,
+        'articles_constructor/constructor.html',
+        {
+            'username': account.username,
+            'article_id': article_id,
+            'article_data': article_data,
+            'covers': COVERS,
+        },
+    )
 
 
 @require_http_methods(['POST'])
@@ -133,8 +137,12 @@ def article_preview(request, article_id):
     article = _own_article(request, article_id)
     if not article:
         raise Http404
-    return render(request, 'articles_constructor/preview.html', {
-        'article': article,
-        'article_id': article_id,
-        'cover_gradient': cover_gradient(article.cover_index),
-    })
+    return render(
+        request,
+        'articles_constructor/preview.html',
+        {
+            'article': article,
+            'article_id': article_id,
+            'cover_gradient': cover_gradient(article.cover_index),
+        },
+    )

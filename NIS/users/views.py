@@ -1,15 +1,15 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import JsonResponse
-from django.views.decorators.http import require_GET, require_POST, require_http_methods
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from authorization import bans
-from authorization.models import Account, ROLE_COMPANY, ROLE_USER
+from authorization.models import ROLE_COMPANY, ROLE_USER, Account
 from authorization.views import get_current_account
 from companies.models import Company
 from core.auth import api_login_required
-from core.utils import load_json_body
 from core.uploads import UploadError, validate_image
+from core.utils import load_json_body
 from tests import statistics
 
 from . import activity, links
@@ -58,16 +58,17 @@ def api_candidate_detail(request, username):
     profile = UserProfile.objects.filter(username=account.username).first()
     is_owner = current is not None and current.username == account.username
 
-    candidate = _serialize_candidate(
-        account, profile, include_private=_sees_contacts(current, account))
+    candidate = _serialize_candidate(account, profile, include_private=_sees_contacts(current, account))
     candidate['strengths'] = statistics.strengths(account.username)
     candidate['streak'] = activity.streaks(activity.daily(account.username))
 
-    return JsonResponse({
-        'ok': True,
-        'candidate': candidate,
-        'is_owner': is_owner,
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'candidate': candidate,
+            'is_owner': is_owner,
+        }
+    )
 
 
 @require_http_methods(['PATCH'])

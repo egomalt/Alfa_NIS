@@ -30,7 +30,7 @@
     </svg>
     <div class="cover-overlay"></div>
     <div class="breadcrumb">
-      <a class="bc-link" href="/articles/">
+      <a class="bc-link" href="{% url 'articles_catalog' %}">
         <svg width="12"
              height="12"
              viewBox="0 0 24 24"
@@ -255,7 +255,7 @@
               <div class="sidebar-title">Похожие статьи</div>
               <div class="related-list">
                 {% for item in related %}
-                  <a class="related-item" href="/articles/{{ item.article.id }}/">
+                  <a class="related-item" href="{% url 'article_read' item.article.id %}">
                     <div class="related-thumb" style="background:{{ item.cover_gradient }};"></div>
                     <div>
                       <div class="related-title">{{ item.article.title|default:"Без названия" }}</div>

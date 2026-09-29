@@ -21,7 +21,7 @@
       </svg>
     </button>
   </div>
-  <a href="/cabinet/company/"
+  <a href="{% url 'company_cabinet' %}"
      class="cp-side-link {% if page == 'profile' or not page %}active{% endif %}">
     <svg width="16"
          height="16"
@@ -36,7 +36,7 @@
     Профиль
   </a>
   <a id="cp-link-tests"
-     href="/cabinet/company/tests/"
+     href="{% url 'company_tests' %}"
      class="cp-side-link locked {% if page == 'tests' %}active{% endif %}">
     <svg width="16"
          height="16"
@@ -63,7 +63,7 @@
     </span>
   </a>
   <a id="cp-link-contests"
-     href="/cabinet/company/contests/"
+     href="{% url 'company_contests' %}"
      class="cp-side-link locked {% if page == 'contests' %}active{% endif %}">
     <svg width="16"
          height="16"
@@ -89,7 +89,7 @@
       </svg>
     </span>
   </a>
-  <a href="/cabinet/company/statistics/"
+  <a href="{% url 'company_statistics' %}"
      class="cp-side-link {% if page == 'stats' %}active{% endif %}">
     <svg width="16"
          height="16"
@@ -103,7 +103,7 @@
     </svg>
     Статистика
   </a>
-  <a href="/cabinet/company/settings/"
+  <a href="{% url 'company_settings' %}"
      class="cp-side-link {% if page == 'settings' %}active{% endif %}">
     <svg width="16"
          height="16"

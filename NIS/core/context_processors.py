@@ -1,4 +1,5 @@
 """Переменные, доступные во всех шаблонах."""
+
 from django.conf import settings
 
 

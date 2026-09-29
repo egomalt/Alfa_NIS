@@ -83,7 +83,7 @@
         </svg>Жалобы<span class="ap-side-badge" id="ap-badge-reports" hidden></span>
       </button>
       <div class="ap-side-spacer"></div>
-      <a href="/" class="ap-side-link">
+      <a href="{% url 'home_page' %}" class="ap-side-link">
         <svg width="16"
              height="16"
              viewBox="0 0 24 24"
@@ -115,7 +115,7 @@
               <div class="ap-page-title">Обзор</div>
               <div class="ap-page-sub">Сводка очередей модерации</div>
             </div>
-            <a href="/export/admin/statistics.pdf"
+            <a href="{% url 'export_admin_pdf' %}"
                class="ap-btn-secondary ap-btn-link">
               <svg width="14"
                    height="14"

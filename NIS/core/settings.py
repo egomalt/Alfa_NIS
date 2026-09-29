@@ -20,9 +20,7 @@ if not DEBUG and SECRET_KEY == 'dev-secret-key-change-in-prod':
 # Список доменов через запятую: ALLOWED_HOSTS=career.example.com,www.career.example.com
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
 
-CSRF_TRUSTED_ORIGINS = [
-    o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()
-]
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
 
 # За обратным прокси схему запроса подсказывает заголовок, иначе Django
 # считает все запросы http и ломает защиту cookie

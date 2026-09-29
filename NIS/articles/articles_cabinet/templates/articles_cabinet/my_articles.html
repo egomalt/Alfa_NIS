@@ -1,4 +1,5 @@
 {% extends "cabinet/base_user.html" %}
+{% load static %}
 {% block title %}Мои статьи — Alfa Career{% endblock %}
 {% block panel %}
   <div class="ud-tab-panel" id="panel-articles">
@@ -7,7 +8,7 @@
         <div class="ud-page-title">Мои статьи</div>
         <div class="ud-page-sub">Делитесь опытом и знаниями с сообществом</div>
       </div>
-      <a class="ud-btn-create" href="/cabinet/user/articles/new/">
+      <a class="ud-btn-create" href="{% url 'article_constructor_new' %}">
         <svg width="14"
              height="14"
              viewBox="0 0 24 24"
@@ -80,10 +81,14 @@
           <div id="tests-empty-title">Статей пока нет</div>
           <div id="tests-empty-sub">Расскажите о своём опыте — статьи видят все кандидаты и компании</div>
           <a id="tests-empty-create"
-             href="/cabinet/user/articles/new/"
+             href="{% url 'article_constructor_new' %}"
              class="ud-btn-create">Написать статью</a>
         </div>
       </div>
     </div>
   </div>
+{% endblock %}
+{% block page_script %}
+  <script type="module"
+          src="{% static 'cabinet/user/articles.js' %}?v={{ ASSET_V }}"></script>
 {% endblock %}

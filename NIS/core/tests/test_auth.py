@@ -1,8 +1,9 @@
 """Авторизация: пароли, блокировка, доступ в админку Django."""
+
 from django.test import Client
 from django.utils import timezone
 
-from authorization.models import Account, ROLE_USER, STATUS_BANNED
+from authorization.models import ROLE_USER, STATUS_BANNED, Account
 from companies.models import Company
 from users.models import UserProfile
 
@@ -11,11 +12,17 @@ from .base import PASSWORD, BaseCase
 
 class RegistrationTests(BaseCase):
     def _signup(self, username, password, confirm=None, role='candidate'):
-        return Client().post('/api/v1/auth/signup/', {
-            'name': 'Новый', 'username': username, 'email': f'{username}@example.ru',
-            'password': password, 'password_confirm': confirm if confirm is not None else password,
-            'role': role,
-        })
+        return Client().post(
+            '/api/v1/auth/signup/',
+            {
+                'name': 'Новый',
+                'username': username,
+                'email': f'{username}@example.ru',
+                'password': password,
+                'password_confirm': confirm if confirm is not None else password,
+                'role': role,
+            },
+        )
 
     def test_weak_password_rejected(self):
         response = self._signup('slabiy', '123')
@@ -27,8 +34,9 @@ class RegistrationTests(BaseCase):
 
     def test_error_messages_are_russian(self):
         errors = self._signup('slabiy', '123').json()['errors']['password']
-        self.assertTrue(all(any(c.isalpha() and c.lower() in 'абвгдежзийклмнопрстуфхцчшщъыьэюя'
-                                for c in e['message']) for e in errors))
+        self.assertTrue(
+            all(any(c.isalpha() and c.lower() in 'абвгдежзийклмнопрстуфхцчшщъыьэюя' for c in e['message']) for e in errors)
+        )
 
     def test_taken_username_message_is_human_readable(self):
         """Django собирал сообщение из английских имён: «Account с таким Username…»."""
@@ -86,8 +94,7 @@ class LoginTests(BaseCase):
 
     def test_invalid_credentials_are_form_level_not_field_level(self):
         """Иначе страница показывала бы и баннер, и текст под полем одновременно."""
-        payload = Client().post('/api/v1/auth/signin/',
-                                {'username': 'kandidat', 'password': 'x'}).json()
+        payload = Client().post('/api/v1/auth/signin/', {'username': 'kandidat', 'password': 'x'}).json()
         self.assertNotIn('errors', payload)
         self.assertEqual(payload['message'], 'Неверное имя пользователя или пароль.')
 
@@ -145,30 +152,26 @@ class BanTests(BaseCase):
 
     def test_ban_stops_actions_but_not_reading(self):
         client = self.login('kandidat')
-        Account.objects.filter(username='kandidat').update(
-            status=STATUS_BANNED, ban_until=None, ban_reason='спам')
+        Account.objects.filter(username='kandidat').update(status=STATUS_BANNED, ban_until=None, ban_reason='спам')
 
         account = client.get('/api/v1/auth/me/').json()['account']
         self.assertTrue(account['banned'])
         self.assertEqual(account['ban_reason'], 'спам')
 
-        response = client.patch('/api/v1/candidates/kandidat/update/',
-                                '{"name": "Другое"}', 'application/json')
+        response = client.patch('/api/v1/candidates/kandidat/update/', '{"name": "Другое"}', 'application/json')
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['code'], 'banned')
 
     def test_banned_logs_in_and_learns_why(self):
-        Account.objects.filter(username='kandidat').update(
-            status=STATUS_BANNED, ban_until=None, ban_reason='спам')
+        Account.objects.filter(username='kandidat').update(status=STATUS_BANNED, ban_until=None, ban_reason='спам')
         client = Client()
-        self.assertEqual(
-            client.post('/api/v1/auth/signin/',
-                        {'username': 'kandidat', 'password': PASSWORD}).status_code, 200)
+        self.assertEqual(client.post('/api/v1/auth/signin/', {'username': 'kandidat', 'password': PASSWORD}).status_code, 200)
         self.assertIn('спам', client.get('/api/v1/auth/me/').json()['account']['ban_reason'])
 
     def test_expired_ban_lifts_itself(self):
         Account.objects.filter(username='kandidat').update(
-            status=STATUS_BANNED, ban_until=timezone.now() - timezone.timedelta(days=1))
+            status=STATUS_BANNED, ban_until=timezone.now() - timezone.timedelta(days=1)
+        )
         response = Client().post('/api/v1/auth/signin/', {'username': 'kandidat', 'password': PASSWORD})
         self.assertEqual(response.status_code, 200)
 

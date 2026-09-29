@@ -1,4 +1,5 @@
 {% extends "cabinet/base_user.html" %}
+{% load static %}
 {% block panel %}
   <div class="ud-tab-panel" id="panel-profile">
     <div class="ud-page-header">
@@ -6,7 +7,7 @@
         <div class="ud-page-title">Профиль</div>
         <div class="ud-page-sub">Обзор вашей активности на платформе</div>
       </div>
-      <a href="/cabinet/user/settings/" class="ud-btn-secondary">
+      <a href="{% url 'user_settings' %}" class="ud-btn-secondary">
         <svg width="14"
              height="14"
              viewBox="0 0 24 24"
@@ -21,7 +22,7 @@
       </a>
     </div>
     <div class="ud-profile-hero" id="ud-profile-hero">
-      <div class="ud-profile-av" id="ud-profile-av">?</div>
+      <div class="ud-profile-av" id="ud-profile-av" role="button" tabindex="0">?</div>
       <div>
         <div class="ud-profile-name" id="ud-profile-name">Загрузка…</div>
         <div class="ud-profile-role" id="ud-profile-role">Кандидат</div>
@@ -54,18 +55,22 @@
       <div id="ud-profile-skills" class="ud-profile-skills"></div>
     </div>
     <div class="ud-shortcuts" id="ud-shortcuts">
-      <a href="/cabinet/user/tests/" class="ud-shortcut">
+      <a href="{% url 'user_tests' %}" class="ud-shortcut">
         <div class="ud-shortcut-title">Мои тесты →</div>
         <div class="ud-shortcut-sub" id="sc-tests-sub">Загрузка…</div>
       </a>
-      <a href="/cabinet/user/articles/" class="ud-shortcut">
+      <a href="{% url 'user_articles' %}" class="ud-shortcut">
         <div class="ud-shortcut-title">Мои статьи →</div>
         <div class="ud-shortcut-sub" id="sc-articles-sub">Загрузка…</div>
       </a>
-      <a href="/cabinet/user/contests/" class="ud-shortcut">
+      <a href="{% url 'user_contests' %}" class="ud-shortcut">
         <div class="ud-shortcut-title">Конкурсы →</div>
         <div class="ud-shortcut-sub" id="sc-contests-sub">Загрузка…</div>
       </a>
     </div>
   </div>
+{% endblock %}
+{% block page_script %}
+  <script type="module"
+          src="{% static 'cabinet/user/profile.js' %}?v={{ ASSET_V }}"></script>
 {% endblock %}

@@ -36,7 +36,10 @@
                type="text"
                placeholder="Поиск по компаниям...">
       </div>
-      <a href="/authorization/signup/" class="btn-write" id="btn-join" hidden>
+      <a href="{% url 'register_page' %}"
+         class="btn-write"
+         id="btn-join"
+         hidden>
         <svg width="14"
              height="14"
              viewBox="0 0 24 24"

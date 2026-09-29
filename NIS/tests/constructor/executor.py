@@ -8,6 +8,7 @@
 
 Контейнер одноразовый, без сети, с потолком по памяти, процессам и времени.
 """
+
 import base64
 import subprocess
 
@@ -52,13 +53,18 @@ def run_in_docker(language, code, stdin_data='', time_limit=5):
         return {'ok': False, 'error': f'Неподдерживаемый язык: {language}'}
 
     cmd = [
-        'docker', 'run', '--rm', '-i',
+        'docker',
+        'run',
+        '--rm',
+        '-i',
         '--network=none',
         '--memory=128m',
         '--cpus=0.5',
         '--pids-limit=64',
         cfg['image'],
-        'sh', '-c', _shell_command(cfg, code),
+        'sh',
+        '-c',
+        _shell_command(cfg, code),
     ]
 
     try:

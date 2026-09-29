@@ -2,17 +2,19 @@ from django.db import IntegrityError, transaction
 from django.db.models import Case, IntegerField, Q, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from articles.constructor.models import Article
-from authorization.models import Account, ROLE_USER
+from authorization.models import ROLE_USER, Account
 from companies.models import Company
 from contests.contests_cabinet.models import Contest
 from core.auth import api_login_required, moderator_required
 from core.pagination import paginate
 from core.utils import load_json_body
 from tests.constructor.models import Test
-from .models import ESCALATION_THRESHOLD, Report, TARGET_LABELS
+
+from .models import ESCALATION_THRESHOLD, TARGET_LABELS, Report
 
 VALID_STATUSES = [Report.STATUS_NEW, Report.STATUS_RESOLVED, Report.STATUS_DISMISSED]
 
@@ -86,12 +88,12 @@ def _resolve_target(target_type, target_id):
         obj_id = int(target_id)
         if target_type == Report.TARGET_ARTICLE:
             obj = Article.objects.filter(id=obj_id, status=Article.STATUS_PUBLISHED).first()
-            return obj and (obj.title or f'Статья #{obj.id}', f'/articles/{obj.id}/', obj.author_username)
+            return obj and (obj.title or f'Статья #{obj.id}', reverse('article_read', args=[obj.id]), obj.author_username)
         if target_type == Report.TARGET_CONTEST:
             obj = Contest.objects.filter(id=obj_id).exclude(status='draft').first()
-            return obj and (obj.title or f'Конкурс #{obj.id}', f'/contests/{obj.id}/', obj.company_username)
+            return obj and (obj.title or f'Конкурс #{obj.id}', reverse('contest_view', args=[obj.id]), obj.company_username)
         obj = Test.objects.filter(id=obj_id, status=Test.STATUS_PUBLISHED).first()
-        return obj and (obj.title or f'Тест #{obj.id}', f'/tests/{obj.id}/', obj.owner_username)
+        return obj and (obj.title or f'Тест #{obj.id}', reverse('test_view_page', args=[obj.id]), obj.owner_username)
 
     if target_type == Report.TARGET_USER:
         obj = Account.objects.filter(username=target_id, role=ROLE_USER).first()

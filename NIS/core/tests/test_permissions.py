@@ -1,4 +1,5 @@
 """Права доступа: кто что может, и закрытые дыры."""
+
 import json
 from io import StringIO
 
@@ -35,8 +36,7 @@ class ApiGuardTests(BaseCase):
         self.assertEqual(self.login('kandidat').post('/api/v1/companies/firma/rate/', body, ct).status_code, 200)
 
     def test_admin_endpoints_are_moderator_only(self):
-        for url in ['/api/v1/admin/overview/', '/api/v1/admin/users/',
-                    '/api/v1/admin/reports/', '/api/v1/admin/verifications/']:
+        for url in ['/api/v1/admin/overview/', '/api/v1/admin/users/', '/api/v1/admin/reports/', '/api/v1/admin/verifications/']:
             with self.subTest(url=url):
                 self.assertEqual(Client().get(url).status_code, 401)
                 self.assertEqual(self.login('firma').get(url).status_code, 403)
@@ -50,9 +50,14 @@ class ApiGuardTests(BaseCase):
 
 class PageGuardTests(BaseCase):
     def test_protected_pages_redirect_to_signin(self):
-        for url in ['/cabinet/user/', '/cabinet/company/', '/administration/',
-                    '/cabinet/user/articles/', '/cabinet/company/contests/',
-                    '/export/user/statistics.pdf']:
+        for url in [
+            '/cabinet/user/',
+            '/cabinet/company/',
+            '/administration/',
+            '/cabinet/user/articles/',
+            '/cabinet/company/contests/',
+            '/export/user/statistics.pdf',
+        ]:
             with self.subTest(url=url):
                 response = Client().get(url)
                 self.assertEqual(response.status_code, 302)
@@ -97,8 +102,8 @@ class TestsCrudHoleTests(BaseCase):
     def test_owner_is_taken_from_session_not_request(self):
         """Владелец берётся из сессии, а не из тела запроса."""
         response = self.login('konkurent').post(
-            '/api/v1/tests/create/',
-            json.dumps({'owner_username': 'firma', 'title': 'Подделка'}), 'application/json')
+            '/api/v1/tests/create/', json.dumps({'owner_username': 'firma', 'title': 'Подделка'}), 'application/json'
+        )
         self.assertEqual(response.status_code, 201)
         self.assertFalse(Test.objects.filter(owner_username='firma', title='Подделка').exists())
         self.assertTrue(Test.objects.filter(owner_username='konkurent', title='Подделка').exists())
@@ -143,7 +148,10 @@ class LeakTests(BaseCase):
         """Страница прохождения получает язык и примеры, но не скрытые тесты."""
         test = self.make_test(owner='firma', with_quiz=False)
         TestPage.objects.create(
-            test=test, order=0, type=TestPage.TYPE_CODE, title='Сумма',
+            test=test,
+            order=0,
+            type=TestPage.TYPE_CODE,
+            title='Сумма',
             page_meta={
                 'language': 'cpp',
                 'time_limit': 3,
@@ -162,10 +170,8 @@ class LeakTests(BaseCase):
 
     def test_company_document_is_private(self):
         Company.objects.filter(username='firma').update(registration_document='company_documents/doc.pdf')
-        self.assertNotIn('registration_document_url',
-                         self.login('konkurent').get('/api/v1/companies/firma/').content.decode())
-        self.assertIn('registration_document_url',
-                      self.login('firma').get('/api/v1/companies/firma/').content.decode())
+        self.assertNotIn('registration_document_url', self.login('konkurent').get('/api/v1/companies/firma/').content.decode())
+        self.assertIn('registration_document_url', self.login('firma').get('/api/v1/companies/firma/').content.decode())
 
     def test_candidate_email_is_private(self):
         self.candidate.email = 'secret@mail.ru'
@@ -206,7 +212,10 @@ class VisibilityGapTests(BaseCase):
         """По id страницы можно было прощупать задачу из чужого черновика."""
         test = self.make_test(owner='firma', published=False, with_quiz=False)
         page = TestPage.objects.create(
-            test=test, order=0, type=TestPage.TYPE_CODE, title='Задача',
+            test=test,
+            order=0,
+            type=TestPage.TYPE_CODE,
+            title='Задача',
             page_meta={'language': 'python', 'test_cases': [{'input': '1', 'expected': '1', 'is_sample': True}]},
         )
         body = json.dumps({'code': 'print(1)'})

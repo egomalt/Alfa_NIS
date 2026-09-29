@@ -88,6 +88,10 @@ export const formatDate = (value) => toDate(value)?.toLocaleDateString('ru-RU') 
 export const formatDateLong = (value) =>
   toDate(value)?.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) ?? '';
 
+/* «28 сент. 2026 г.» — для ячеек таблиц */
+export const formatDateMedium = (value) =>
+  toDate(value)?.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }) ?? '';
+
 /* «28 сент.» */
 export const formatDateShort = (value) =>
   toDate(value)?.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) ?? '';
@@ -150,6 +154,9 @@ export const WORDS = {
   reports: ['жалоба', 'жалобы', 'жалоб'],
   views: ['просмотр', 'просмотра', 'просмотров'],
   questions: ['вопрос', 'вопроса', 'вопросов'],
+  events: ['событие', 'события', 'событий'],
+  participations: ['участие', 'участия', 'участий'],
+  drafts: ['черновик', 'черновика', 'черновиков'],
 };
 
 export const TEST_CATEGORIES = {

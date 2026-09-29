@@ -6,13 +6,28 @@ from django import forms
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
-
 # Логин подставляется в адрес профиля (/<username>/), поэтому совпадать
 # с разделом сайта он не может — иначе профиль окажется недоступен
 RESERVED_USERNAMES = {
-    'admin', 'administration', 'api', 'articles', 'auth', 'authorization',
-    'cabinet', 'candidates', 'companies', 'constructor', 'contests',
-    'django-admin', 'export', 'help', 'media', 'profiles', 'reports', 'static', 'tests',
+    'admin',
+    'administration',
+    'api',
+    'articles',
+    'auth',
+    'authorization',
+    'cabinet',
+    'candidates',
+    'companies',
+    'constructor',
+    'contests',
+    'django-admin',
+    'export',
+    'help',
+    'media',
+    'profiles',
+    'reports',
+    'static',
+    'tests',
 }
 
 
@@ -23,9 +38,7 @@ def validate_username(raw_value):
         raise forms.ValidationError('Введите имя пользователя.')
 
     if ' ' in value or len(value) < 3 or len(value) > 50 or not re.fullmatch(r'[a-z0-9_-]+', value):
-        raise forms.ValidationError(
-            'Имя пользователя может содержать только буквы, цифры, дефисы и символы подчёркивания.'
-        )
+        raise forms.ValidationError('Имя пользователя может содержать только буквы, цифры, дефисы и символы подчёркивания.')
 
     if not value[0].isalnum() or not value[-1].isalnum():
         raise forms.ValidationError('Имя пользователя должно начинаться и заканчиваться буквой или цифрой.')

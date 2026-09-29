@@ -7,7 +7,6 @@ main {
   margin: 0 auto;
   padding: 32px 32px 80px;
 }
-
 .ct-back {
   display: inline-flex;
   align-items: center;
@@ -27,7 +26,6 @@ main {
 .ct-back:hover {
   color: var(--text);
 }
-
 .ct-page-header {
   display: flex;
   align-items: center;
@@ -62,22 +60,10 @@ main {
   gap: 8px;
   flex-wrap: wrap;
 }
-.ct-verified {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--green-soft);
-  color: var(--green-text);
-  font-size: 11px;
-}
 .ct-page-sub {
   font-size: 13.5px;
   color: var(--muted);
 }
-
 .ct-filters {
   display: flex;
   align-items: center;
@@ -113,7 +99,6 @@ main {
   color: var(--muted);
   margin-left: auto;
 }
-
 .ct-card {
   display: flex;
   align-items: center;
@@ -174,7 +159,6 @@ main {
   background: var(--red-soft);
   color: var(--red-text);
 }
-
 .ct-empty {
   padding: 60px;
   text-align: center;
@@ -190,7 +174,6 @@ main {
   font-size: 14px;
   color: var(--muted);
 }
-
 @media (max-width: 680px) {
   main {
     padding: 24px 18px 64px;
@@ -211,4 +194,15 @@ main {
     flex-basis: 100%;
     margin-left: 0;
   }
+}
+.ct-verified {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--green-soft);
+  color: var(--green-text);
+  font-size: 11px;
 }

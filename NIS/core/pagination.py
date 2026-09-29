@@ -4,6 +4,7 @@
 
     {"ok": true, "items": [...], "page": 1, "per_page": 20, "total": 137, "pages": 7}
 """
+
 from django.core.paginator import EmptyPage, Paginator
 
 DEFAULT_PER_PAGE = 20

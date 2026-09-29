@@ -2,16 +2,21 @@ from django import forms
 from django.contrib.auth.password_validation import validate_password
 
 from core.utils import validate_username
+
 from .models import Account
 
 
 class AccountRegistrationForm(forms.ModelForm):
     password = forms.CharField(
-        label='Пароль', strip=False, widget=forms.PasswordInput,
+        label='Пароль',
+        strip=False,
+        widget=forms.PasswordInput,
         error_messages={'required': 'Придумайте пароль.'},
     )
     password_confirm = forms.CharField(
-        label='Повторите пароль', strip=False, widget=forms.PasswordInput,
+        label='Повторите пароль',
+        strip=False,
+        widget=forms.PasswordInput,
         error_messages={'required': 'Повторите пароль.'},
     )
 
@@ -61,6 +66,8 @@ class AccountLoginForm(forms.Form):
         error_messages={'required': 'Введите имя пользователя.'},
     )
     password = forms.CharField(
-        label='Пароль', strip=False, widget=forms.PasswordInput,
+        label='Пароль',
+        strip=False,
+        widget=forms.PasswordInput,
         error_messages={'required': 'Введите пароль.'},
     )

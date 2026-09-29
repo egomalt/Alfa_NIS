@@ -8,7 +8,7 @@
       <div class="cp-page-title">Тесты и оценки</div>
       <div class="cp-page-sub">Управляйте тестами и следите за результатами кандидатов</div>
     </div>
-    <a href="/constructor/" class="cp-btn-primary">
+    <a href="{% url 'constructor_page' %}" class="cp-btn-primary">
       <svg width="14"
            height="14"
            viewBox="0 0 24 24"
@@ -80,7 +80,9 @@
         {# Текст зависит от того, пусто из-за фильтра или тестов нет вовсе #}
         <div id="tests-empty-title">Тестов пока нет</div>
         <div id="tests-empty-sub">Создайте первый тест, чтобы начать оценку кандидатов</div>
-        <a id="tests-empty-create" href="/constructor/" class="cp-btn-primary">Создать тест</a>
+        <a id="tests-empty-create"
+           href="{% url 'constructor_page' %}"
+           class="cp-btn-primary">Создать тест</a>
       </div>
     </div>
   </div>

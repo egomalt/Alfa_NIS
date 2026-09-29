@@ -3,14 +3,31 @@
 Тело выводится фильтром `safe`, поэтому без очистки это хранимая XSS.
 Разрешены только теги, которые ставит редактор; остальное вырезается.
 """
+
 import nh3
 
 ALLOWED_TAGS = {
-    'p', 'br', 'hr', 'span', 'div',
-    'strong', 'b', 'em', 'i', 'u', 's',
-    'h2', 'h3', 'h4',
-    'ul', 'ol', 'li',
-    'a', 'code', 'pre', 'blockquote',
+    'p',
+    'br',
+    'hr',
+    'span',
+    'div',
+    'strong',
+    'b',
+    'em',
+    'i',
+    'u',
+    's',
+    'h2',
+    'h3',
+    'h4',
+    'ul',
+    'ol',
+    'li',
+    'a',
+    'code',
+    'pre',
+    'blockquote',
 }
 
 ALLOWED_ATTRIBUTES = {'a': {'href', 'title'}}

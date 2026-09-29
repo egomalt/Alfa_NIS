@@ -1,4 +1,5 @@
 {% extends "cabinet/base_user.html" %}
+{% load static %}
 {% block title %}Конкурсы — Alfa Career{% endblock %}
 {% block panel %}
   <div class="ud-tab-panel" id="panel-contests">
@@ -7,7 +8,7 @@
         <div class="ud-page-title">Конкурсы</div>
         <div class="ud-page-sub">История вашего участия и вердикты компаний</div>
       </div>
-      <a class="ud-btn-create" href="/contests/">
+      <a class="ud-btn-create" href="{% url 'contests_catalog' %}">
         <svg width="14"
              height="14"
              viewBox="0 0 24 24"
@@ -85,9 +86,15 @@
           {# Текст зависит от того, пусто из-за фильтра или участий нет вовсе #}
           <div id="tests-empty-title">Участий пока нет</div>
           <div id="tests-empty-sub">Выберите конкурс в каталоге и пришлите решение до дедлайна</div>
-          <a id="tests-empty-create" href="/contests/" class="ud-btn-create">Открыть каталог</a>
+          <a id="tests-empty-create"
+             href="{% url 'contests_catalog' %}"
+             class="ud-btn-create">Открыть каталог</a>
         </div>
       </div>
     </div>
   </div>
+{% endblock %}
+{% block page_script %}
+  <script type="module"
+          src="{% static 'cabinet/user/contests.js' %}?v={{ ASSET_V }}"></script>
 {% endblock %}

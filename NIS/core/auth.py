@@ -3,15 +3,18 @@
 JSON-эндпоинты отдают 401/403, HTML-страницы уводят на форму входа.
 Прошедшая проверку вьюха берёт аккаунт из `request.account`.
 """
+
 from functools import wraps
 
 from django.http import JsonResponse
 from django.shortcuts import redirect
+from django.urls import reverse_lazy
 
 from authorization.models import ROLE_MODERATOR
 from authorization.views import get_current_account
 
-SIGNIN_URL = '/authorization/signin/'
+# Ленивый: модуль импортируется раньше, чем загружены маршруты
+SIGNIN_URL = reverse_lazy('login_page')
 
 
 def ban_block(account, method):
@@ -29,6 +32,7 @@ def ban_block(account, method):
 
 def api_login_required(*roles):
     """401 без входа, 403 при неподходящей роли. Без ролей — любой вошедший."""
+
     def decorator(view):
         @wraps(view)
         def wrapper(request, *args, **kwargs):
@@ -42,12 +46,15 @@ def api_login_required(*roles):
                 return blocked
             request.account = account
             return view(request, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
 def page_login_required(*roles, redirect_to=SIGNIN_URL):
     """Guard для HTML-страниц: уводит на форму входа, если доступа нет."""
+
     def decorator(view):
         @wraps(view)
         def wrapper(request, *args, **kwargs):
@@ -56,7 +63,9 @@ def page_login_required(*roles, redirect_to=SIGNIN_URL):
                 return redirect(redirect_to)
             request.account = account
             return view(request, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
 

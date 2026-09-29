@@ -1,5 +1,5 @@
 <header class="cr-navbar">
-  <a href="/" class="cr-brand">
+  <a href="{% url 'home_page' %}" class="cr-brand">
     <span class="cr-brand-mark">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff">
         <rect x="3.5" y="13" width="4.3" height="8" rx="1.4" /><rect x="9.85" y="8" width="4.3" height="13" rx="1.4" /><rect x="16.2" y="3" width="4.3" height="18" rx="1.4" />
@@ -23,17 +23,17 @@
     </svg>
   </button>
   <nav class="cr-nav">
-    <a href="/"
+    <a href="{% url 'home_page' %}"
        class="cr-nav-link {% if active == 'home' %}active{% endif %}">Главная</a>
-    <a href="/companies/"
+    <a href="{% url 'companies_list_page' %}"
        class="cr-nav-link {% if active == 'companies' %}active{% endif %}">Компании</a>
-    <a href="/articles/"
+    <a href="{% url 'articles_catalog' %}"
        class="cr-nav-link {% if active == 'articles' %}active{% endif %}">Статьи</a>
-    <a href="/tests/"
+    <a href="{% url 'tests_catalog' %}"
        class="cr-nav-link {% if active == 'tests' %}active{% endif %}">Тесты</a>
-    <a href="/contests/"
+    <a href="{% url 'contests_catalog' %}"
        class="cr-nav-link {% if active == 'contests' %}active{% endif %}">Конкурсы</a>
-    <a href="/help/"
+    <a href="{% url 'help_page' %}"
        class="cr-nav-link {% if active == 'help' %}active{% endif %}">Помощь</a>
   </nav>
   <div class="cr-navbar-spacer"></div>

@@ -102,7 +102,6 @@
 .ud-tab-panel {
   display: block;
 }
-
 .ud-page-header {
   display: flex;
   align-items: flex-start;
@@ -121,7 +120,6 @@
   font-size: 14px;
   color: var(--muted);
 }
-
 .ud-stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -146,7 +144,6 @@
   font-size: 12.5px;
   color: var(--muted);
 }
-
 .ud-section {
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -159,7 +156,6 @@
   font-weight: 700;
   margin-bottom: 16px;
 }
-
 .ud-profile-hero {
   display: flex;
   align-items: center;
@@ -170,7 +166,9 @@
   padding: 24px 26px;
   margin-bottom: 22px;
 }
+/* Щелчок по фото открывает выбор нового */
 .ud-profile-av {
+  cursor: pointer;
   width: 64px;
   height: 64px;
   border-radius: 16px;
@@ -199,41 +197,6 @@
   font-size: 13.5px;
   color: var(--muted);
 }
-
-.ud-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.ud-tl-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 4px;
-  border-bottom: 1px solid var(--line);
-}
-.ud-tl-row:last-child {
-  border-bottom: none;
-}
-.ud-tl-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.ud-tl-text {
-  font-size: 13.5px;
-  flex: 1;
-}
-.ud-tl-time {
-  font-size: 12px;
-  color: var(--faint);
-  white-space: nowrap;
-}
-
 .ud-shortcuts {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -265,13 +228,11 @@
   font-size: 12.5px;
   color: var(--muted);
 }
-
 /* Списки разделов — общие компоненты из career.css: .cr-filters/.cr-chip
    для фильтров, .list-card с .tests-table для самих списков. Здесь лежали
    их копии: квадратные .ud-filter-btn и строки .ud-list-row, из-за которых
    кабинет кандидата выглядел иначе, чем кабинет компании, и не умел
    превращаться в карточки на телефоне. */
-
 /* Подпись под заголовком раздела и текст на месте пустого блока */
 .ud-section-note {
   font-size: 12.5px;
@@ -284,7 +245,6 @@
   color: var(--muted);
   padding: 6px 0;
 }
-
 /* Заголовок плашки со счётчиком справа */
 .ud-card-head {
   display: flex;
@@ -314,7 +274,6 @@
   font-weight: 700;
   color: var(--text);
 }
-
 /* Числа внутри раздела. Плашка .ud-stat-card здесь давала карточку
    в карточке, поэтому у фактов нет ни рамки, ни фона. */
 .ud-facts {
@@ -336,7 +295,6 @@
   font-weight: 600;
   letter-spacing: -0.02em;
 }
-
 /* Последние прохождения: список без рамок, чтобы не спорить с секцией */
 .ud-mini-head {
   font-size: 11.5px;
@@ -378,14 +336,12 @@
   color: var(--faint);
   white-space: nowrap;
 }
-
 .ud-activity-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
   align-items: stretch;
 }
-
 /* Карта выровнена по неделям: колонка — неделя, строка — день недели. */
 .ud-heat {
   display: grid;
@@ -479,7 +435,6 @@
   height: 11px;
   border-radius: 3px;
 }
-
 /* Текущая серия огоньком: это единственное на странице число, которое
    хочется не столько прочитать, сколько не потерять */
 .ud-streak-card {
@@ -533,7 +488,6 @@
   color: var(--text);
   font-weight: 600;
 }
-
 /* Текущая неделя крупными клетками: видно, какой день остался незакрытым */
 .ud-week {
   display: grid;
@@ -563,7 +517,6 @@
 .ud-week-cell.today {
   box-shadow: inset 0 0 0 1.5px var(--brand);
 }
-
 .ud-callout {
   display: flex;
   gap: 11px;
@@ -585,7 +538,6 @@
 .ud-callout.done .ud-callout-dot {
   background: var(--green-text);
 }
-
 .ud-streak-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -612,7 +564,6 @@
   font-size: 12px;
   color: var(--muted);
 }
-
 .ud-two-col {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
@@ -676,7 +627,6 @@
   font-weight: 700;
   flex-shrink: 0;
 }
-
 .ud-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -696,7 +646,6 @@
   color: var(--text-2);
 }
 .ud-form-input,
-.ud-form-select,
 .ud-form-textarea {
   height: 42px;
   padding: 0 14px;
@@ -712,7 +661,6 @@
   box-sizing: border-box;
 }
 .ud-form-input:focus,
-.ud-form-select:focus,
 .ud-form-textarea:focus {
   border-color: var(--brand);
 }
@@ -864,7 +812,6 @@
 .cab-chip-text {
   min-width: 0;
 }
-
 @media (max-width: 980px) {
   .ud-two-col {
     grid-template-columns: 1fr;
@@ -971,11 +918,9 @@
     border-radius: 8px;
   }
 }
-
 /* Здесь лежали .ud-grid-2 и .ud-grid-3 — ряды плашек внутри секций.
    Плашки внутри секций заменены на .ud-facts, которая раскладывается
    сама через auto-fit и не требует отдельных брейкпоинтов. */
-
 .ud-bio {
   margin: 0;
 }

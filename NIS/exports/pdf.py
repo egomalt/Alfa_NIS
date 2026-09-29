@@ -1,19 +1,26 @@
 """Общий построитель PDF-отчётов на ReportLab (брендинг Career, кириллица)."""
+
 import io
 import os
 
+from django.http import HttpResponse
 from django.utils import timezone
-
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from django.http import HttpResponse
 from reportlab.platypus import (
-    BaseDocTemplate, Flowable, Frame, KeepTogether, PageTemplate, Paragraph, Spacer,
-    Table, TableStyle,
+    BaseDocTemplate,
+    Flowable,
+    Frame,
+    KeepTogether,
+    PageTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
 )
 
 FONT = 'DejaVu'
@@ -54,8 +61,9 @@ CONTENT_W = PAGE_W - 2 * MARGIN
 def _styles():
     return {
         # keepWithNext: заголовок раздела не должен оставаться один внизу страницы
-        'section': ParagraphStyle('section', fontName=FONT_BOLD, fontSize=13, textColor=TEXT,
-                                  spaceBefore=6, spaceAfter=8, leading=16, keepWithNext=1),
+        'section': ParagraphStyle(
+            'section', fontName=FONT_BOLD, fontSize=13, textColor=TEXT, spaceBefore=6, spaceAfter=8, leading=16, keepWithNext=1
+        ),
         'note': ParagraphStyle('note', fontName=FONT, fontSize=9.5, textColor=MUTED, leading=14),
         'kpi_value': ParagraphStyle('kpi_value', fontName=FONT_BOLD, fontSize=17, textColor=TEXT, leading=20),
         'kpi_label': ParagraphStyle('kpi_label', fontName=FONT, fontSize=8, textColor=MUTED, leading=11, spaceBefore=2),
@@ -75,8 +83,7 @@ def fit_column_widths(headers, widths):
     где запас есть, — пропорционально запасу.
     """
     minimums = [
-        max((pdfmetrics.stringWidth(word, FONT_BOLD, 8)
-             for word in str(h).upper().split()), default=0) + CELL_PADDING
+        max((pdfmetrics.stringWidth(word, FONT_BOLD, 8) for word in str(h).upper().split()), default=0) + CELL_PADDING
         for h in headers
     ]
     deficit = sum(max(m - w, 0) for m, w in zip(minimums, widths, strict=True))
@@ -88,10 +95,7 @@ def fit_column_widths(headers, widths):
     if total_slack < deficit:
         # Ужимать некуда: в такой таблице колонок больше, чем помещается
         return widths
-    return [
-        max(w, m) - (s / total_slack * deficit if s else 0)
-        for w, m, s in zip(widths, minimums, slack, strict=True)
-    ]
+    return [max(w, m) - (s / total_slack * deficit if s else 0) for w, m, s in zip(widths, minimums, slack, strict=True)]
 
 
 def plural(number, forms):
@@ -270,7 +274,7 @@ class ReportBuilder:
         per_row = 4
         vs, ls = self.styles['kpi_value'], self.styles['kpi_label']
         for i in range(0, len(items), per_row):
-            chunk = items[i:i + per_row]
+            chunk = items[i : i + per_row]
             row = [[Paragraph(str(v), vs), Paragraph(str(label), ls)] for v, label in chunk]
             # добиваем пустыми ячейками до per_row, чтобы ширина колонок была ровной
             while len(row) < per_row:
@@ -387,10 +391,9 @@ class ReportBuilder:
         buf = io.BytesIO()
         # верхний отступ под шапку, нижний — под футер
         frame = Frame(MARGIN, MARGIN + 6, CONTENT_W, PAGE_H - 2 * MARGIN - 20, id='body')
-        doc = BaseDocTemplate(buf, pagesize=A4,
-                              leftMargin=MARGIN, rightMargin=MARGIN,
-                              topMargin=MARGIN, bottomMargin=MARGIN,
-                              title=self.title)
+        doc = BaseDocTemplate(
+            buf, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN, title=self.title
+        )
         doc.addPageTemplates([PageTemplate(id='main', frames=[frame], onPage=self._draw_frame)])
 
         # Титульный блок отчёта

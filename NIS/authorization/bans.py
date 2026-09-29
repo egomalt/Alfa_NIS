@@ -6,10 +6,11 @@
 Исключение одно: конкурсы заблокированной компании удаляются, потому что
 висящий конкурс с дедлайном, который никто не разберёт, хуже его отсутствия.
 """
+
 from django.db.models import Q
 from django.utils import timezone
 
-from .models import Account, STATUS_BANNED
+from .models import STATUS_BANNED, Account
 
 # Подпись вместо логина там, где запись скрыть нельзя: решение на конкурс
 # компания должна видеть, даже если его прислал заблокированный человек
@@ -30,19 +31,14 @@ def active_ban_q():
 
 def banned_usernames():
     """Логины, чей контент нужно спрятать."""
-    return set(
-        Account.objects
-        .filter(active_ban_q())
-        .values_list('username', flat=True)
-    )
+    return set(Account.objects.filter(active_ban_q()).values_list('username', flat=True))
 
 
 def is_hidden(username):
     """Прячем ли контент этого автора от публики."""
     if not username:
         return False
-    account = Account.objects.filter(username=username).only(
-        'status', 'ban_until').first()
+    account = Account.objects.filter(username=username).only('status', 'ban_until').first()
     return account is not None and account.is_banned
 
 

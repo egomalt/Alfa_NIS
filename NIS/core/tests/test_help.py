@@ -1,6 +1,7 @@
 """Страница помощи: карта сайта должна вести туда, куда обещает."""
+
 from django.test import Client
-from django.urls import Resolver404, resolve
+from django.urls import NoReverseMatch, Resolver404, resolve, reverse
 
 from home.views import SITE_MAP
 from profiles.views import profile_view
@@ -17,16 +18,17 @@ class HelpPageTests(BaseCase):
             self.assertIn(anchor, body)
 
     def test_every_map_link_leads_to_a_real_page(self):
-        """Ссылка на несуществующий раздел упала бы в каталог профилей и дала 404."""
+        """Карта хранит имена маршрутов: опечатка в имени сломала бы всю страницу,
+        а маршрут, пойманный каталогом профилей, дал бы 404."""
         for group in SITE_MAP:
-            for title, _, url, _ in group['items']:
-                if url is None:
+            for title, _, name, _ in group['items']:
+                if name is None:
                     continue
-                with self.subTest(section=title, url=url):
+                with self.subTest(section=title, name=name):
                     try:
-                        match = resolve(url)
-                    except Resolver404:
-                        self.fail(f'{url} никуда не ведёт')
+                        match = resolve(reverse(name))
+                    except (NoReverseMatch, Resolver404):
+                        self.fail(f'{name} никуда не ведёт')
                     self.assertIsNot(match.func, profile_view)
 
     def test_hint_depends_on_role(self):
@@ -41,8 +43,14 @@ class HelpPageTests(BaseCase):
         self.assertIn('href="/help/"', body)
 
     def test_help_is_reserved_as_a_username(self):
-        response = Client().post('/api/v1/auth/signup/', {
-            'name': 'Хелп', 'username': 'help', 'email': 'help@example.com',
-            'password': 'Prochniy-Parol-77', 'password_confirm': 'Prochniy-Parol-77',
-        })
+        response = Client().post(
+            '/api/v1/auth/signup/',
+            {
+                'name': 'Хелп',
+                'username': 'help',
+                'email': 'help@example.com',
+                'password': 'Prochniy-Parol-77',
+                'password_confirm': 'Prochniy-Parol-77',
+            },
+        )
         self.assertEqual(response.status_code, 400)

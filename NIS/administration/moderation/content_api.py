@@ -1,13 +1,14 @@
 """Модераторские действия над контентом: удаление материалов и зачистка контента автора."""
+
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 
-from core.auth import moderator_required
-from core.utils import load_json_body
 from articles.constructor.models import Article
 from authorization.models import Account
 from contests.contests_cabinet.models import Contest
+from core.auth import moderator_required
+from core.utils import load_json_body
 from tests.constructor.models import Test
 
 

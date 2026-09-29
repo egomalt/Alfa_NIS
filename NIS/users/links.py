@@ -4,6 +4,7 @@
 сохранении настроек и при показе в профиле, — а формат ввода у людей разный:
 кто-то пишет «@nick», кто-то «github.com/nick», кто-то полный адрес.
 """
+
 import re
 from urllib.parse import urlparse
 
@@ -69,7 +70,4 @@ def clean(raw):
 def as_list(links):
     """Ссылки для показа: [(ключ, подпись, адрес)] в постоянном порядке."""
     links = links or {}
-    return [
-        {'kind': kind, 'label': LABELS[kind], 'url': links[kind]}
-        for kind in KINDS if links.get(kind)
-    ]
+    return [{'kind': kind, 'label': LABELS[kind], 'url': links[kind]} for kind in KINDS if links.get(kind)]

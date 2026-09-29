@@ -1,6 +1,7 @@
 from django.urls import path
 
 from administration.verification import views as verification_views
+
 from . import views
 
 urlpatterns = [

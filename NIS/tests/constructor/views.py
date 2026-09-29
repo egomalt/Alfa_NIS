@@ -3,6 +3,7 @@ import time
 from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
@@ -62,17 +63,21 @@ def public_code_meta(page):
 @page_login_required(*TEST_OWNER_ROLES)
 def constructor_shell(request, test_id=None):
     account = request.account
-    back_url = '/cabinet/company/tests/' if account.role == ROLE_COMPANY else '/cabinet/user/tests/'
-    return render(request, 'constructor/constructor.html', {
-        'app_path': request.path,
-        'test_id': test_id or '',
-        'owner_username': account.username,
-        'is_authenticated': True,
-        'back_url': back_url,
-        # Список языков — из исполнителя, чтобы в шаблоне не оказалось лишних
-        'languages': [{'key': key, 'label': cfg['label']} for key, cfg in LANGUAGES.items()],
-        'max_time_limit': MAX_TIME_LIMIT,
-    })
+    back_url = reverse('company_tests' if account.role == ROLE_COMPANY else 'user_tests')
+    return render(
+        request,
+        'constructor/constructor.html',
+        {
+            'app_path': request.path,
+            'test_id': test_id or '',
+            'owner_username': account.username,
+            'is_authenticated': True,
+            'back_url': back_url,
+            # Список языков — из исполнителя, чтобы в шаблоне не оказалось лишних
+            'languages': [{'key': key, 'label': cfg['label']} for key, cfg in LANGUAGES.items()],
+            'max_time_limit': MAX_TIME_LIMIT,
+        },
+    )
 
 
 @ensure_csrf_cookie
@@ -86,15 +91,19 @@ def constructor_stats_shell(request, test_id):
 
     # Базовый шаблон и боковая панель — по роли автора
     is_company = account.role == ROLE_COMPANY
-    return render(request, 'constructor/test_stats.html', {
-        'base_template': 'cabinet/base_company.html' if is_company else 'cabinet/base_user.html',
-        'username': account.username,
-        'test_id': test_id,
-        'test_title': test.title,
-        'page': 'tests',
-        'panel': 'none',
-        'back_url': '/cabinet/company/tests/' if is_company else '/cabinet/user/tests/',
-    })
+    return render(
+        request,
+        'constructor/test_stats.html',
+        {
+            'base_template': 'cabinet/base_company.html' if is_company else 'cabinet/base_user.html',
+            'username': account.username,
+            'test_id': test_id,
+            'test_title': test.title,
+            'page': 'tests',
+            'panel': 'none',
+            'back_url': reverse('company_tests' if is_company else 'user_tests'),
+        },
+    )
 
 
 def _serialize_answer(answer):
@@ -135,8 +144,8 @@ def _serialize_test(test, include_pages=False):
         'submissions': attempts.count_for(test),
         'created_at': test.created_at.isoformat(),
         'updated_at': test.updated_at.isoformat(),
-        'url': f'/tests/{test.id}/',
-        'edit_url': f'/constructor/{test.id}/',
+        'url': reverse('test_view_page', args=[test.id]),
+        'edit_url': reverse('constructor_edit_page', args=[test.id]),
     }
     if include_pages:
         data['pages'] = [_serialize_page(p) for p in test.pages.all()]
@@ -147,10 +156,11 @@ def _serialize_test(test, include_pages=False):
 @api_login_required()
 def api_tests_list(request):
     """Свои тесты, включая черновики. Публичные отдаёт каталог."""
-    tests = (Test.objects
-             .filter(owner_username=request.account.username)
-             .prefetch_related('pages')
-             .annotate(finished_attempts=attempts.finished_count()))
+    tests = (
+        Test.objects.filter(owner_username=request.account.username)
+        .prefetch_related('pages')
+        .annotate(finished_attempts=attempts.finished_count())
+    )
     return JsonResponse({'ok': True, 'tests': [_serialize_test(t) for t in tests]})
 
 
@@ -160,12 +170,14 @@ def api_my_attempts(request):
     """Прохождения, активность по дням и серии — для кабинета кандидата."""
     username = request.account.username
     daily = activity.daily(username)
-    return JsonResponse({
-        'ok': True,
-        **statistics.for_candidate(username),
-        'daily': daily,
-        'streak': activity.streaks(daily),
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            **statistics.for_candidate(username),
+            'daily': daily,
+            'streak': activity.streaks(daily),
+        }
+    )
 
 
 @require_GET
@@ -190,7 +202,7 @@ def _owned_test_or_error(request, test_id):
 
 def _save_pages(test, pages_data):
     test.pages.all().delete()
-    for page_data in (pages_data or []):
+    for page_data in pages_data or []:
         page = TestPage.objects.create(
             test=test,
             order=page_data.get('order', 0),
@@ -199,7 +211,7 @@ def _save_pages(test, pages_data):
             content=(page_data.get('content') or ''),
             page_meta=(page_data.get('page_meta') or {}),
         )
-        for ans_data in (page_data.get('answers') or []):
+        for ans_data in page_data.get('answers') or []:
             TestAnswer.objects.create(
                 page=page,
                 text=(ans_data.get('text') or ''),
@@ -288,14 +300,10 @@ def api_test_publish(request, test_id):
 @require_http_methods(['POST'])
 @api_login_required()
 def api_code_run(request, page_id):
-    page = (TestPage.objects
-            .filter(id=page_id, type=TestPage.TYPE_CODE)
-            .select_related('test')
-            .first())
+    page = TestPage.objects.filter(id=page_id, type=TestPage.TYPE_CODE).select_related('test').first()
     # Чужой черновик запускать нельзя: иначе по id страницы можно
     # прощупать задачу из ещё не опубликованного теста
-    if page is None or (page.test.status != Test.STATUS_PUBLISHED
-                        and page.test.owner_username != request.account.username):
+    if page is None or (page.test.status != Test.STATUS_PUBLISHED and page.test.owner_username != request.account.username):
         return JsonResponse({'ok': False, 'message': 'Страница не найдена.'}, status=404)
 
     body = load_json_body(request)
@@ -335,7 +343,8 @@ def api_code_run(request, page_id):
             break
 
         run_result = run_in_docker(
-            language, code,
+            language,
+            code,
             stdin_data=tc.get('input', ''),
             time_limit=max(1, min(time_limit, int(remaining))),
         )

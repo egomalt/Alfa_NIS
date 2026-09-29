@@ -3,6 +3,7 @@
 Всё считается запросами по факту: денормализованных счётчиков здесь нет,
 кроме Contest.participants_count, который ведёт сам конкурс.
 """
+
 from collections import Counter
 from datetime import datetime, time, timedelta
 
@@ -42,39 +43,31 @@ def _weekly(username):
         since = timezone.make_aware(since)
 
     def by_week(queryset, field):
-        rows = (queryset
-                .annotate(week=TruncWeek(field))
-                .values('week')
-                .annotate(n=Count('id'))
-                .values_list('week', 'n'))
-        return {
-            (timezone.localtime(week).date() if settings.USE_TZ else week.date()): n
-            for week, n in rows if week is not None
-        }
+        rows = queryset.annotate(week=TruncWeek(field)).values('week').annotate(n=Count('id')).values_list('week', 'n')
+        return {(timezone.localtime(week).date() if settings.USE_TZ else week.date()): n for week, n in rows if week is not None}
 
     submissions = by_week(
-        ContestSubmission.objects.filter(contest__company_username=username, created_at__gte=since),
-        'created_at')
-    attempts = by_week(
-        TestAttempt.objects.filter(test__owner_username=username, finished_at__gte=since),
-        'finished_at')
+        ContestSubmission.objects.filter(contest__company_username=username, created_at__gte=since), 'created_at'
+    )
+    attempts = by_week(TestAttempt.objects.filter(test__owner_username=username, finished_at__gte=since), 'finished_at')
 
     series = []
     for offset in range(WEEKS):
         week = first + timedelta(weeks=offset)
-        series.append({
-            'week': week.isoformat(),
-            'submissions': submissions.get(week, 0),
-            'attempts': attempts.get(week, 0),
-        })
+        series.append(
+            {
+                'week': week.isoformat(),
+                'submissions': submissions.get(week, 0),
+                'attempts': attempts.get(week, 0),
+            }
+        )
     return series
 
 
 def _skills(username):
     """Навыки тех, кто присылал решения на конкурсы компании."""
     usernames = list(
-        ContestSubmission.objects
-        .filter(contest__company_username=username)
+        ContestSubmission.objects.filter(contest__company_username=username)
         .values_list('candidate_username', flat=True)
         .distinct()[:MAX_PROFILES]
     )
@@ -83,7 +76,7 @@ def _skills(username):
 
     counter = Counter()
     for skills in UserProfile.objects.filter(username__in=usernames).values_list('skills', flat=True):
-        for skill in (skills or []):
+        for skill in skills or []:
             name = str(skill).strip()
             if name:
                 counter[name] += 1
@@ -127,8 +120,7 @@ def collect(company):
         winners=Count('id', filter=Q(winner=True)),
         pending=Count('id', filter=Q(status=ContestSubmission.STATUS_PENDING)),
     )
-    finished_attempts = TestAttempt.objects.filter(
-        test__owner_username=username, finished_at__isnull=False).count()
+    finished_attempts = TestAttempt.objects.filter(test__owner_username=username, finished_at__isnull=False).count()
     stars = rating(company)
 
     return {

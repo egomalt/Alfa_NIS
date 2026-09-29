@@ -4,7 +4,6 @@
 [data-theme='dark'] {
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.36);
 }
-
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line-2) transparent;
@@ -33,7 +32,6 @@ input,
 button {
   font-family: inherit;
 }
-
 /* Progress bar */
 .progress-bar {
   position: fixed;
@@ -50,7 +48,6 @@ button {
   width: 0%;
   transition: width 0.1s linear;
 }
-
 /* Cover */
 .cover {
   position: relative;
@@ -139,7 +136,6 @@ button {
   max-width: 720px;
   overflow-wrap: break-word;
 }
-
 /* Layout */
 .layout {
   max-width: 1160px;
@@ -176,11 +172,9 @@ button {
     padding: 28px 18px 80px;
   }
 }
-
 .article {
   min-width: 0;
 }
-
 /* Meta row */
 .meta-row {
   display: flex;
@@ -286,7 +280,6 @@ a.author-block:hover .author-name {
   color: var(--brand-text);
   background: var(--brand-soft);
 }
-
 /* Prose */
 .prose {
   font-size: 17px;
@@ -371,14 +364,6 @@ a.author-block:hover .author-name {
   border-top: 1px solid var(--line);
   margin: 2.5em 0;
 }
-.prose .lead {
-  font-size: 19px;
-  color: var(--text);
-  font-weight: 500;
-  line-height: 1.7;
-  margin-bottom: 1.8em;
-}
-
 /* Vote widget */
 .vote-row {
   margin: 48px 0 36px;
@@ -445,7 +430,6 @@ a.author-block:hover .author-name {
 .vote-count.down {
   color: #6b3fa0;
 }
-
 /* Author card */
 .author-card {
   display: block;
@@ -545,7 +529,6 @@ a.author-block:hover .author-name {
   color: var(--faint);
   margin-top: 1px;
 }
-
 /* Sidebar */
 .art-sidebar {
   position: sticky;
@@ -568,7 +551,6 @@ a.author-block:hover .author-name {
   color: var(--faint);
   margin-bottom: 14px;
 }
-
 /* TOC */
 .toc-list {
   display: flex;
@@ -615,7 +597,6 @@ a.author-block:hover .author-name {
   font-size: 12px;
   color: var(--muted);
 }
-
 /* Related */
 .related-list {
   display: flex;

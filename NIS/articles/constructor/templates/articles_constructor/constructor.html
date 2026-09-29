@@ -14,7 +14,7 @@
 {% block body %}
   <div class="app">
     <header class="topbar">
-      <a href="/" class="logo">
+      <a href="{% url 'home_page' %}" class="logo">
         <span class="logo-icon">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff">
             <rect x="3.5" y="13" width="4.3" height="8" rx="1.4" /><rect x="9.85" y="8" width="4.3" height="13" rx="1.4" /><rect x="16.2" y="3" width="4.3" height="18" rx="1.4" />
@@ -22,7 +22,7 @@
         </span>
         <span class="logo-text">Career</span>
       </a>
-      <a href="/cabinet/user/articles/" class="btn-back">
+      <a href="{% url 'user_articles' %}" class="btn-back">
         <svg width="14"
              height="14"
              viewBox="0 0 24 24"
@@ -45,7 +45,7 @@
       <div class="topbar-actions">
         <a class="btn"
            id="btn-preview"
-           {% if article_id %}href="/cabinet/user/articles/{{ article_id }}/preview/" target="_blank"{% else %}aria-disabled="true"{% endif %}>
+           {% if article_id %}href="{% url 'article_preview' article_id %}" target="_blank"{% else %}aria-disabled="true"{% endif %}>
           <svg width="13"
                height="13"
                viewBox="0 0 24 24"
@@ -63,7 +63,7 @@
       </div>
       <div class="topbar-tools">
         <a class="btn-theme btn-help"
-           href="/help/"
+           href="{% url 'help_page' %}"
            target="_blank"
            rel="noopener"
            title="Помощь — откроется в новой вкладке"

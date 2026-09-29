@@ -42,12 +42,6 @@
   font-weight: 600;
   color: var(--text-2);
 }
-.cv-hero-status {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 999px;
-}
 .cv-hero-title {
   font-size: 30px;
   font-weight: 800;
@@ -603,7 +597,6 @@ textarea.cv-submit-input {
 .cv-modal-inp:focus {
   border-color: var(--brand);
 }
-
 @media (max-width: 1000px) {
   /* Боковая панель раскрывается в общий поток (display: contents), чтобы
      отсчёт до дедлайна встал над текстом кейса, а статистика и приз —
@@ -626,7 +619,6 @@ textarea.cv-submit-input {
     order: 1;
   }
 }
-
 @media (max-width: 680px) {
   .cv-hero-inner {
     padding: 24px 18px 0;
@@ -634,7 +626,6 @@ textarea.cv-submit-input {
   .cv-wrap {
     padding: 24px 18px 72px;
   }
-
   .cv-hero-top {
     flex-direction: column;
     gap: 14px;
@@ -650,7 +641,6 @@ textarea.cv-submit-input {
     font-size: 14.5px;
     margin-bottom: 16px;
   }
-
   /* Три вкладки в строку не помещаются: строка прокручивается вбок
      до краёв экрана, подписи не переносятся на вторую строку. */
   .cv-tabs {
@@ -668,7 +658,6 @@ textarea.cv-submit-input {
   .cv-tab-btn:last-child {
     margin-right: 0;
   }
-
   .cv-submit-card {
     padding: 18px;
   }
@@ -688,14 +677,7 @@ textarea.cv-submit-input {
   .cv-contact-banner {
     flex-wrap: wrap;
   }
-  .cv-modal {
-    padding: 16px;
-  }
-  .cv-modal-card {
-    padding: 22px 20px;
-  }
 }
-
 @media (max-width: 480px) {
   .cv-hero-inner {
     padding: 20px 14px 0;
@@ -710,7 +692,6 @@ textarea.cv-submit-input {
   .cv-hero-title {
     font-size: 22px;
   }
-
   /* Имя файла уходит на свою строку, размер и «Скачать» остаются в паре */
   .cv-attach-file-row {
     flex-wrap: wrap;
@@ -721,7 +702,6 @@ textarea.cv-submit-input {
   .cv-attach-size {
     margin-left: 26px;
   }
-
   .cv-cd-num {
     font-size: 18px;
   }

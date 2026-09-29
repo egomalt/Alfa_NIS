@@ -7,7 +7,6 @@
  * содержание слева и задание справа. Ниже 900px содержание превращается
  * в выезжающую панель, чтобы не отжимать текст задания в узкую полосу.
  */
-
 .tv-head {
   background: var(--surface);
   border-bottom: 1px solid var(--line);
@@ -70,7 +69,6 @@
   align-items: center;
   gap: 10px;
 }
-
 .tv-progress-row {
   display: flex;
   align-items: center;
@@ -97,7 +95,6 @@
   font-weight: 600;
   color: var(--muted);
 }
-
 /* Открывает содержание на узких экранах; на широких панель видна всегда */
 .tv-toc-btn {
   display: none;
@@ -118,7 +115,6 @@
   color: var(--text);
   border-color: var(--brand);
 }
-
 .tv-body {
   max-width: 1160px;
   margin: 0 auto;
@@ -131,7 +127,6 @@
 .tv-main {
   min-width: 0;
 }
-
 .tv-toc {
   position: sticky;
   top: 84px; /* 64px шапки + воздух */
@@ -182,7 +177,6 @@
   max-height: calc(100vh - 240px);
   overflow-y: auto;
 }
-
 .tv-nav-item {
   display: flex;
   align-items: center;
@@ -213,7 +207,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 /* Номер вопроса. Отвеченные помечаются галочкой, а не серым цветом:
    серый читался как «недоступно», хотя значит ровно обратное. */
 .tv-nav-num {
@@ -243,11 +236,9 @@
   background: transparent;
   color: var(--faint);
 }
-
 .tv-toc-backdrop {
   display: none;
 }
-
 .tv-card {
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -280,7 +271,6 @@
   background: var(--brand-soft);
   color: var(--brand-text);
 }
-
 .tv-question {
   font-size: 18px;
   font-weight: 700;
@@ -336,7 +326,6 @@
   background: none;
   padding: 0;
 }
-
 .tv-answers {
   display: flex;
   flex-direction: column;
@@ -381,7 +370,6 @@
   color: var(--red-text);
   text-decoration: line-through;
 }
-
 .tv-input-field {
   width: 100%;
   margin-top: 18px;
@@ -405,17 +393,6 @@
 .tv-input-field.incorrect {
   border-color: var(--red-text);
 }
-.tv-input-hint {
-  font-size: 13px;
-  margin-top: 6px;
-}
-.tv-input-hint.correct {
-  color: var(--green-text);
-}
-.tv-input-hint.incorrect {
-  color: var(--red-text);
-}
-
 /* Назад слева, Далее/Завершить справа — чтобы движение «вперёд»
    всегда было в одном и том же месте экрана. */
 .tv-nav-btns {
@@ -463,7 +440,6 @@
   opacity: 0.35;
   cursor: default;
 }
-
 .tv-samples {
   margin-top: 18px;
   border: 1px solid var(--line);
@@ -507,7 +483,6 @@
   overflow-wrap: anywhere;
   color: var(--text-2);
 }
-
 .tv-editor {
   margin-top: 18px;
   border: 1px solid var(--line-2);
@@ -587,7 +562,6 @@
   flex-wrap: wrap;
   margin-top: 14px;
 }
-
 .tv-code-results-wrap {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -670,7 +644,6 @@
   font-size: 13px;
   padding: 10px 0;
 }
-
 .tv-results {
   text-align: center;
   padding: 34px 28px;
@@ -738,17 +711,11 @@
   color: var(--muted);
   font-size: 12.5px;
 }
-.tv-error-note {
-  color: var(--red-text);
-  font-size: 13.5px;
-  margin-top: 12px;
-}
 .tv-loading {
   text-align: center;
   padding: 80px 20px;
   color: var(--muted);
 }
-
 @media (max-width: 900px) {
   /* Содержание превращается в выезжающую панель: колонка в 250px
      оставляла заданию полосу, в которую не влезает ни один вопрос. */
@@ -759,7 +726,6 @@
   .tv-toc-btn {
     display: inline-flex;
   }
-
   .tv-toc {
     position: fixed;
     top: 0;
@@ -786,7 +752,6 @@
     flex: 1;
     max-height: none;
   }
-
   .tv-toc-backdrop {
     display: block;
     position: fixed;
@@ -802,7 +767,6 @@
     pointer-events: auto;
   }
 }
-
 @media (max-width: 680px) {
   .tv-head-inner {
     padding: 16px 18px 14px;
@@ -818,7 +782,6 @@
   .tv-head-actions {
     margin-left: 0;
   }
-
   .tv-card {
     padding: 20px 18px;
   }
@@ -832,7 +795,6 @@
   .tv-results {
     padding: 28px 18px;
   }
-
   /* Кнопки навигации в столбик: рядом «Назад» и «Завершить тест» не влезают */
   .tv-nav-btns {
     flex-wrap: wrap;
@@ -846,12 +808,10 @@
   .tv-code-actions .tv-btn {
     flex: 1 1 160px;
   }
-
   .tv-sample {
     grid-template-columns: 1fr;
   }
 }
-
 @media (max-width: 420px) {
   .tv-head-inner {
     padding: 14px 14px 12px;

@@ -2,6 +2,7 @@ from django.db.models import Avg, Count, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
@@ -16,7 +17,7 @@ from tests import attempts
 from tests.constructor.models import Test
 
 from . import statistics
-from .forms import clean_directions, CompanyProfileForm, CompanyVerificationForm
+from .forms import CompanyProfileForm, CompanyVerificationForm, clean_directions
 from .models import Company, CompanyRating, ensure_company
 
 # Каталог фильтруется в браузере, поэтому страница крупная
@@ -37,13 +38,17 @@ def company_tests_page(request):
     account = request.account
     company = ensure_company(account)
     if not company.is_verified:
-        return redirect('/cabinet/company/')
-    return render(request, 'companies/tests.html', {
-        'username': account.username,
-        # page подсвечивает пункт сайдбара, panel='none' — у страницы свой скрипт
-        'page': 'tests',
-        'panel': 'none',
-    })
+        return redirect('company_cabinet')
+    return render(
+        request,
+        'companies/tests.html',
+        {
+            'username': account.username,
+            # page подсвечивает пункт сайдбара, panel='none' — у страницы свой скрипт
+            'page': 'tests',
+            'panel': 'none',
+        },
+    )
 
 
 def _company_rating(company):
@@ -81,11 +86,9 @@ def _serialize_company(company, include_private=False):
     if include_private:
         # Документ лежит вне media/ — ссылка ведёт во вьюху с проверкой прав
         data['registration_document_url'] = (
-            f'/administration/verification/{company.username}/document/'
-            if company.registration_document else ''
+            reverse('admin_verification_document', args=[company.username]) if company.registration_document else ''
         )
     return data
-
 
 
 @require_GET
@@ -93,26 +96,20 @@ def api_companies_list(request):
     # Сортируем по числу опубликованных тестов: компании без тестов внизу.
     # Тесты связаны с компанией строкой owner_username, поэтому подзапрос.
     published_tests = (
-        Test.objects
-        .filter(status=Test.STATUS_PUBLISHED, owner_username=OuterRef('username'))
+        Test.objects.filter(status=Test.STATUS_PUBLISHED, owner_username=OuterRef('username'))
         .values('owner_username')
         .annotate(n=Count('id'))
         .values('n')
     )
     companies_qs = (
-        Company.objects
-        .filter(verification_status=Company.VERIF_APPROVED)
+        Company.objects.filter(verification_status=Company.VERIF_APPROVED)
         .exclude(username__in=bans.banned_usernames())
         .annotate(tests_total=Coalesce(Subquery(published_tests, output_field=IntegerField()), 0))
         .order_by('-tests_total', '-created_at')
     )
     companies, page_meta = paginate(request, companies_qs, CATALOG_PER_PAGE)
 
-    ratings_qs = (
-        CompanyRating.objects
-        .values('company__username')
-        .annotate(avg=Avg('rating'), cnt=Count('id'))
-    )
+    ratings_qs = CompanyRating.objects.values('company__username').annotate(avg=Avg('rating'), cnt=Count('id'))
     ratings_map = {r['company__username']: (round(r['avg'], 1), r['cnt']) for r in ratings_qs}
 
     result = [
@@ -140,11 +137,13 @@ def api_company_detail(request, username):
     company = get_object_or_404(Company, username=username)
     current = get_current_account(request)
     is_owner = current is not None and current.username == username
-    return JsonResponse({
-        'ok': True,
-        'company': _serialize_company(company, include_private=is_owner),
-        'is_owner': is_owner,
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'company': _serialize_company(company, include_private=is_owner),
+            'is_owner': is_owner,
+        }
+    )
 
 
 def _profile_form_data(request, company):
@@ -200,11 +199,13 @@ def api_company_verification(request, username):
     company.submitted_at = timezone.now()
     company.verified_at = None
     company.save()
-    return JsonResponse({
-        'ok': True,
-        'company': _serialize_company(company, include_private=True),
-        'next_url': '/cabinet/company/',
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'company': _serialize_company(company, include_private=True),
+            'next_url': reverse('company_cabinet'),
+        }
+    )
 
 
 @require_GET
@@ -218,7 +219,7 @@ def api_company_tests(request, username):
             {
                 'ok': False,
                 'message': 'Сначала подтвердите компанию, чтобы открыть раздел тестов.',
-                'next_url': '/cabinet/company/',
+                'next_url': reverse('company_cabinet'),
             },
             status=403,
         )
@@ -227,8 +228,7 @@ def api_company_tests(request, username):
     tests = Test.objects.filter(owner_username=username)
     if not is_owner:
         tests = tests.filter(status=Test.STATUS_PUBLISHED)
-    tests = list(tests.annotate(page_total=Count('pages', distinct=True),
-                                finished_attempts=attempts.finished_count()))
+    tests = list(tests.annotate(page_total=Count('pages', distinct=True), finished_attempts=attempts.finished_count()))
 
     total = len(tests)
     active = sum(1 for t in tests if t.status == Test.STATUS_PUBLISHED)
@@ -244,24 +244,30 @@ def api_company_tests(request, username):
             'page_count': t.page_total,
             'submissions': t.finished_attempts,
             'created_at': t.created_at.isoformat(),
-            'url': f'/tests/{t.id}/' if t.status == t.STATUS_PUBLISHED else f'/constructor/{t.id}/?owner={username}',
-            'edit_url': f'/constructor/{t.id}/',
+            'url': (
+                reverse('test_view_page', args=[t.id])
+                if t.status == t.STATUS_PUBLISHED
+                else f'{reverse("constructor_edit_page", args=[t.id])}?owner={username}'
+            ),
+            'edit_url': reverse('constructor_edit_page', args=[t.id]),
         }
         for t in tests
     ]
 
-    return JsonResponse({
-        'ok': True,
-        'company': _serialize_company(company, include_private=is_owner),
-        'is_owner': is_owner,
-        'tests': serialized,
-        'stats': {
-            'total_tests': total,
-            'active_tests': active,
-            'submissions': submissions,
-            'active_rate': round(active / total * 100) if total else 0,
-        },
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'company': _serialize_company(company, include_private=is_owner),
+            'is_owner': is_owner,
+            'tests': serialized,
+            'stats': {
+                'total_tests': total,
+                'active_tests': active,
+                'submissions': submissions,
+                'active_rate': round(active / total * 100) if total else 0,
+            },
+        }
+    )
 
 
 @require_GET
@@ -277,16 +283,8 @@ def api_company_statistics(request, username):
 @require_GET
 @api_login_required()
 def api_my_company_ratings(request):
-    ratings = (
-        CompanyRating.objects
-        .filter(user_username=request.account.username)
-        .select_related('company')
-        .order_by('-id')
-    )
-    result = [
-        {'company_username': r.company.username, 'company_name': r.company.name, 'rating': r.rating}
-        for r in ratings
-    ]
+    ratings = CompanyRating.objects.filter(user_username=request.account.username).select_related('company').order_by('-id')
+    result = [{'company_username': r.company.username, 'company_name': r.company.name, 'rating': r.rating} for r in ratings]
     return JsonResponse({'ok': True, 'ratings': result})
 
 
@@ -310,8 +308,10 @@ def api_company_rate(request, username):
 
     agg = company.ratings.aggregate(avg=Avg('rating'))
     avg = agg['avg']
-    return JsonResponse({
-        'ok': True,
-        'avg_rating': round(avg, 1) if avg is not None else None,
-        'rating_count': company.ratings.count(),
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'avg_rating': round(avg, 1) if avg is not None else None,
+            'rating_count': company.ratings.count(),
+        }
+    )

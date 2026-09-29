@@ -21,7 +21,7 @@
       </svg>
     </button>
   </div>
-  <a href="/cabinet/user/"
+  <a href="{% url 'user_cabinet' %}"
      class="ud-side-link {% if page == 'profile' or not page %}active{% endif %}">
     <svg width="16"
          height="16"
@@ -35,7 +35,7 @@
     </svg>
     Профиль
   </a>
-  <a href="/cabinet/user/tests/"
+  <a href="{% url 'user_tests' %}"
      class="ud-side-link {% if page == 'tests' %}active{% endif %}">
     <svg width="16"
          height="16"
@@ -49,7 +49,7 @@
     </svg>
     Мои тесты
   </a>
-  <a href="/cabinet/user/articles/"
+  <a href="{% url 'user_articles' %}"
      class="ud-side-link {% if page == 'articles' %}active{% endif %}">
     <svg width="16"
          height="16"
@@ -63,7 +63,7 @@
     </svg>
     Мои статьи
   </a>
-  <a href="/cabinet/user/contests/"
+  <a href="{% url 'user_contests' %}"
      class="ud-side-link {% if page == 'contests' %}active{% endif %}">
     <svg width="16"
          height="16"
@@ -77,7 +77,7 @@
     </svg>
     Конкурсы
   </a>
-  <a href="/cabinet/user/statistics/"
+  <a href="{% url 'user_statistics' %}"
      class="ud-side-link {% if page == 'stats' %}active{% endif %}">
     <svg width="16"
          height="16"
@@ -91,7 +91,7 @@
     </svg>
     Статистика
   </a>
-  <a href="/cabinet/user/settings/"
+  <a href="{% url 'user_settings' %}"
      class="ud-side-link {% if page == 'settings' %}active{% endif %}">
     <svg width="16"
          height="16"

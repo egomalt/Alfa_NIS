@@ -12,6 +12,7 @@
     manage.py seed_candidate --user kandidat
     manage.py seed_candidate --clear         # удалить созданное этой командой
 """
+
 import random
 import re
 from datetime import timedelta
@@ -23,7 +24,7 @@ from django.utils import timezone
 
 from articles.constructor.models import Article
 from articles.sanitize import clean_article_html
-from authorization.models import Account, ROLE_USER
+from authorization.models import ROLE_USER, Account
 from companies.models import Company, CompanyRating
 from contests.contests_cabinet.models import Contest, ContestSubmission
 from core.demo import MARK, build_pages, make_attempts
@@ -33,46 +34,106 @@ from users.models import UserProfile
 DEFAULT_USER = 'egor'
 
 SKILLS = ['Python', 'Django', 'SQL', 'PostgreSQL', 'Docker', 'Git']
-BIO = ('Учусь на разработчика, собираю тесты и пишу про подготовку '
-       'к техническим собеседованиям.')
+BIO = 'Учусь на разработчика, собираю тесты и пишу про подготовку к техническим собеседованиям.'
 
 # (название, уровень, категория, опубликован, завершённых прохождений, вопросы)
 TESTS = [
-    ('Алгоритмы: сложность и структуры данных', 'middle', 'backend', True, 34, [
-        ('quiz', 'Какая сложность у поиска в сбалансированном бинарном дереве?',
-         [('O(log n)', True), ('O(1)', False), ('O(n)', False), ('O(n log n)', False)]),
-        ('quiz', 'Что быстрее для проверки вхождения элемента?',
-         [('Множество', True), ('Список', False), ('Кортеж', False), ('Строка', False)]),
-        ('input', 'Как называется обход графа в ширину тремя буквами?',
-         [('BFS', True), ('bfs', True)]),
-        ('quiz', 'Какая структура нужна для отмены последнего действия?',
-         [('Стек', True), ('Очередь', False), ('Куча', False), ('Дерево', False)]),
-    ]),
-    ('JavaScript: промисы и event loop', 'junior', 'frontend', True, 16, [
-        ('quiz', 'Что выполнится раньше — setTimeout(…, 0) или промис?',
-         [('Промис: микрозадачи идут первыми', True), ('setTimeout', False),
-          ('Одновременно', False), ('Зависит от браузера', False)]),
-        ('input', 'Каким ключевым словом помечают функцию, чтобы использовать await?',
-         [('async', True)]),
-        ('quiz', 'Что вернёт Promise.all, если один промис отклонён?',
-         [('Отклонится с первой ошибкой', True), ('Массив с undefined', False),
-          ('Дождётся остальных', False), ('Бросит исключение синхронно', False)]),
-    ]),
-    ('Git: ветки, ребейз и конфликты', 'junior', 'other', True, 4, [
-        ('quiz', 'Чем rebase отличается от merge?',
-         [('Переписывает историю, накладывая коммиты заново', True),
-          ('Ничем', False), ('Работает только с тегами', False),
-          ('Удаляет ветку', False)]),
-        ('input', 'Какой командой посмотреть историю одной строкой на коммит?',
-         [('git log --oneline', True)]),
-    ]),
+    (
+        'Алгоритмы: сложность и структуры данных',
+        'middle',
+        'backend',
+        True,
+        34,
+        [
+            (
+                'quiz',
+                'Какая сложность у поиска в сбалансированном бинарном дереве?',
+                [('O(log n)', True), ('O(1)', False), ('O(n)', False), ('O(n log n)', False)],
+            ),
+            (
+                'quiz',
+                'Что быстрее для проверки вхождения элемента?',
+                [('Множество', True), ('Список', False), ('Кортеж', False), ('Строка', False)],
+            ),
+            ('input', 'Как называется обход графа в ширину тремя буквами?', [('BFS', True), ('bfs', True)]),
+            (
+                'quiz',
+                'Какая структура нужна для отмены последнего действия?',
+                [('Стек', True), ('Очередь', False), ('Куча', False), ('Дерево', False)],
+            ),
+        ],
+    ),
+    (
+        'JavaScript: промисы и event loop',
+        'junior',
+        'frontend',
+        True,
+        16,
+        [
+            (
+                'quiz',
+                'Что выполнится раньше — setTimeout(…, 0) или промис?',
+                [
+                    ('Промис: микрозадачи идут первыми', True),
+                    ('setTimeout', False),
+                    ('Одновременно', False),
+                    ('Зависит от браузера', False),
+                ],
+            ),
+            ('input', 'Каким ключевым словом помечают функцию, чтобы использовать await?', [('async', True)]),
+            (
+                'quiz',
+                'Что вернёт Promise.all, если один промис отклонён?',
+                [
+                    ('Отклонится с первой ошибкой', True),
+                    ('Массив с undefined', False),
+                    ('Дождётся остальных', False),
+                    ('Бросит исключение синхронно', False),
+                ],
+            ),
+        ],
+    ),
+    (
+        'Git: ветки, ребейз и конфликты',
+        'junior',
+        'other',
+        True,
+        4,
+        [
+            (
+                'quiz',
+                'Чем rebase отличается от merge?',
+                [
+                    ('Переписывает историю, накладывая коммиты заново', True),
+                    ('Ничем', False),
+                    ('Работает только с тегами', False),
+                    ('Удаляет ветку', False),
+                ],
+            ),
+            ('input', 'Какой командой посмотреть историю одной строкой на коммит?', [('git log --oneline', True)]),
+        ],
+    ),
     # Черновик: в кабинете должно быть видно оба состояния, и у черновика
     # не должно быть ни статистики, ни публичной страницы
-    ('Django ORM: N+1 и оптимизация запросов', 'middle', 'backend', False, 0, [
-        ('quiz', 'Что чинит select_related?',
-         [('Лишние запросы по ForeignKey', True), ('Дубли строк', False),
-          ('Медленные миграции', False), ('Ничего', False)]),
-    ]),
+    (
+        'Django ORM: N+1 и оптимизация запросов',
+        'middle',
+        'backend',
+        False,
+        0,
+        [
+            (
+                'quiz',
+                'Что чинит select_related?',
+                [
+                    ('Лишние запросы по ForeignKey', True),
+                    ('Дубли строк', False),
+                    ('Медленные миграции', False),
+                    ('Ничего', False),
+                ],
+            ),
+        ],
+    ),
 ]
 
 BODY_LONG = (
@@ -179,31 +240,65 @@ BODY_SHORT = (
 
 # (заголовок, описание, теги, дней назад, просмотры, рейтинг, опубликована, тело)
 ARTICLES = [
-    ('Как я собрал свой первый тест и что о нём сказала статистика',
-     'Три теста, сто прохождений и выводы о том, какие вопросы работают, '
-     'а какие только путают.',
-     ['Практика', 'Обучение'], 3, 412, 27, True, BODY_LONG),
-    ('Пять ошибок в SQL-запросах, которые видно на код-ревью',
-     'Джойны вместо подзапросов, SELECT * и фильтрация после группировки — '
-     'разбираем на примерах.',
-     ['SQL', 'Backend'], 11, 738, 51, True, BODY_SQL),
-    ('Что спрашивают у джуна на собеседовании в 2026 году',
-     'Собрал вопросы с девяти собеседований и разложил по темам.',
-     ['Карьера', 'Собеседования'], 26, 265, 14, True, BODY_SHORT),
-    ('Черновик: заметки про асинхронность в Python',
-     '', ['Python'], 0, 0, 0, False, BODY_SHORT),
+    (
+        'Как я собрал свой первый тест и что о нём сказала статистика',
+        'Три теста, сто прохождений и выводы о том, какие вопросы работают, а какие только путают.',
+        ['Практика', 'Обучение'],
+        3,
+        412,
+        27,
+        True,
+        BODY_LONG,
+    ),
+    (
+        'Пять ошибок в SQL-запросах, которые видно на код-ревью',
+        'Джойны вместо подзапросов, SELECT * и фильтрация после группировки — разбираем на примерах.',
+        ['SQL', 'Backend'],
+        11,
+        738,
+        51,
+        True,
+        BODY_SQL,
+    ),
+    (
+        'Что спрашивают у джуна на собеседовании в 2026 году',
+        'Собрал вопросы с девяти собеседований и разложил по темам.',
+        ['Карьера', 'Собеседования'],
+        26,
+        265,
+        14,
+        True,
+        BODY_SHORT,
+    ),
+    ('Черновик: заметки про асинхронность в Python', '', ['Python'], 0, 0, 0, False, BODY_SHORT),
 ]
 
 # (название конкурса компании, статус решения, победитель, комментарий)
 PARTICIPATIONS = [
-    ('Сервис коротких ссылок', ContestSubmission.STATUS_ACCEPTED, False,
-     'Сделал на FastAPI, хранилище — Redis с TTL. В README объяснил выбор.'),
-    ('Разбор инцидента в проде', ContestSubmission.STATUS_PENDING, False,
-     'Постмортем на две страницы: хронология, корневая причина и три меры.'),
-    ('Редизайн формы отклика', ContestSubmission.STATUS_ACCEPTED, True,
-     'Свёл четыре экрана в один с прогрессом. Обосновал цифрами из воронки.'),
-    ('Дашборд продаж за квартал', ContestSubmission.STATUS_REJECTED, False,
-     'Собрал дашборд, но не успел разобрать падение выручки в четвёртом квартале.'),
+    (
+        'Сервис коротких ссылок',
+        ContestSubmission.STATUS_ACCEPTED,
+        False,
+        'Сделал на FastAPI, хранилище — Redis с TTL. В README объяснил выбор.',
+    ),
+    (
+        'Разбор инцидента в проде',
+        ContestSubmission.STATUS_PENDING,
+        False,
+        'Постмортем на две страницы: хронология, корневая причина и три меры.',
+    ),
+    (
+        'Редизайн формы отклика',
+        ContestSubmission.STATUS_ACCEPTED,
+        True,
+        'Свёл четыре экрана в один с прогрессом. Обосновал цифрами из воронки.',
+    ),
+    (
+        'Дашборд продаж за квартал',
+        ContestSubmission.STATUS_REJECTED,
+        False,
+        'Собрал дашборд, но не успел разобрать падение выручки в четвёртом квартале.',
+    ),
 ]
 
 # Глубина, на которую разносим прохождения чужих тестов: полгода — ровно
@@ -238,10 +333,8 @@ class Command(BaseCommand):
     help = 'Наполняет кабинет кандидата тестами, статьями и участиями в конкурсах.'
 
     def add_arguments(self, parser):
-        parser.add_argument('--user', default=DEFAULT_USER,
-                            help=f'Логин кандидата (по умолчанию {DEFAULT_USER})')
-        parser.add_argument('--clear', action='store_true',
-                            help='Удалить записи, созданные этой командой')
+        parser.add_argument('--user', default=DEFAULT_USER, help=f'Логин кандидата (по умолчанию {DEFAULT_USER})')
+        parser.add_argument('--clear', action='store_true', help='Удалить записи, созданные этой командой')
 
     def handle(self, *args, **options):
         username = options['user']
@@ -262,9 +355,12 @@ class Command(BaseCommand):
             attempts = self._take_tests(username)
             ratings = self._rate_companies(username)
 
-        self.stdout.write(self.style.SUCCESS(
-            f'«{account.name or username}»: тестов {tests}, статей {articles}, '
-            f'участий {entries}, прохождений {attempts}, оценок компаниям {ratings}.'))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'«{account.name or username}»: тестов {tests}, статей {articles}, '
+                f'участий {entries}, прохождений {attempts}, оценок компаниям {ratings}.'
+            )
+        )
         self.stdout.write(f'Кабинет: /cabinet/user/   Профиль: /{username}/')
         self.stdout.write(f'Удалить: manage.py seed_candidate --user {username} --clear')
 
@@ -329,11 +425,9 @@ class Command(BaseCommand):
         for title, status, winner, comment in PARTICIPATIONS:
             contest = Contest.objects.filter(title=title).order_by('-created_at').first()
             if contest is None:
-                self.stdout.write(self.style.WARNING(
-                    f'Конкурс «{title}» не найден — сначала manage.py seed_contests'))
+                self.stdout.write(self.style.WARNING(f'Конкурс «{title}» не найден — сначала manage.py seed_contests'))
                 continue
-            if ContestSubmission.objects.filter(
-                    contest=contest, candidate_username=account.username).exists():
+            if ContestSubmission.objects.filter(contest=contest, candidate_username=account.username).exists():
                 continue
 
             submission = ContestSubmission.objects.create(
@@ -342,8 +436,7 @@ class Command(BaseCommand):
                 candidate_name=account.name or account.username,
                 # Формат решения задаёт конкурс: ссылку в файловый конкурс
                 # прикрепить нельзя, и карточка решения показала бы пустоту
-                link=('https://github.com/example/short-links'
-                      if contest.submission_type == Contest.SUB_LINK else ''),
+                link=('https://github.com/example/short-links' if contest.submission_type == Contest.SUB_LINK else ''),
                 text=f'{comment} {MARK}',
                 status=status,
                 winner=winner,
@@ -353,8 +446,7 @@ class Command(BaseCommand):
             sent = (contest.deadline or timezone.now()) - timedelta(days=2, hours=3)
             ContestSubmission.objects.filter(pk=submission.pk).update(created_at=sent)
             # Иначе в воронке конкурса решений окажется больше, чем участников
-            Contest.objects.filter(pk=contest.pk).update(
-                participants_count=contest.participants_count + 1)
+            Contest.objects.filter(pk=contest.pk).update(participants_count=contest.participants_count + 1)
             created += 1
         return created
 
@@ -372,17 +464,18 @@ class Command(BaseCommand):
         # полно от ручных проб — по ним ни средний балл, ни гистограмма
         # ничего не покажут
         tests = list(
-            Test.objects
-            .filter(status=Test.STATUS_PUBLISHED)
+            Test.objects.filter(status=Test.STATUS_PUBLISHED)
             .exclude(owner_username=username)
             .annotate(pages_total=Count('pages'))
             .filter(pages_total__gte=MIN_TEST_PAGES)
             .order_by('id')
         )
         if not tests:
-            self.stdout.write(self.style.WARNING(
-                f'Нет чужих опубликованных тестов от {MIN_TEST_PAGES} вопросов — '
-                'сначала manage.py seed_contests'))
+            self.stdout.write(
+                self.style.WARNING(
+                    f'Нет чужих опубликованных тестов от {MIN_TEST_PAGES} вопросов — сначала manage.py seed_contests'
+                )
+            )
             return 0
 
         rng = random.Random(f'attempts:{username}')
@@ -415,8 +508,7 @@ class Command(BaseCommand):
             # Время внутри суток отсчитываем от полуночи, а не вычитаем часы
             # из «сейчас»: иначе попытка с большим сдвигом уезжала во вчера,
             # и день, который мы только что назначили активным, оставался пуст
-            day_start = (local_now - timedelta(days=days_ago)).replace(
-                hour=0, minute=0, second=0, microsecond=0)
+            day_start = (local_now - timedelta(days=days_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
             latest = int(min(now - day_start, timedelta(hours=23)).total_seconds() // 60)
 
             for number in range(per_day):
@@ -448,29 +540,26 @@ class Command(BaseCommand):
     def _rate_companies(self, username):
         """Оценки компаниям: раздел «Оценки, которые вы поставили» иначе пуст."""
         companies = list(
-            Company.objects
-            .filter(verification_status=Company.VERIF_APPROVED)
+            Company.objects.filter(verification_status=Company.VERIF_APPROVED)
             .exclude(username=username)
-            .order_by('id')[:len(RATINGS)]
+            .order_by('id')[: len(RATINGS)]
         )
         created = 0
-        for company, rating in zip(companies, RATINGS):
-            _, is_new = CompanyRating.objects.get_or_create(
-                company=company, user_username=username, defaults={'rating': rating})
+        for company, rating in zip(companies, RATINGS, strict=False):
+            _, is_new = CompanyRating.objects.get_or_create(company=company, user_username=username, defaults={'rating': rating})
             created += int(is_new)
         return created
 
     def _clear(self, username):
-        tests = Test.objects.filter(owner_username=username,
-                                    description__contains=MARK).delete()[0]
-        articles = Article.objects.filter(author_username=username,
-                                          content__contains=MARK).delete()[0]
-        entries = ContestSubmission.objects.filter(candidate_username=username,
-                                                   text__contains=MARK).delete()[0]
+        tests = Test.objects.filter(owner_username=username, description__contains=MARK).delete()[0]
+        articles = Article.objects.filter(author_username=username, content__contains=MARK).delete()[0]
+        entries = ContestSubmission.objects.filter(candidate_username=username, text__contains=MARK).delete()[0]
         # Настоящие попытки пользователя идут с пустым session_key — их не трогаем
-        attempts = TestAttempt.objects.filter(candidate_username=username,
-                                              session_key=MARK).delete()[0]
-        self.stdout.write(self.style.SUCCESS(
-            f'Удалено: тестов {tests} (со страницами и прохождениями), '
-            f'статей {articles}, участий {entries}, прохождений {attempts}. '
-            f'Оценки компаниям оставлены.'))
+        attempts = TestAttempt.objects.filter(candidate_username=username, session_key=MARK).delete()[0]
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Удалено: тестов {tests} (со страницами и прохождениями), '
+                f'статей {articles}, участий {entries}, прохождений {attempts}. '
+                f'Оценки компаниям оставлены.'
+            )
+        )

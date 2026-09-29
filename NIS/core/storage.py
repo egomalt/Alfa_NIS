@@ -1,4 +1,5 @@
 """Хранилище вне MEDIA_ROOT: прямой ссылки на такие файлы нет."""
+
 import os
 
 from django.conf import settings

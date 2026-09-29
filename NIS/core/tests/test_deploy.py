@@ -1,4 +1,5 @@
 """Настройки запуска: боевой режим, раздача файлов, демонстрационные данные."""
+
 import importlib
 import os
 from io import StringIO
@@ -17,12 +18,14 @@ class SettingsTests(SimpleTestCase):
     def _load(self, **env):
         """Перечитывает core.settings с подменённым окружением."""
         import core.settings as module
+
         with mock.patch.dict(os.environ, env, clear=False):
             return importlib.reload(module)
 
     def tearDown(self):
         # Возвращаем модуль в состояние текущего запуска
         import core.settings
+
         importlib.reload(core.settings)
 
     def test_debug_key_is_refused_in_production(self):
@@ -68,8 +71,7 @@ class SeedAllTests(TestCase):
 
     def test_seed_all_does_not_touch_an_existing_account(self):
         """Пароль и имя уже заведённого аккаунта команда менять не должна."""
-        Account.objects.create_user('egor', name='Настоящее имя',
-                                    password='Moy-Sobstvenniy-Parol-1', role='user')
+        Account.objects.create_user('egor', name='Настоящее имя', password='Moy-Sobstvenniy-Parol-1', role='user')
 
         call_command('seed_all', stdout=StringIO(), stderr=StringIO())
 

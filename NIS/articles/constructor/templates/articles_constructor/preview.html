@@ -10,7 +10,8 @@
 {% block navbar %}{% endblock %}
 {% block body %}
   <header class="topbar">
-    <a href="/cabinet/user/articles/{{ article_id }}/edit/" class="btn-back">
+    <a href="{% url 'article_constructor_edit' article_id %}"
+       class="btn-back">
       <svg width="13"
            height="13"
            viewBox="0 0 24 24"
@@ -25,7 +26,7 @@
     </a>
     <span class="preview-badge">Предпросмотр</span>
     <a class="btn-theme btn-help"
-       href="/help/"
+       href="{% url 'help_page' %}"
        target="_blank"
        rel="noopener"
        title="Помощь — откроется в новой вкладке"

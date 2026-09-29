@@ -1,4 +1,5 @@
 """Стандартные валидаторы пароля с русскими текстами ошибок."""
+
 from django.contrib.auth import password_validation
 
 

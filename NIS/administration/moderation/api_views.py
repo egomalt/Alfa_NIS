@@ -1,20 +1,25 @@
 from datetime import timedelta
 
-from django.http import JsonResponse
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from authorization import bans
+from authorization.models import (
+    ROLE_COMPANY,
+    ROLE_LABELS,
+    ROLE_MODERATOR,
+    ROLE_USER,
+    STATUS_ACTIVE,
+    STATUS_BANNED,
+    Account,
+)
 from contests.contests_cabinet.models import Contest
 from core.auth import moderator_required
 from core.pagination import paginate
 from core.utils import load_json_body
-from authorization import bans
-from authorization.models import (
-    Account, ROLE_LABELS, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER,
-    STATUS_ACTIVE, STATUS_BANNED,
-)
 
 # Списки модерации могут вырасти, поэтому выдача постраничная.
 CATALOG_PER_PAGE = 100
@@ -96,11 +101,13 @@ def api_user_ban(request, username):
         removed = contests.count()
         contests.delete()
 
-    return JsonResponse({
-        'ok': True,
-        'user': serialize_account(account),
-        'contests_removed': removed,
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'user': serialize_account(account),
+            'contests_removed': removed,
+        }
+    )
 
 
 @require_POST

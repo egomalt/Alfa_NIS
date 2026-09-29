@@ -6,14 +6,13 @@ from django.views.decorators.http import require_http_methods
 
 from articles.constructor.models import Article, ArticleVote
 from articles.serializers import cover_gradient
-from authorization.models import Account, ROLE_COMPANY, ROLE_USER
 from authorization import bans
+from authorization.models import ROLE_COMPANY, ROLE_USER, Account
 from authorization.views import get_current_account
 from companies.models import Company
 from core.auth import api_login_required
 from core.utils import load_json_body
 from users.models import UserProfile
-
 
 AV_COLORS = [
     ('#FCE7E8', '#C81E2D'),
@@ -77,10 +76,7 @@ def article_read(request, article_id):
         for tag in article.tags[:10]:
             tag_filter |= Q(tags__icontains=tag)
         candidates = (
-            Article.objects
-            .filter(tag_filter, status=Article.STATUS_PUBLISHED)
-            .exclude(id=article_id)
-            .order_by('-views')[:60]
+            Article.objects.filter(tag_filter, status=Article.STATUS_PUBLISHED).exclude(id=article_id).order_by('-views')[:60]
         )
         wanted = set(article.tags)
         for a in candidates:
@@ -138,9 +134,7 @@ def api_article_vote(request, article_id):
         return JsonResponse({'ok': False, 'message': 'Неверное направление'}, status=400)
 
     with transaction.atomic():
-        existing = ArticleVote.objects.filter(
-            article=article, voter_username=account.username
-        ).first()
+        existing = ArticleVote.objects.filter(article=article, voter_username=account.username).first()
 
         if existing:
             if existing.direction == direction:

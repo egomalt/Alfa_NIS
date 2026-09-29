@@ -1,4 +1,5 @@
 """Вьюхи экспорта статистики в PDF (с проверкой доступа)."""
+
 from authorization.models import ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER
 from companies.models import ensure_company
 from core.auth import page_login_required

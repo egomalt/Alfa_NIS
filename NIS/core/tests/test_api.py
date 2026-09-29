@@ -1,4 +1,5 @@
 """Пагинация, число запросов к базе и дымовой обход всех адресов."""
+
 import json
 import re
 import tempfile
@@ -13,7 +14,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from articles.constructor.models import Article
-from authorization.models import Account, ROLE_USER
+from authorization.models import ROLE_USER, Account
 from companies import statistics
 from companies.models import Company, CompanyRating
 from contests.contests_cabinet.models import Contest, ContestSubmission
@@ -30,10 +31,9 @@ class PaginationTests(BaseCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        Article.objects.bulk_create([
-            Article(author_username='kandidat', title=f'Статья {i}', status=Article.STATUS_PUBLISHED)
-            for i in range(130)
-        ])
+        Article.objects.bulk_create(
+            [Article(author_username='kandidat', title=f'Статья {i}', status=Article.STATUS_PUBLISHED) for i in range(130)]
+        )
 
     def test_response_is_capped(self):
         data = Client().get('/api/v1/articles/catalog/').json()
@@ -85,10 +85,12 @@ class QueryCountTests(BaseCase):
 
     def test_article_page_does_not_scan_whole_table(self):
         """«Похожие статьи» поднимали в память всю таблицу."""
-        Article.objects.bulk_create([
-            Article(author_username='kandidat', title=f'С {i}', status=Article.STATUS_PUBLISHED, tags=['python'])
-            for i in range(130)
-        ])
+        Article.objects.bulk_create(
+            [
+                Article(author_username='kandidat', title=f'С {i}', status=Article.STATUS_PUBLISHED, tags=['python'])
+                for i in range(130)
+            ]
+        )
         main = self.make_article(author='kandidat', tags=['python'])
         with CaptureQueriesContext(connection) as ctx:
             response = Client().get(f'/articles/{main.id}/')
@@ -127,7 +129,7 @@ class ArticleAuthorLinkTests(BaseCase):
     def test_candidate_author_is_linked_by_name(self):
         body = self._page('kandidat')
         self.assertIn('href="/kandidat/"', body)
-        self.assertIn('Кандидат', body)          # имя, а не логин
+        self.assertIn('Кандидат', body)  # имя, а не логин
         self.assertEqual(Client().get('/kandidat/').status_code, 200)
 
     def test_verified_company_author_is_linked(self):
@@ -195,7 +197,7 @@ class ProfilePageTests(BaseCase):
         self.make_test(owner='firma', published=True)
         # Статика тестовым клиентом не отдаётся — читаем исходник скрипта
         script = Path(settings.BASE_DIR) / 'profiles/static/profiles/company.js'
-        self.assertIn("/tests/\">Все тесты компании", script.read_text(encoding='utf-8'))
+        self.assertIn('/tests/">Все тесты компании', script.read_text(encoding='utf-8'))
         self.assertEqual(Client().get('/firma/tests/').status_code, 200)
 
     def test_company_tests_page_requires_verified_company(self):
@@ -227,14 +229,14 @@ class CompanyStatisticsTests(BaseCase):
 
     def test_totals_count_winners_and_pending(self):
         contest = self.make_contest(owner='firma')
-        ContestSubmission.objects.create(contest=contest, candidate_username='a', winner=True,
-                                         status=ContestSubmission.STATUS_ACCEPTED)
+        ContestSubmission.objects.create(
+            contest=contest, candidate_username='a', winner=True, status=ContestSubmission.STATUS_ACCEPTED
+        )
         ContestSubmission.objects.create(contest=contest, candidate_username='b')
         ContestSubmission.objects.create(contest=contest, candidate_username='c')
 
         test = self.make_test(owner='firma')
-        TestAttempt.objects.create(test=test, candidate_username='a',
-                                   finished_at=timezone.now(), score=1, max_score=1)
+        TestAttempt.objects.create(test=test, candidate_username='a', finished_at=timezone.now(), score=1, max_score=1)
         TestAttempt.objects.create(test=test, candidate_username='b')  # не закончил
 
         totals = self.login('firma').get(self.URL).json()['totals']
@@ -295,8 +297,7 @@ class CompanyReportTests(BaseCase):
         ContestSubmission.objects.create(contest=contest, candidate_username='kandidat')
         UserProfile.objects.create(username='kandidat', skills=['Python', 'SQL'])
         test = self.make_test(owner='firma')
-        TestAttempt.objects.create(test=test, candidate_username='kandidat',
-                                   finished_at=timezone.now(), score=8, max_score=10)
+        TestAttempt.objects.create(test=test, candidate_username='kandidat', finished_at=timezone.now(), score=8, max_score=10)
         CompanyRating.objects.create(company=self.firma(), user_username='kandidat', rating=4)
 
         self.assertTrue(build_company_pdf(self.firma()).startswith(b'%PDF'))
@@ -316,8 +317,9 @@ class CompanyReportTests(BaseCase):
         """Две агрегации по одной связи: строки не должны множиться."""
         test = self.make_test(owner='firma')
         for score in (4, 8):
-            TestAttempt.objects.create(test=test, candidate_username='kandidat',
-                                       finished_at=timezone.now(), score=score, max_score=10)
+            TestAttempt.objects.create(
+                test=test, candidate_username='kandidat', finished_at=timezone.now(), score=score, max_score=10
+            )
         TestAttempt.objects.create(test=test, candidate_username='drugoy')  # не закончил
 
         row = test_rows('firma')[0]
@@ -342,13 +344,13 @@ class CompanyReportTests(BaseCase):
         for i in range(12):
             test = self.make_test(owner='firma', title=f'Тест {i}')
             for _ in range(i):
-                TestAttempt.objects.create(test=test, candidate_username='kandidat',
-                                           finished_at=timezone.now(), score=1, max_score=1)
+                TestAttempt.objects.create(
+                    test=test, candidate_username='kandidat', finished_at=timezone.now(), score=1, max_score=1
+                )
 
         contests = contest_rows('firma')
         tests = test_rows('firma')
-        self.assertEqual([c.title for c in contests],
-                         ['Конкурс 6', 'Конкурс 5', 'Конкурс 4', 'Конкурс 3', 'Конкурс 2'])
+        self.assertEqual([c.title for c in contests], ['Конкурс 6', 'Конкурс 5', 'Конкурс 4', 'Конкурс 3', 'Конкурс 2'])
         self.assertEqual(len(tests), 10)
         self.assertEqual(tests[0].title, 'Тест 11')
 
@@ -369,8 +371,7 @@ class ReportBuilderTests(SimpleTestCase):
     def test_plural_picks_the_russian_form(self):
         forms = ('отзыв', 'отзыва', 'отзывов')
         picked = [plural(n, forms) for n in (1, 2, 5, 11, 21, 104)]
-        self.assertEqual(picked, ['отзыв', 'отзыва', 'отзывов',
-                                  'отзывов', 'отзыв', 'отзыва'])
+        self.assertEqual(picked, ['отзыв', 'отзыва', 'отзывов', 'отзывов', 'отзыв', 'отзыва'])
 
 
 class ContestStatisticsTests(BaseCase):
@@ -392,9 +393,11 @@ class ContestStatisticsTests(BaseCase):
         for i in range(4):
             ContestSubmission.objects.create(contest=contest, candidate_username=f'k{i}')
         ContestSubmission.objects.filter(contest=contest, candidate_username='k0').update(
-            status=ContestSubmission.STATUS_ACCEPTED)
+            status=ContestSubmission.STATUS_ACCEPTED
+        )
         ContestSubmission.objects.filter(contest=contest, candidate_username='k1').update(
-            status=ContestSubmission.STATUS_REJECTED)
+            status=ContestSubmission.STATUS_REJECTED
+        )
 
         funnel = self.login('firma').get(self._url(contest)).json()['funnel']
         self.assertEqual(funnel['participants'], 10)
@@ -423,8 +426,7 @@ class ContestStatisticsTests(BaseCase):
         """Иначе сумма столбиков расходится с числом решений, и график врёт."""
         contest = self.make_contest(owner='firma')
         old = ContestSubmission.objects.create(contest=contest, candidate_username='davniy')
-        ContestSubmission.objects.filter(pk=old.pk).update(
-            created_at=contest.deadline - timedelta(days=60))
+        ContestSubmission.objects.filter(pk=old.pk).update(created_at=contest.deadline - timedelta(days=60))
 
         data = self.login('firma').get(self._url(contest)).json()
         self.assertEqual(sum(row['count'] for row in data['daily']), 0)
@@ -442,8 +444,8 @@ class TestStatisticsTests(BaseCase):
 
     def _finish(self, test, username, score, max_score=4):
         return TestAttempt.objects.create(
-            test=test, candidate_username=username,
-            finished_at=timezone.now(), score=score, max_score=max_score)
+            test=test, candidate_username=username, finished_at=timezone.now(), score=score, max_score=max_score
+        )
 
     def _url(self, test):
         return f'/api/v1/tests/{test.id}/statistics/'
@@ -456,13 +458,13 @@ class TestStatisticsTests(BaseCase):
 
     def test_average_and_pass_rate(self):
         test = self.make_test(owner='firma')
-        for i, score in enumerate([4, 3, 2, 0]):   # 100%, 75%, 50%, 0%
+        for i, score in enumerate([4, 3, 2, 0]):  # 100%, 75%, 50%, 0%
             self._finish(test, f'k{i}', score)
 
         data = self.login('firma').get(self._url(test)).json()['attempts']
         self.assertEqual(data['finished'], 4)
-        self.assertEqual(data['avg_percent'], 56)          # (100+75+50+0)/4
-        self.assertEqual(data['pass_rate'], 50)            # порог 60%: 100 и 75
+        self.assertEqual(data['avg_percent'], 56)  # (100+75+50+0)/4
+        self.assertEqual(data['pass_rate'], 50)  # порог 60%: 100 и 75
 
     def test_unfinished_attempts_split_into_running_and_abandoned(self):
         """Тот, кто прямо сейчас решает, не должен попадать в «бросили»."""
@@ -470,8 +472,7 @@ class TestStatisticsTests(BaseCase):
         self._finish(test, 'doshel', 4)
         TestAttempt.objects.create(test=test, candidate_username='seychas-reshaet')
         stale = TestAttempt.objects.create(test=test, candidate_username='brosil')
-        TestAttempt.objects.filter(pk=stale.pk).update(
-            started_at=timezone.now() - timedelta(days=3))
+        TestAttempt.objects.filter(pk=stale.pk).update(started_at=timezone.now() - timedelta(days=3))
 
         data = self.login('firma').get(self._url(test)).json()['attempts']
         self.assertEqual(data['started'], 3)
@@ -482,8 +483,7 @@ class TestStatisticsTests(BaseCase):
     def test_test_without_questions_does_not_divide_by_zero(self):
         """max_score = 0 у теста без вопросов — среднее посчитать не из чего."""
         test = self.make_test(owner='firma', with_quiz=False)
-        TestAttempt.objects.create(test=test, candidate_username='k',
-                                   finished_at=timezone.now(), score=0, max_score=0)
+        TestAttempt.objects.create(test=test, candidate_username='k', finished_at=timezone.now(), score=0, max_score=0)
 
         data = self.login('firma').get(self._url(test)).json()['attempts']
         self.assertEqual(data['finished'], 1)
@@ -562,9 +562,9 @@ class UserTestsSectionTests(BaseCase):
 
     def test_rows_offer_statistics_for_published_tests(self):
         """Ссылки «Как проходят тест» в кабинете кандидата не было вовсе."""
-        script = Path(settings.BASE_DIR) / 'cabinet/static/cabinet/user.js'
+        script = Path(settings.BASE_DIR) / 'cabinet/static/cabinet/user/tests.js'
         source = script.read_text(encoding='utf-8')
-        self.assertIn("stats/", source)
+        self.assertIn('stats/', source)
         self.assertIn('action-icon-btn', source)
 
     def test_candidate_opens_statistics_of_own_test(self):
@@ -582,7 +582,7 @@ class UserTestsSectionTests(BaseCase):
         self.assertEqual(client.get(f'/tests/{test.id}/').status_code, 404)
         self.assertEqual(client.get(f'/tests/{test.id}/?preview=1').status_code, 200)
 
-        for path in ('cabinet/static/cabinet/user.js', 'companies/static/companies/app.js'):
+        for path in ('cabinet/static/cabinet/user/tests.js', 'companies/static/companies/app.js'):
             with self.subTest(path=path):
                 source = (Path(settings.BASE_DIR) / path).read_text(encoding='utf-8')
                 self.assertIn('?preview=1', source)
@@ -595,8 +595,12 @@ class CandidateStatisticsTests(BaseCase):
 
     def attempt(self, test, score, max_score=10, finished=True, days_ago=0):
         attempt = TestAttempt.objects.create(
-            test=test, candidate_username='kandidat', score=score, max_score=max_score,
-            finished_at=timezone.now() - timedelta(days=days_ago) if finished else None)
+            test=test,
+            candidate_username='kandidat',
+            score=score,
+            max_score=max_score,
+            finished_at=timezone.now() - timedelta(days=days_ago) if finished else None,
+        )
         return attempt
 
     def test_requires_login(self):
@@ -607,14 +611,14 @@ class CandidateStatisticsTests(BaseCase):
         test = self.make_test(owner='firma')
         self.attempt(test, 8)
         self.attempt(test, 4)
-        self.attempt(test, 0, max_score=0)          # пустой тест
-        self.attempt(test, 0, finished=False)       # не закончил
+        self.attempt(test, 0, max_score=0)  # пустой тест
+        self.attempt(test, 0, finished=False)  # не закончил
 
         data = self.login('kandidat').get(self.URL).json()
         self.assertEqual(data['started'], 4)
         self.assertEqual(data['finished'], 3)
-        self.assertEqual(data['avg_percent'], 60)   # (80 + 40) / 2
-        self.assertEqual(data['passed'], 1)         # порог 60%
+        self.assertEqual(data['avg_percent'], 60)  # (80 + 40) / 2
+        self.assertEqual(data['passed'], 1)  # порог 60%
 
     def test_daily_series_groups_by_day(self):
         test = self.make_test(owner='firma')
@@ -641,23 +645,32 @@ class CandidateStatisticsTests(BaseCase):
         # Плашки внутри секций заменены на лёгкие факты
         self.assertNotIn('ud-grid-2', body)
 
-    def test_cabinet_script_guards_on_ids_that_exist(self):
-        """Скрипт кабинета выходит по проверке «моя ли это страница».
-
-        Каждый такой якорь обязан существовать хотя бы в одном шаблоне:
-        иначе раздел молча не отрисуется.
-        """
+    def test_cabinet_panels_use_ids_that_exist(self):
+        """Кабинет кандидата — ядро и по модулю на раздел. Модуль раздела
+        подключает только его страница, поэтому каждый id, к которому он
+        обращается, обязан быть в её шаблоне: иначе раздел молча не отрисуется."""
         root = Path(settings.BASE_DIR)
-        source = (root / 'cabinet/static/cabinet/user.js').read_text(encoding='utf-8')
-        known = set()
-        for template in (root / 'cabinet/templates/cabinet').glob('*.html'):
-            known |= set(re.findall(r'id="([\w-]+)"', template.read_text(encoding='utf-8')))
-
-        guards = re.findall(r"if \(!document\.getElementById\('([\w-]+)'\)\) return;", source)
-        self.assertTrue(guards, 'у разделов кабинета нет проверки на свою страницу')
-        for element_id in guards:
-            with self.subTest(id=element_id):
-                self.assertIn(element_id, known)
+        panels = {
+            'profile': 'cabinet/templates/cabinet/user_profile.html',
+            'stats': 'cabinet/templates/cabinet/user_statistics.html',
+            'settings': 'cabinet/templates/cabinet/user_settings.html',
+            'tests': 'tests/tests_cabinet/templates/tests_cabinet/my_tests.html',
+            'articles': 'articles/articles_cabinet/templates/articles_cabinet/my_articles.html',
+            'contests': 'contests/contests_cabinet/templates/contests/contests_cabinet/my_contests_user.html',
+        }
+        shared = (root / 'cabinet/templates/cabinet/base_user.html').read_text(encoding='utf-8') + (
+            root / 'cabinet/templates/cabinet/_user_sidebar.html'
+        ).read_text(encoding='utf-8')
+        for panel, template in panels.items():
+            with self.subTest(panel=panel):
+                markup = (root / template).read_text(encoding='utf-8')
+                self.assertIn(f'cabinet/user/{panel}.js', markup)
+                known = set(re.findall(r'id="([\w-]+)"', markup + shared))
+                source = (root / f'cabinet/static/cabinet/user/{panel}.js').read_text(encoding='utf-8')
+                ids = set(re.findall(r"byId\('([\w-]+)'\)", source))
+                # Составные id (ud-${key}-body) собирает общий listPanel в ядре
+                self.assertTrue(ids or 'listPanel' in source, f'модуль {panel} не обращается к странице')
+                self.assertEqual(ids - known, set(), f'нет в шаблоне {template}')
 
     def test_report_carries_the_same_numbers(self):
         test = self.make_test(owner='firma')
@@ -689,10 +702,9 @@ class UserArticlesSectionTests(BaseCase):
         draft = self.make_article(author='kandidat', published=False, title='Черновик')
         client = self.login('kandidat')
         self.assertEqual(client.get(f'/articles/{draft.id}/').status_code, 404)
-        self.assertEqual(
-            client.get(f'/cabinet/user/articles/{draft.id}/preview/').status_code, 200)
+        self.assertEqual(client.get(f'/cabinet/user/articles/{draft.id}/preview/').status_code, 200)
 
-        source = (Path(settings.BASE_DIR) / 'cabinet/static/cabinet/user.js').read_text(encoding='utf-8')
+        source = (Path(settings.BASE_DIR) / 'cabinet/static/cabinet/user/articles.js').read_text(encoding='utf-8')
         self.assertIn('/preview/', source)
 
 
@@ -702,8 +714,8 @@ class UserContestsSectionTests(BaseCase):
     def submission(self, candidate='kandidat', **kwargs):
         contest = kwargs.pop('contest', None) or self.make_contest(owner='firma')
         return ContestSubmission.objects.create(
-            contest=contest, candidate_username=candidate,
-            text='Моё решение', comment='Делал на выходных', **kwargs)
+            contest=contest, candidate_username=candidate, text='Моё решение', comment='Делал на выходных', **kwargs
+        )
 
     def test_list_uses_the_shared_table(self):
         body = self.login('kandidat').get('/cabinet/user/contests/').content.decode()
@@ -721,8 +733,7 @@ class UserContestsSectionTests(BaseCase):
 
     def test_owner_sees_the_whole_submission(self):
         submission = self.submission(status=ContestSubmission.STATUS_ACCEPTED)
-        data = self.login('kandidat').get(
-            f'/api/v1/contests/my-submissions/{submission.id}/').json()
+        data = self.login('kandidat').get(f'/api/v1/contests/my-submissions/{submission.id}/').json()
         self.assertEqual(data['submission']['text'], 'Моё решение')
         self.assertEqual(data['submission']['comment'], 'Делал на выходных')
         self.assertEqual(data['submission']['status'], 'accepted')
@@ -732,8 +743,7 @@ class UserContestsSectionTests(BaseCase):
         """Внутри решения файл и переписка — чужое отдавать нельзя."""
         submission = self.submission(candidate='drugoy')
         client = self.login('kandidat')
-        self.assertEqual(
-            client.get(f'/api/v1/contests/my-submissions/{submission.id}/').status_code, 404)
+        self.assertEqual(client.get(f'/api/v1/contests/my-submissions/{submission.id}/').status_code, 404)
         self.assertEqual(client.get(f'/cabinet/user/contests/{submission.id}/').status_code, 404)
 
     def test_submission_page_opens_for_its_author(self):
@@ -753,8 +763,11 @@ class CabinetSidebarTests(BaseCase):
         contest = self.make_contest(owner='firma')
         test = self.make_test(owner='firma')
         return [
-            '/cabinet/company/', '/cabinet/company/statistics/', '/cabinet/company/settings/',
-            '/cabinet/company/tests/', '/cabinet/company/contests/',
+            '/cabinet/company/',
+            '/cabinet/company/statistics/',
+            '/cabinet/company/settings/',
+            '/cabinet/company/tests/',
+            '/cabinet/company/contests/',
             f'/cabinet/company/contests/{contest.id}/submissions/',
             f'/constructor/{test.id}/stats/',
         ]
@@ -794,8 +807,7 @@ class CabinetSidebarTests(BaseCase):
         """Бан означал только «не войти»: профиль и материалы жили дальше."""
         self.make_article(author='kandidat', title='Статья')
         self.make_test(owner='kandidat', title='Тест')
-        Account.objects.filter(username='kandidat').update(
-            status='banned', ban_until=None, ban_reason='спам')
+        Account.objects.filter(username='kandidat').update(status='banned', ban_until=None, ban_reason='спам')
 
         anon = Client()
         self.assertEqual(anon.get('/kandidat/').status_code, 404)
@@ -815,8 +827,7 @@ class CabinetSidebarTests(BaseCase):
         """status снимается только при входе, поэтому фильтр смотрит на дату."""
         from authorization import bans
 
-        Account.objects.filter(username='kandidat').update(
-            status='banned', ban_until=timezone.now() - timedelta(days=1))
+        Account.objects.filter(username='kandidat').update(status='banned', ban_until=timezone.now() - timedelta(days=1))
         self.assertNotIn('kandidat', bans.banned_usernames())
         self.assertEqual(Client().get('/kandidat/').status_code, 200)
 
@@ -828,8 +839,7 @@ class CabinetSidebarTests(BaseCase):
         self.assertTrue(me['banned'])
         self.assertEqual(me['ban_reason'], 'спам')
 
-        response = client.patch('/api/v1/candidates/kandidat/update/',
-                                json.dumps({'name': 'Новое'}), 'application/json')
+        response = client.patch('/api/v1/candidates/kandidat/update/', json.dumps({'name': 'Новое'}), 'application/json')
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['code'], 'banned')
         self.assertEqual(Account.objects.get(username='kandidat').name, 'Кандидат')
@@ -840,8 +850,8 @@ class CabinetSidebarTests(BaseCase):
         self.make_contest(owner='firma', title='Второй')
 
         response = self.login('moder').post(
-            '/api/v1/admin/users/firma/ban/',
-            json.dumps({'reason': 'нарушение', 'duration': 'perm'}), 'application/json')
+            '/api/v1/admin/users/firma/ban/', json.dumps({'reason': 'нарушение', 'duration': 'perm'}), 'application/json'
+        )
         self.assertEqual(response.json()['contests_removed'], 2)
         self.assertEqual(Contest.objects.filter(company_username='firma').count(), 0)
 
@@ -849,11 +859,11 @@ class CabinetSidebarTests(BaseCase):
         """Работу компания видеть должна, личность заблокированного — нет."""
         contest = self.make_contest(owner='firma')
         ContestSubmission.objects.create(
-            contest=contest, candidate_username='kandidat', candidate_name='Кандидат', text='Решение')
+            contest=contest, candidate_username='kandidat', candidate_name='Кандидат', text='Решение'
+        )
         Account.objects.filter(username='kandidat').update(status='banned')
 
-        row = self.login('firma').get(
-            f'/api/v1/contests/{contest.id}/submissions/').json()['submissions'][0]
+        row = self.login('firma').get(f'/api/v1/contests/{contest.id}/submissions/').json()['submissions'][0]
         self.assertEqual(row['candidate_name'], 'Заблокирован')
         self.assertEqual(row['candidate_username'], '')
         self.assertTrue(row['candidate_banned'])
@@ -869,12 +879,12 @@ class CabinetSidebarTests(BaseCase):
         self.assertNotIn('warned_at', fields)
         self.assertNotIn('warned', dict(AccountModel._meta.get_field('status').choices))
 
-        self.assertEqual(
-            self.login('moder').post('/api/v1/admin/users/kandidat/warn/').status_code, 404)
+        self.assertEqual(self.login('moder').post('/api/v1/admin/users/kandidat/warn/').status_code, 404)
 
         root = Path(settings.BASE_DIR)
-        for path in list(root.glob('*/static/**/*.js')) + list(root.glob('*/*/static/**/*.js')) \
-                + [root / 'static/js/moderation-bar.js']:
+        for path in (
+            list(root.glob('*/static/**/*.js')) + list(root.glob('*/*/static/**/*.js')) + [root / 'static/js/moderation-bar.js']
+        ):
             with self.subTest(file=path.name):
                 self.assertNotIn('/warn/', path.read_text(encoding='utf-8'))
 
@@ -909,8 +919,7 @@ class CabinetSidebarTests(BaseCase):
 
         # Обычному пользователю этот адрес недоступен
         other = self.make_test(owner='kandidat')
-        self.assertEqual(
-            self.login('kandidat').post(f'/api/v1/admin/content/test/{other.id}/delete/').status_code, 403)
+        self.assertEqual(self.login('kandidat').post(f'/api/v1/admin/content/test/{other.id}/delete/').status_code, 403)
 
     def test_moderation_bar_says_actions_not_author_actions(self):
         source = (Path(settings.BASE_DIR) / 'static/js/moderation-bar.js').read_text(encoding='utf-8')
@@ -924,8 +933,12 @@ class CabinetSidebarTests(BaseCase):
         то, что уже нарисовал career.js."""
         root = Path(settings.BASE_DIR)
         renderers = []
-        for path in list(root.glob('*/templates/**/*.html')) + list(root.glob('*/*/templates/**/*.html')) \
-                + list(root.glob('*/static/**/*.js')) + list(root.glob('*/*/static/**/*.js')):
+        for path in (
+            list(root.glob('*/templates/**/*.html'))
+            + list(root.glob('*/*/templates/**/*.html'))
+            + list(root.glob('*/static/**/*.js'))
+            + list(root.glob('*/*/static/**/*.js'))
+        ):
             if 'cr-user-role' in path.read_text(encoding='utf-8'):
                 renderers.append(str(path.relative_to(root)))
         self.assertEqual(renderers, [], 'чип пользователя рисует только static/js/career.js')
@@ -949,8 +962,9 @@ class CabinetSidebarTests(BaseCase):
         self.assertIn('js/career.js', body)
         self.assertNotIn('ap-user-chip', body)
 
-        css = (Path(settings.BASE_DIR)
-               / 'administration/dashboard/static/administration/dashboard.css').read_text(encoding='utf-8')
+        css = (Path(settings.BASE_DIR) / 'administration/dashboard/static/administration/dashboard.css').read_text(
+            encoding='utf-8'
+        )
         for rule in ('.ap-user-chip', '.ap-avatar', '.ap-user-name', '.ap-user-role'):
             with self.subTest(rule=rule):
                 self.assertNotIn(rule, css)
@@ -958,8 +972,9 @@ class CabinetSidebarTests(BaseCase):
     def test_admin_sidebar_stays_on_screen(self):
         """Панель тянулась вместе со страницей: на длинном списке до кнопки
         «Выйти» приходилось листать весь список до конца."""
-        css = (Path(settings.BASE_DIR)
-               / 'administration/dashboard/static/administration/dashboard.css').read_text(encoding='utf-8')
+        css = (Path(settings.BASE_DIR) / 'administration/dashboard/static/administration/dashboard.css').read_text(
+            encoding='utf-8'
+        )
         rule = re.search(r'\.ap-sidebar \{([^}]*)\}', css)
         self.assertIsNotNone(rule, 'нет правила .ap-sidebar')
         self.assertIn('position: sticky', rule.group(1))
@@ -969,8 +984,9 @@ class CabinetSidebarTests(BaseCase):
         """Карточка заявки была одной нерезиновой строкой: аватар, название,
         чип документа и две кнопки. Названию оставалось меньше ширины буквы,
         и оно переносилось по одному символу."""
-        css = (Path(settings.BASE_DIR)
-               / 'administration/dashboard/static/administration/dashboard.css').read_text(encoding='utf-8')
+        css = (Path(settings.BASE_DIR) / 'administration/dashboard/static/administration/dashboard.css').read_text(
+            encoding='utf-8'
+        )
         phone = re.search(r'@media \(max-width: 560px\) \{(.*?)\n\}', css, re.S)
         self.assertIsNotNone(phone, 'у админки нет телефонного медиазапроса')
         for rule in ('.ap-verify-card', '.ap-verify-main', '.ap-search-input'):
@@ -983,8 +999,9 @@ class CabinetSidebarTests(BaseCase):
     def test_admin_table_cells_cannot_overflow(self):
         """Плашка «Забанен до 2 октября 2026 г.» вылезала на соседнюю
         колонку: ячейка грида не сжимается ниже содержимого без minmax(0)."""
-        css = (Path(settings.BASE_DIR)
-               / 'administration/dashboard/static/administration/dashboard.css').read_text(encoding='utf-8')
+        css = (Path(settings.BASE_DIR) / 'administration/dashboard/static/administration/dashboard.css').read_text(
+            encoding='utf-8'
+        )
         rule = re.search(r'\.ap-trow \{([^}]*)\}', css)
         self.assertIsNotNone(rule, 'нет правила .ap-trow')
         self.assertIn('minmax(0', rule.group(1))
@@ -1026,8 +1043,9 @@ class CabinetSidebarTests(BaseCase):
             checked += 1
             relative = path.relative_to(root).as_posix()
             with self.subTest(page=relative):
-                self.assertTrue(extends_base(relative.split('templates/', 1)[1]),
-                                'страница не наследует base.html и не подключает career.js')
+                self.assertTrue(
+                    extends_base(relative.split('templates/', 1)[1]), 'страница не наследует base.html и не подключает career.js'
+                )
         self.assertGreaterEqual(checked, 10, 'страницы с шапкой не нашлись — проверка ничего не проверила')
 
     def test_user_chip_knows_every_role(self):
@@ -1043,7 +1061,7 @@ class CabinetSidebarTests(BaseCase):
         сайдбаре оставили. Разметка без обработчика выглядит исправной."""
         root = Path(settings.BASE_DIR)
         pairs = (
-            ('cabinet/templates/cabinet/_user_sidebar.html', 'cabinet/static/cabinet/user.js', 'ud-logout-btn'),
+            ('cabinet/templates/cabinet/_user_sidebar.html', 'cabinet/static/cabinet/user/cabinet.js', 'ud-logout-btn'),
             ('cabinet/templates/cabinet/_company_sidebar.html', 'cabinet/static/cabinet/company.js', 'cp-logout-btn'),
         )
         for template, script, button_id in pairs:
@@ -1077,9 +1095,9 @@ class CabinetSidebarTests(BaseCase):
         должны либо лежать в контейнере с прокруткой, либо сниматься
         в мобильном медиазапросе.
         """
-        css = (Path(settings.BASE_DIR)
-               / 'contests/contests_cabinet/static/contests/contests_cabinet/contests_cabinet.css'
-               ).read_text(encoding='utf-8')
+        css = (
+            Path(settings.BASE_DIR) / 'contests/contests_cabinet/static/contests/contests_cabinet/contests_cabinet.css'
+        ).read_text(encoding='utf-8')
 
         wide = re.findall(r'min-width: (\d{3,})px', css)
         self.assertTrue(wide, 'правило с min-width пропало — проверьте тест')
@@ -1104,9 +1122,9 @@ class CabinetSidebarTests(BaseCase):
         self.assertIn('class="list-card"', body)
         self.assertIn('class="list-card-header"', body)
 
-        script = (Path(settings.BASE_DIR)
-                  / 'contests/contests_cabinet/static/contests/contests_cabinet/company_contests.js'
-                  ).read_text(encoding='utf-8')
+        script = (
+            Path(settings.BASE_DIR) / 'contests/contests_cabinet/static/contests/contests_cabinet/company_contests.js'
+        ).read_text(encoding='utf-8')
         self.assertIn('class="list-card"', script)
         self.assertIn('class="list-card-header"', script)
         # Прокрутка живёт внутри карточки, иначе строки распирают страницу
@@ -1147,11 +1165,10 @@ class TemplateCommentTests(SimpleTestCase):
             text = path.read_text(encoding='utf-8')
             for match in re.finditer(r'\{#', text):
                 end = text.find('#}', match.start())
-                if end == -1 or '\n' in text[match.start():end]:
-                    broken.append(f'{path.relative_to(settings.BASE_DIR)}:{text[:match.start()].count(chr(10)) + 1}')
+                if end == -1 or '\n' in text[match.start() : end]:
+                    broken.append(f'{path.relative_to(settings.BASE_DIR)}:{text[: match.start()].count(chr(10)) + 1}')
 
-        self.assertEqual(broken, [], 'многострочный {# #} выводится на страницу, нужен {% comment %}: '
-                                     + ', '.join(broken))
+        self.assertEqual(broken, [], 'многострочный {# #} выводится на страницу, нужен {% comment %}: ' + ', '.join(broken))
 
 
 class PublicProfileContentTests(BaseCase):
@@ -1161,8 +1178,12 @@ class PublicProfileContentTests(BaseCase):
 
     def take(self, test, score, max_score=10, days_ago=0):
         TestAttempt.objects.create(
-            test=test, candidate_username='kandidat', score=score, max_score=max_score,
-            finished_at=timezone.now() - timedelta(days=days_ago))
+            test=test,
+            candidate_username='kandidat',
+            score=score,
+            max_score=max_score,
+            finished_at=timezone.now() - timedelta(days=days_ago),
+        )
 
     def test_strengths_come_from_test_topics(self):
         """Навыки человек вписывает сам, а темы подтверждены чужими тестами."""
@@ -1216,8 +1237,7 @@ class PublicProfileContentTests(BaseCase):
             self.assertEqual(data['phone'], '+7 900 000-00-00')
 
         with self.subTest('неподтверждённая компания'):
-            Company.objects.filter(username='konkurent').update(
-                verification_status=Company.VERIF_NONE)
+            Company.objects.filter(username='konkurent').update(verification_status=Company.VERIF_NONE)
             data = self.login('konkurent').get(self.URL).json()['candidate']
             self.assertNotIn('email', data)
 
@@ -1228,17 +1248,22 @@ class PublicProfileContentTests(BaseCase):
     def test_links_are_normalized_and_filtered(self):
         from users import links
 
-        cleaned = links.clean({
-            'github': 'egomalt',
-            'telegram': '@egomalt',
-            'site': 'example.com',
-            'vk': 'кто-то лишний',
-        })
-        self.assertEqual(cleaned, {
-            'github': 'https://github.com/egomalt',
-            'telegram': 'https://t.me/egomalt',
-            'site': 'https://example.com',
-        })
+        cleaned = links.clean(
+            {
+                'github': 'egomalt',
+                'telegram': '@egomalt',
+                'site': 'example.com',
+                'vk': 'кто-то лишний',
+            }
+        )
+        self.assertEqual(
+            cleaned,
+            {
+                'github': 'https://github.com/egomalt',
+                'telegram': 'https://t.me/egomalt',
+                'site': 'https://example.com',
+            },
+        )
 
     def test_links_reject_other_schemes(self):
         """«javascript:» с подставленным https:// стал бы ссылкой-мусором."""
@@ -1426,38 +1451,81 @@ class SmokeTests(BaseCase):
     """Ни один адрес не должен отвечать ошибкой 500 ни для одной роли."""
 
     PAGES = [
-        '/', '/companies/', '/articles/', '/tests/', '/contests/', '/constructor/',
-        '/cabinet/', '/cabinet/user/', '/cabinet/user/articles/', '/cabinet/user/tests/',
-        '/cabinet/user/contests/', '/cabinet/user/settings/', '/cabinet/user/statistics/',
-        '/cabinet/user/articles/new/', '/cabinet/company/', '/cabinet/company/settings/',
-        '/cabinet/company/statistics/', '/cabinet/company/tests/', '/cabinet/company/contests/',
-        '/cabinet/company/contests/new/', '/administration/', '/kandidat/', '/firma/',
+        '/',
+        '/companies/',
+        '/articles/',
+        '/tests/',
+        '/contests/',
+        '/constructor/',
+        '/cabinet/',
+        '/cabinet/user/',
+        '/cabinet/user/articles/',
+        '/cabinet/user/tests/',
+        '/cabinet/user/contests/',
+        '/cabinet/user/settings/',
+        '/cabinet/user/statistics/',
+        '/cabinet/user/articles/new/',
+        '/cabinet/company/',
+        '/cabinet/company/settings/',
+        '/cabinet/company/statistics/',
+        '/cabinet/company/tests/',
+        '/cabinet/company/contests/',
+        '/cabinet/company/contests/new/',
+        '/administration/',
+        '/kandidat/',
+        '/firma/',
         '/firma/tests/',
-        '/kandidat/articles/', '/firma/contests/', '/tests/?q=тест', '/tests/?cat=backend',
-        '/export/user/statistics.pdf', '/export/company/statistics.pdf', '/export/admin/statistics.pdf',
+        '/kandidat/articles/',
+        '/firma/contests/',
+        '/tests/?q=тест',
+        '/tests/?cat=backend',
+        '/export/user/statistics.pdf',
+        '/export/company/statistics.pdf',
+        '/export/admin/statistics.pdf',
     ]
 
     API = [
-        '/api/v1/auth/me/', '/api/v1/companies/', '/api/v1/companies/my-ratings/',
-        '/api/v1/companies/firma/', '/api/v1/companies/firma/tests/', '/api/v1/companies/firma/contests/',
-        '/api/v1/candidates/kandidat/', '/api/v1/candidates/kandidat/articles/',
-        '/api/v1/candidates/kandidat/contests/', '/api/v1/articles/catalog/', '/api/v1/articles/my/',
-        '/api/v1/tests/', '/api/v1/tests/catalog/', '/api/v1/contests/catalog/',
-        '/api/v1/contests/company/', '/api/v1/contests/user-history/',
-        '/api/v1/admin/overview/', '/api/v1/admin/verifications/', '/api/v1/admin/users/',
-        '/api/v1/admin/reports/', '/api/v1/admin/users/kandidat/content/',
+        '/api/v1/auth/me/',
+        '/api/v1/companies/',
+        '/api/v1/companies/my-ratings/',
+        '/api/v1/companies/firma/',
+        '/api/v1/companies/firma/tests/',
+        '/api/v1/companies/firma/contests/',
+        '/api/v1/candidates/kandidat/',
+        '/api/v1/candidates/kandidat/articles/',
+        '/api/v1/candidates/kandidat/contests/',
+        '/api/v1/articles/catalog/',
+        '/api/v1/articles/my/',
+        '/api/v1/tests/',
+        '/api/v1/tests/catalog/',
+        '/api/v1/contests/catalog/',
+        '/api/v1/contests/company/',
+        '/api/v1/contests/user-history/',
+        '/api/v1/admin/overview/',
+        '/api/v1/admin/verifications/',
+        '/api/v1/admin/users/',
+        '/api/v1/admin/reports/',
+        '/api/v1/admin/users/kandidat/content/',
     ]
 
     def test_no_server_errors_for_any_role(self):
         article = self.make_article(author='kandidat')
         contest = self.make_contest()
         test = self.make_test()
-        urls = self.PAGES + self.API + [
-            f'/articles/{article.id}/', f'/contests/{contest.id}/', f'/tests/{test.id}/',
-            f'/api/v1/tests/{test.id}/', f'/api/v1/tests/{test.id}/view/',
-            f'/api/v1/contests/{contest.id}/', f'/api/v1/contests/{contest.id}/submissions/',
-            f'/api/v1/contests/{contest.id}/my-submissions/',
-        ]
+        urls = (
+            self.PAGES
+            + self.API
+            + [
+                f'/articles/{article.id}/',
+                f'/contests/{contest.id}/',
+                f'/tests/{test.id}/',
+                f'/api/v1/tests/{test.id}/',
+                f'/api/v1/tests/{test.id}/view/',
+                f'/api/v1/contests/{contest.id}/',
+                f'/api/v1/contests/{contest.id}/submissions/',
+                f'/api/v1/contests/{contest.id}/my-submissions/',
+            ]
+        )
         for username in [None, 'kandidat', 'firma', 'moder']:
             client = self.login(username) if username else Client()
             for url in urls:
@@ -1466,10 +1534,16 @@ class SmokeTests(BaseCase):
 
     def test_django_admin_pages_open(self):
         client = self.login('moder')
-        for url in ['/django-admin/', '/django-admin/authorization/account/',
-                    '/django-admin/companies/company/', '/django-admin/articles_constructor/article/',
-                    '/django-admin/constructor/test/', '/django-admin/contests_cabinet/contest/',
-                    '/django-admin/admin_reports/report/', '/django-admin/users/userprofile/']:
+        for url in [
+            '/django-admin/',
+            '/django-admin/authorization/account/',
+            '/django-admin/companies/company/',
+            '/django-admin/articles_constructor/article/',
+            '/django-admin/constructor/test/',
+            '/django-admin/contests_cabinet/contest/',
+            '/django-admin/admin_reports/report/',
+            '/django-admin/users/userprofile/',
+        ]:
             with self.subTest(url=url):
                 self.assertEqual(client.get(url).status_code, 200)
 
@@ -1479,19 +1553,22 @@ class ContactDetailsTests(BaseCase):
 
     def test_phone_is_saved_and_returned_to_owner(self):
         client = self.login('kandidat')
-        response = client.patch('/api/v1/candidates/kandidat/update/',
-                                json.dumps({'name': 'К', 'phone': '+7 900 000-00-00'}), 'application/json')
+        response = client.patch(
+            '/api/v1/candidates/kandidat/update/', json.dumps({'name': 'К', 'phone': '+7 900 000-00-00'}), 'application/json'
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['candidate']['phone'], '+7 900 000-00-00')
 
     def test_phone_is_private(self):
-        self.login('kandidat').patch('/api/v1/candidates/kandidat/update/',
-                                     json.dumps({'name': 'К', 'phone': '+79000000000'}), 'application/json')
+        self.login('kandidat').patch(
+            '/api/v1/candidates/kandidat/update/', json.dumps({'name': 'К', 'phone': '+79000000000'}), 'application/json'
+        )
         self.assertNotIn('+79000000000', Client().get('/api/v1/candidates/kandidat/').content.decode())
 
     def test_company_sees_contacts_of_its_participants(self):
-        self.login('kandidat').patch('/api/v1/candidates/kandidat/update/',
-                                     json.dumps({'name': 'К', 'phone': '+79000000000'}), 'application/json')
+        self.login('kandidat').patch(
+            '/api/v1/candidates/kandidat/update/', json.dumps({'name': 'К', 'phone': '+79000000000'}), 'application/json'
+        )
         contest = self.make_contest(submission_type='text')
         self.login('kandidat').post(f'/api/v1/contests/{contest.id}/submit/', {'text': 'решение'})
 
@@ -1544,7 +1621,7 @@ class CompanyCatalogTests(BaseCase):
         self.make_test(owner='firma', published=True)
         self.make_test(owner='firma', published=True)
         self.make_test(owner='konkurent', published=True)
-        self.make_test(owner='konkurent', published=False)   # черновик не в счёт
+        self.make_test(owner='konkurent', published=False)  # черновик не в счёт
 
         companies = Client().get('/api/v1/companies/').json()['companies']
         order = [(c['username'], c['tests_count']) for c in companies]
@@ -1553,8 +1630,17 @@ class CompanyCatalogTests(BaseCase):
 
     def test_card_fields_present(self):
         company = Client().get('/api/v1/companies/').json()['companies'][0]
-        for key in ('username', 'name', 'description', 'industry', 'city',
-                    'tests_count', 'avg_rating', 'profile_url', 'avatar_url'):
+        for key in (
+            'username',
+            'name',
+            'description',
+            'industry',
+            'city',
+            'tests_count',
+            'avg_rating',
+            'profile_url',
+            'avatar_url',
+        ):
             self.assertIn(key, company)
 
     def test_catalog_page_opens(self):
@@ -1568,8 +1654,7 @@ class TestAttemptTests(BaseCase):
         return client.get(f'/api/v1/tests/{test.id}/view/')
 
     def _submit(self, client, test, answers=None):
-        return client.post(f'/api/v1/tests/{test.id}/submit/',
-                           json.dumps({'answers': answers or {}}), 'application/json')
+        return client.post(f'/api/v1/tests/{test.id}/submit/', json.dumps({'answers': answers or {}}), 'application/json')
 
     def test_opening_records_an_unfinished_attempt(self):
         test = self.make_test(owner='firma')
@@ -1639,8 +1724,7 @@ class TestAttemptTests(BaseCase):
         for order in range(3):
             TestPage.objects.create(test=test, order=order, type=TestPage.TYPE_QUIZ, title=f'В{order}')
         for i in range(5):
-            TestAttempt.objects.create(test=test, candidate_username=f'k{i}',
-                                       finished_at=timezone.now(), score=1, max_score=3)
+            TestAttempt.objects.create(test=test, candidate_username=f'k{i}', finished_at=timezone.now(), score=1, max_score=3)
 
         card = Client().get('/api/v1/tests/catalog/').json()['tests'][0]
         self.assertEqual(card['page_count'], 3)
@@ -1668,8 +1752,7 @@ class TestsCatalogTests(BaseCase):
     def test_card_fields_present(self):
         self.make_test(owner='firma', published=True)
         test = Client().get('/api/v1/tests/catalog/').json()['tests'][0]
-        for key in ('id', 'title', 'description', 'owner_name', 'level',
-                    'category', 'page_count', 'submissions', 'url'):
+        for key in ('id', 'title', 'description', 'owner_name', 'level', 'category', 'page_count', 'submissions', 'url'):
             self.assertIn(key, test)
 
     def test_submissions_count_comes_from_finished_attempts(self):
@@ -1683,8 +1766,7 @@ class TestsCatalogTests(BaseCase):
         test.save(update_fields=['stats'])
 
         for i in range(3):
-            TestAttempt.objects.create(test=test, candidate_username=f'kto{i}',
-                                       finished_at=timezone.now(), score=1, max_score=1)
+            TestAttempt.objects.create(test=test, candidate_username=f'kto{i}', finished_at=timezone.now(), score=1, max_score=1)
         TestAttempt.objects.create(test=test, candidate_username='eshchyo-idyot')
 
         card = Client().get('/api/v1/tests/catalog/').json()['tests'][0]
@@ -1711,8 +1793,7 @@ class ContestsCatalogTests(BaseCase):
     def test_card_fields_present(self):
         self.make_contest(owner='firma', status='active', prize='100 000 ₽', category='backend')
         contest = Client().get('/api/v1/contests/catalog/').json()['contests'][0]
-        for key in ('id', 'title', 'excerpt', 'status', 'deadline', 'prize',
-                    'category', 'participants_count', 'company_name'):
+        for key in ('id', 'title', 'excerpt', 'status', 'deadline', 'prize', 'category', 'participants_count', 'company_name'):
             self.assertIn(key, contest)
 
     def test_drafts_are_not_in_catalog(self):

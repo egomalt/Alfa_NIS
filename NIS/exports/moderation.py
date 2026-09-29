@@ -1,12 +1,15 @@
 """Сбор сводки модерации и сборка PDF-отчёта для админ-панели."""
+
 from django.utils import timezone
 
 from administration.reports.api_views import (
-    _new_counts_by_target, escalated_first, escalated_keys,
+    _new_counts_by_target,
+    escalated_first,
+    escalated_keys,
 )
-from administration.reports.models import ESCALATION_THRESHOLD, Report, TARGET_LABELS
+from administration.reports.models import ESCALATION_THRESHOLD, TARGET_LABELS, Report
 from authorization import bans
-from authorization.models import Account, ROLE_LABELS
+from authorization.models import ROLE_LABELS, Account
 from companies.models import Company
 
 from .pdf import ReportBuilder, fmt_date
@@ -22,12 +25,14 @@ def build_admin_pdf():
 
     r = ReportBuilder('Сводка модерации', 'Панель администратора')
 
-    r.kpi([
-        (len(pending), 'Заявок на верификацию'),
-        (len(new_reports), 'Открытых жалоб'),
-        (escalated, 'Эскалировано (3+)'),
-        (Account.objects.count(), 'Всего пользователей'),
-    ])
+    r.kpi(
+        [
+            (len(pending), 'Заявок на верификацию'),
+            (len(new_reports), 'Открытых жалоб'),
+            (escalated, 'Эскалировано (3+)'),
+            (Account.objects.count(), 'Всего пользователей'),
+        ]
+    )
     r.kpi([(len(banned), 'Забанено')])
 
     # Заявки на верификацию
@@ -45,12 +50,14 @@ def build_admin_pdf():
         for rep in new_reports:
             total = new_counts.get((rep.target_type, rep.target_id), 0)
             mark = ' (эскалация)' if total >= ESCALATION_THRESHOLD else ''
-            rows.append([
-                TARGET_LABELS.get(rep.target_type, rep.target_type),
-                rep.target_title + mark,
-                rep.reporter_username or '—',
-                fmt_date(rep.created_at),
-            ])
+            rows.append(
+                [
+                    TARGET_LABELS.get(rep.target_type, rep.target_type),
+                    rep.target_title + mark,
+                    rep.reporter_username or '—',
+                    fmt_date(rep.created_at),
+                ]
+            )
         r.table(['Тип', 'Цель', 'Заявитель', 'Дата'], rows, col_ratios=[1.4, 3.0, 1.8, 1.3])
     else:
         r.empty_note('Новых жалоб нет.')
@@ -58,12 +65,15 @@ def build_admin_pdf():
     # Забаненные
     r.section('Забаненные пользователи')
     if banned:
-        rows = [[
-            u.name or u.username,
-            ROLE_LABELS.get(u.role, u.role),
-            fmt_date(u.ban_until) if u.ban_until else 'навсегда',
-            (u.ban_reason or '—')[:80],
-        ] for u in banned]
+        rows = [
+            [
+                u.name or u.username,
+                ROLE_LABELS.get(u.role, u.role),
+                fmt_date(u.ban_until) if u.ban_until else 'навсегда',
+                (u.ban_reason or '—')[:80],
+            ]
+            for u in banned
+        ]
         r.table(['Пользователь', 'Роль', 'Бан до', 'Причина'], rows, col_ratios=[2.0, 1.3, 1.4, 3.0])
     else:
         r.empty_note('Забаненных пользователей нет.')
@@ -72,4 +82,4 @@ def build_admin_pdf():
 
 
 def admin_filename():
-    return f"career-moderation-{timezone.localtime(timezone.now()):%Y%m%d}.pdf"
+    return f'career-moderation-{timezone.localtime(timezone.now()):%Y%m%d}.pdf'

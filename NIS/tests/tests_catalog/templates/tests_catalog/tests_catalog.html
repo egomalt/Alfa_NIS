@@ -44,7 +44,10 @@
                placeholder="Поиск по тестам..."
                autocomplete="off">
       </div>
-      <a href="/constructor/" class="btn-write" id="btn-create" hidden>
+      <a href="{% url 'constructor_page' %}"
+         class="btn-write"
+         id="btn-create"
+         hidden>
         <svg width="14"
              height="14"
              viewBox="0 0 24 24"

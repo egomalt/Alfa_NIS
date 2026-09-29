@@ -27,12 +27,12 @@
                 class="cr-btn-primary cr-search-btn">Найти</button>
       </div>
       <div class="cr-chips">
-        <a class="cr-chip" href="/tests/?cat=frontend">Frontend</a>
-        <a class="cr-chip" href="/tests/?cat=backend">Backend</a>
-        <a class="cr-chip" href="/tests/?cat=devops">DevOps</a>
-        <a class="cr-chip" href="/tests/?cat=analytics">Аналитика</a>
-        <a class="cr-chip" href="/tests/?level=junior">Junior</a>
-        <a class="cr-chip" href="/tests/?level=middle">Middle</a>
+        <a class="cr-chip" href="{% url 'tests_catalog' %}?cat=frontend">Frontend</a>
+        <a class="cr-chip" href="{% url 'tests_catalog' %}?cat=backend">Backend</a>
+        <a class="cr-chip" href="{% url 'tests_catalog' %}?cat=devops">DevOps</a>
+        <a class="cr-chip" href="{% url 'tests_catalog' %}?cat=analytics">Аналитика</a>
+        <a class="cr-chip" href="{% url 'tests_catalog' %}?level=junior">Junior</a>
+        <a class="cr-chip" href="{% url 'tests_catalog' %}?level=middle">Middle</a>
       </div>
       <div class="cr-hero-tagline">Платформа для IT-собеседований · Компании · Тесты · Кандидаты</div>
     </section>
@@ -61,7 +61,7 @@
           <h2 class="cr-section-title">Популярные компании</h2>
           <p class="cr-section-sub">Работодатели, которые активно проводят испытания</p>
         </div>
-        <a href="/companies/" class="cr-all-link">
+        <a href="{% url 'companies_list_page' %}" class="cr-all-link">
           Все компании
           <svg width="15"
                height="15"

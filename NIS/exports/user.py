@@ -1,4 +1,5 @@
 """Сбор статистики кандидата и сборка PDF-отчёта."""
+
 from datetime import datetime
 
 from django.utils import timezone
@@ -33,19 +34,12 @@ def build_user_pdf(account):
     articles = list(Article.objects.filter(author_username=username).order_by('-created_at'))
     published_articles = [a for a in articles if a.status == Article.STATUS_PUBLISHED]
 
-    subs = list(
-        ContestSubmission.objects.filter(candidate_username=username)
-        .select_related('contest').order_by('-created_at')
-    )
+    subs = list(ContestSubmission.objects.filter(candidate_username=username).select_related('contest').order_by('-created_at'))
     wins = sum(1 for s in subs if s.winner)
 
-    ratings = list(
-        CompanyRating.objects.filter(user_username=username).select_related('company').order_by('-id')
-    )
+    ratings = list(CompanyRating.objects.filter(user_username=username).select_related('company').order_by('-id'))
     company_names = dict(
-        Company.objects
-        .filter(username__in={s.contest.company_username for s in subs})
-        .values_list('username', 'name')
+        Company.objects.filter(username__in={s.contest.company_username for s in subs}).values_list('username', 'name')
     )
 
     # Числа те же, что рисует кабинет: считаются в одном месте
@@ -65,30 +59,37 @@ def build_user_pdf(account):
     r.spacer(4)
 
     # KPI
-    r.kpi([
-        (taking['passed'], 'Тестов пройдено'),
-        (len(published_articles), 'Статей опубликовано'),
-        (len(subs), 'Участий в конкурсах'),
-        (wins, 'Побед в конкурсах'),
-    ])
+    r.kpi(
+        [
+            (taking['passed'], 'Тестов пройдено'),
+            (len(published_articles), 'Статей опубликовано'),
+            (len(subs), 'Участий в конкурсах'),
+            (wins, 'Побед в конкурсах'),
+        ]
+    )
 
     # Прохождение тестов — то же, что на странице статистики в кабинете
     r.section('Как вы проходите тесты')
     if taking['started']:
-        r.note(f"Тест считается пройденным от {taking['pass_percent']}% верных ответов.")
-        r.kpi([
-            (taking['started'], 'Начато'),
-            (taking['finished'], 'Завершено'),
-            (percent(taking['avg_percent']), 'Средний результат'),
-            (percent(taking['pass_rate']), 'Доля пройденных'),
-        ])
+        r.note(f'Тест считается пройденным от {taking["pass_percent"]}% верных ответов.')
+        r.kpi(
+            [
+                (taking['started'], 'Начато'),
+                (taking['finished'], 'Завершено'),
+                (percent(taking['avg_percent']), 'Средний результат'),
+                (percent(taking['pass_rate']), 'Доля пройденных'),
+            ]
+        )
         if taking['recent']:
-            rows = [[
-                item['title'] or f"Тест #{item['test_id']}",
-                f"{item['score']} из {item['max_score']}",
-                percent(item['percent']),
-                fmt_date(datetime.fromisoformat(item['finished_at'])),
-            ] for item in taking['recent']]
+            rows = [
+                [
+                    item['title'] or f'Тест #{item["test_id"]}',
+                    f'{item["score"]} из {item["max_score"]}',
+                    percent(item['percent']),
+                    fmt_date(datetime.fromisoformat(item['finished_at'])),
+                ]
+                for item in taking['recent']
+            ]
             r.table(['Тест', 'Баллы', 'Результат', 'Дата'], rows, col_ratios=[3.4, 1.2, 1.3, 1.3])
     else:
         r.empty_note('Вы ещё не проходили тесты.')
@@ -96,29 +97,33 @@ def build_user_pdf(account):
     # Статьи
     r.section('Публикации')
     if articles:
-        rows = [[
-            a.title or f'Статья #{a.id}',
-            ARTICLE_STATUS.get(a.status, a.status),
-            a.views,
-            a.likes,
-            fmt_date(a.published_at),
-        ] for a in articles]
-        r.table(['Название', 'Статус', 'Просмотры', 'Рейтинг', 'Дата'], rows,
-                col_ratios=[3.2, 1.5, 1.2, 1.0, 1.3])
+        rows = [
+            [
+                a.title or f'Статья #{a.id}',
+                ARTICLE_STATUS.get(a.status, a.status),
+                a.views,
+                a.likes,
+                fmt_date(a.published_at),
+            ]
+            for a in articles
+        ]
+        r.table(['Название', 'Статус', 'Просмотры', 'Рейтинг', 'Дата'], rows, col_ratios=[3.2, 1.5, 1.2, 1.0, 1.3])
     else:
         r.empty_note('Публикаций пока нет.')
 
     # Участие в конкурсах
     r.section('Участие в конкурсах')
     if subs:
-        rows = [[
-            s.contest.title,
-            company_names.get(s.contest.company_username) or s.contest.company_username,
-            'Победитель' if s.winner else SUB_STATUS.get(s.status, s.status),
-            fmt_date(s.created_at),
-        ] for s in subs]
-        r.table(['Конкурс', 'Компания', 'Результат', 'Дата'], rows,
-                col_ratios=[3.0, 1.8, 1.5, 1.3])
+        rows = [
+            [
+                s.contest.title,
+                company_names.get(s.contest.company_username) or s.contest.company_username,
+                'Победитель' if s.winner else SUB_STATUS.get(s.status, s.status),
+                fmt_date(s.created_at),
+            ]
+            for s in subs
+        ]
+        r.table(['Конкурс', 'Компания', 'Результат', 'Дата'], rows, col_ratios=[3.0, 1.8, 1.5, 1.3])
     else:
         r.empty_note('Участий в конкурсах пока нет.')
 

@@ -35,6 +35,7 @@
   </div>
 {% endblock %}
 {% block scripts %}
-  <script type="module" src="{% static 'cabinet/user.js' %}?v={{ ASSET_V }}"></script>
+  <script type="module"
+          src="{% static 'cabinet/user/cabinet.js' %}?v={{ ASSET_V }}"></script>
   {% block page_script %}{% endblock %}
 {% endblock %}

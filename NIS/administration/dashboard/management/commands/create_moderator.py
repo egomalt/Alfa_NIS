@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from authorization.models import Account, ROLE_MODERATOR
+from authorization.models import ROLE_MODERATOR, Account
 from core.utils import resolve_new_password
 
 
@@ -26,14 +26,16 @@ class Command(BaseCommand):
                 raise CommandError(f'Модератор «{username}» уже существует.')
             existing.role = ROLE_MODERATOR
             existing.save(update_fields=['role'])
-            self.stdout.write(self.style.SUCCESS(
-                f'Аккаунт «{existing.username}» повышен до модератора. Вход: /authorization/signin/'
-            ))
+            self.stdout.write(
+                self.style.SUCCESS(f'Аккаунт «{existing.username}» повышен до модератора. Вход: /authorization/signin/')
+            )
             if not existing.password:
-                self.stdout.write(self.style.WARNING(
-                    'У аккаунта не задан пароль — войти не получится. '
-                    f'Задайте его: manage.py set_password {existing.username}'
-                ))
+                self.stdout.write(
+                    self.style.WARNING(
+                        'У аккаунта не задан пароль — войти не получится. '
+                        f'Задайте его: manage.py set_password {existing.username}'
+                    )
+                )
             return
 
         try:
@@ -45,6 +47,4 @@ class Command(BaseCommand):
         account.set_password(raw_password)
         account.full_clean()
         account.save()
-        self.stdout.write(self.style.SUCCESS(
-            f'Модератор «{username}» создан. Вход: /authorization/signin/ → /administration/'
-        ))
+        self.stdout.write(self.style.SUCCESS(f'Модератор «{username}» создан. Вход: /authorization/signin/ → /administration/'))

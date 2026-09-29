@@ -3,12 +3,13 @@
 Отсюда берутся демо-кандидаты, от чьего имени записаны прохождения тестов
 и решения конкурсов, и сами прохождения.
 """
+
 import random
 from datetime import timedelta
 
 from django.utils import timezone
 
-from authorization.models import Account, ROLE_USER
+from authorization.models import ROLE_USER, Account
 from tests.constructor.models import TestAnswer, TestAttempt, TestPage
 from users.models import UserProfile
 
@@ -41,8 +42,7 @@ def ensure_takers():
     for i, skills in enumerate(SKILL_SETS):
         username = f'{TAKER_PREFIX}{i}'
         if not Account.objects.filter(username=username).exists():
-            Account.objects.create_user(username, name=f'Кандидат {i + 1}',
-                                        password=DEMO_PASSWORD, role=ROLE_USER)
+            Account.objects.create_user(username, name=f'Кандидат {i + 1}', password=DEMO_PASSWORD, role=ROLE_USER)
         UserProfile.objects.get_or_create(
             username=username,
             defaults={'bio': 'Демонстрационный профиль участника.', 'skills': skills},
@@ -100,7 +100,8 @@ def build_pages(test, questions):
     """
     for order, (page_type, title, payload) in enumerate(questions):
         page = TestPage.objects.create(
-            test=test, order=order,
+            test=test,
+            order=order,
             type=PAGE_TYPES.get(page_type, TestPage.TYPE_TEXT),
             title=title,
             content=payload.get('content', '') if isinstance(payload, dict) else '',
@@ -108,8 +109,7 @@ def build_pages(test, questions):
         )
         if isinstance(payload, list):
             for answer_order, (text, is_correct) in enumerate(payload):
-                TestAnswer.objects.create(page=page, text=text,
-                                          is_correct=is_correct, order=answer_order)
+                TestAnswer.objects.create(page=page, text=text, is_correct=is_correct, order=answer_order)
 
 
 def _code_meta(payload):
@@ -118,8 +118,7 @@ def _code_meta(payload):
         'language': payload.get('language', 'python'),
         'time_limit': payload.get('time_limit', 5),
         'test_cases': [
-            {'input': case['input'], 'expected': case['expected'],
-             'is_sample': bool(case.get('is_sample'))}
+            {'input': case['input'], 'expected': case['expected'], 'is_sample': bool(case.get('is_sample'))}
             for case in payload.get('test_cases', [])
         ],
     }

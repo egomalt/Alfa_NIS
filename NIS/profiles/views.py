@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from authorization import bans
-from authorization.models import Account, ROLE_COMPANY, ROLE_USER
+from authorization.models import ROLE_COMPANY, ROLE_USER, Account
 from authorization.views import get_current_account
 from companies.models import Company
 

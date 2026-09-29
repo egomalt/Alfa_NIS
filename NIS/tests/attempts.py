@@ -7,6 +7,7 @@
 Порог прохождения (PASS_PERCENT) общий для всей платформы — тот же, по
 которому страница прохождения показывает «Тест пройден».
 """
+
 from datetime import timedelta
 
 from django.db.models import Count, Q
@@ -48,19 +49,22 @@ def start(request, test):
     ).first()
     if recent is not None:
         return recent
-    return TestAttempt.objects.create(
-        test=test, candidate_username=username, session_key=session_key)
+    return TestAttempt.objects.create(test=test, candidate_username=username, session_key=session_key)
 
 
 def finish(request, test, score, max_score):
     """Отправка ответов: закрываем открытую попытку либо заводим сразу закрытую."""
     username, session_key = _identity(request)
-    attempt = TestAttempt.objects.filter(
-        test=test,
-        candidate_username=username,
-        session_key=session_key,
-        finished_at__isnull=True,
-    ).order_by('-started_at').first()
+    attempt = (
+        TestAttempt.objects.filter(
+            test=test,
+            candidate_username=username,
+            session_key=session_key,
+            finished_at__isnull=True,
+        )
+        .order_by('-started_at')
+        .first()
+    )
     if attempt is None:
         # Страницу могли открыть до появления учёта или в другой сессии
         attempt = TestAttempt(test=test, candidate_username=username, session_key=session_key)

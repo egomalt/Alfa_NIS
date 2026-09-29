@@ -3,8 +3,8 @@ import re
 from django import forms
 
 from core.utils import validate_username
-from .models import Company
 
+from .models import Company
 
 MAX_DIRECTIONS = 10
 DIRECTION_MAX_LEN = 60
@@ -43,8 +43,18 @@ class CompanyProfileForm(PDFValidationMixin, forms.ModelForm):
         model = Company
         # directions сюда не входит: список разбирает clean_directions() во вьюхе
         fields = [
-            'username', 'name', 'description', 'contact_email', 'phone', 'website',
-            'address', 'city', 'company_size', 'industry', 'avatar', 'registration_document',
+            'username',
+            'name',
+            'description',
+            'contact_email',
+            'phone',
+            'website',
+            'address',
+            'city',
+            'company_size',
+            'industry',
+            'avatar',
+            'registration_document',
         ]
 
     def clean_username(self):
@@ -58,11 +68,11 @@ class CompanyProfileForm(PDFValidationMixin, forms.ModelForm):
         numbers = re.findall(r'\d+', normalized)
         if not numbers:
             return value
-        formatted_numbers = [f"{int(n):,}".replace(',', ' ') for n in numbers]
+        formatted_numbers = [f'{int(n):,}'.replace(',', ' ') for n in numbers]
         if len(formatted_numbers) >= 2 and '-' in normalized:
-            return f"{formatted_numbers[0]}-{formatted_numbers[1]} сотрудников"
+            return f'{formatted_numbers[0]}-{formatted_numbers[1]} сотрудников'
         if len(formatted_numbers) == 1:
-            return f"{formatted_numbers[0]} сотрудников"
+            return f'{formatted_numbers[0]} сотрудников'
         return ' - '.join(formatted_numbers) + ' сотрудников'
 
     def clean_website(self):

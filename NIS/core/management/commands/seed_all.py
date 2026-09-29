@@ -8,10 +8,11 @@
     manage.py seed_all --user egor --company alfa
     manage.py seed_all --clear     # снять всё в обратном порядке
 """
+
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
-from authorization.models import Account, ROLE_COMPANY, ROLE_USER
+from authorization.models import ROLE_COMPANY, ROLE_USER, Account
 from companies.models import Company
 from core.demo import DEMO_PASSWORD
 from users.models import UserProfile
@@ -33,8 +34,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--user', default='egor', help='Логин кандидата')
         parser.add_argument('--company', default='alfa', help='Логин компании')
-        parser.add_argument('--clear', action='store_true',
-                            help='Удалить всё созданное командами seed_*')
+        parser.add_argument('--clear', action='store_true', help='Удалить всё созданное командами seed_*')
 
     def handle(self, *args, **options):
         names = {'user': options['user'], 'company': options['company']}
@@ -61,8 +61,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'  пропущено: {error}'))
 
         if failed:
-            self.stdout.write(self.style.WARNING(
-                f'Команд пропущено: {len(failed)} из {len(steps)}.'))
+            self.stdout.write(self.style.WARNING(f'Команд пропущено: {len(failed)} из {len(steps)}.'))
         else:
             self.stdout.write(self.style.SUCCESS('Готово: все наборы данных обработаны.'))
 
@@ -73,21 +72,17 @@ class Command(BaseCommand):
         """
         created = []
         if not Account.objects.filter(username=user).exists():
-            Account.objects.create_user(user, name=user.capitalize(),
-                                        password=DEMO_PASSWORD, role=ROLE_USER)
+            Account.objects.create_user(user, name=user.capitalize(), password=DEMO_PASSWORD, role=ROLE_USER)
             UserProfile.objects.get_or_create(username=user)
             created.append(f'кандидат {user}')
 
         if not Account.objects.filter(username=company).exists():
-            Account.objects.create_user(company, name=company.capitalize(),
-                                        password=DEMO_PASSWORD, role=ROLE_COMPANY)
+            Account.objects.create_user(company, name=company.capitalize(), password=DEMO_PASSWORD, role=ROLE_COMPANY)
             created.append(f'компания {company}')
         Company.objects.get_or_create(
             username=company,
-            defaults={'name': company.capitalize(),
-                      'verification_status': Company.VERIF_APPROVED},
+            defaults={'name': company.capitalize(), 'verification_status': Company.VERIF_APPROVED},
         )
 
         if created:
-            self.stdout.write(self.style.SUCCESS(
-                'Заведены аккаунты: ' + ', '.join(created) + f' (пароль {DEMO_PASSWORD})'))
+            self.stdout.write(self.style.SUCCESS('Заведены аккаунты: ' + ', '.join(created) + f' (пароль {DEMO_PASSWORD})'))

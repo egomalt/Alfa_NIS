@@ -3,13 +3,14 @@
 Тесты лежат в core/tests/, а не в tests/ — каталог верхнего уровня с таким именем
 занят доменным приложением (конструктор тестов, прохождение, каталог).
 """
+
 from datetime import timedelta
 
 from django.test import Client, TestCase
 from django.utils import timezone
 
 from articles.constructor.models import Article
-from authorization.models import Account, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER
+from authorization.models import ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER, Account
 from companies.models import Company
 from contests.contests_cabinet.models import Contest
 from tests.constructor.models import Test, TestAnswer, TestPage

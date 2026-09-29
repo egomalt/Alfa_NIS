@@ -3,6 +3,7 @@
 Всё считается по TestAttempt. Сравнение со средним по площадке нужно,
 чтобы автор понимал, его тест сложный или обычный.
 """
+
 from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Q
 from django.db.models.fields.json import KeyTextTransform
 from django.utils import timezone
@@ -50,17 +51,17 @@ def _distribution(queryset):
     """Гистограмма результатов: по сколько человек в каждом диапазоне."""
     scored = _scored(queryset)
     filters = {
-        f'b{low}': Count('id', filter=Q(
-            score__gte=F('max_score') * low / 100.0,
-            score__lte=F('max_score') * high / 100.0,
-        ))
+        f'b{low}': Count(
+            'id',
+            filter=Q(
+                score__gte=F('max_score') * low / 100.0,
+                score__lte=F('max_score') * high / 100.0,
+            ),
+        )
         for low, high in BUCKETS
     }
     row = scored.aggregate(**filters)
-    return [
-        {'label': f'{low}–{high}%', 'count': row[f'b{low}']}
-        for low, high in BUCKETS
-    ]
+    return [{'label': f'{low}–{high}%', 'count': row[f'b{low}']} for low, high in BUCKETS]
 
 
 def platform_summary():
@@ -91,12 +92,14 @@ def strengths(username, limit=TOP_TOPICS, min_attempts=MIN_TOPIC_ATTEMPTS):
 
     Тема лежит внутри JSON-поля Test.stats, поэтому группируем по ключу.
     """
-    rows = (_scored(TestAttempt.objects.filter(candidate_username=username))
-            .annotate(topic=KeyTextTransform('category', 'test__stats'))
-            .values('topic')
-            .annotate(attempts=Count('id'), average=Avg(_percent()))
-            .filter(attempts__gte=min_attempts)
-            .order_by('-average'))
+    rows = (
+        _scored(TestAttempt.objects.filter(candidate_username=username))
+        .annotate(topic=KeyTextTransform('category', 'test__stats'))
+        .values('topic')
+        .annotate(attempts=Count('id'), average=Avg(_percent()))
+        .filter(attempts__gte=min_attempts)
+        .order_by('-average')
+    )
 
     result = []
     for row in rows:
@@ -104,12 +107,14 @@ def strengths(username, limit=TOP_TOPICS, min_attempts=MIN_TOPIC_ATTEMPTS):
         # Тест без темы в сильные стороны записать нельзя: непонятно, в чём
         if not topic:
             continue
-        result.append({
-            'topic': topic,
-            'label': CATEGORY_LABELS.get(topic, topic),
-            'attempts': row['attempts'],
-            'avg_percent': round(row['average']),
-        })
+        result.append(
+            {
+                'topic': topic,
+                'label': CATEGORY_LABELS.get(topic, topic),
+                'attempts': row['attempts'],
+                'avg_percent': round(row['average']),
+            }
+        )
         if len(result) == limit:
             break
     return result
@@ -126,13 +131,9 @@ def for_candidate(username, recent=RECENT_ATTEMPTS):
     started = attempts_qs.count()
     finished = attempts_qs.filter(finished_at__isnull=False).count()
     summary = _summary(attempts_qs)
-    passed = _scored(attempts_qs).filter(
-        score__gte=F('max_score') * PASS_PERCENT / 100.0).count()
+    passed = _scored(attempts_qs).filter(score__gte=F('max_score') * PASS_PERCENT / 100.0).count()
 
-    rows = (attempts_qs
-            .filter(finished_at__isnull=False)
-            .select_related('test')
-            .order_by('-finished_at')[:recent])
+    rows = attempts_qs.filter(finished_at__isnull=False).select_related('test').order_by('-finished_at')[:recent]
 
     return {
         'started': started,
@@ -141,15 +142,18 @@ def for_candidate(username, recent=RECENT_ATTEMPTS):
         'avg_percent': summary['avg_percent'],
         'pass_rate': summary['pass_rate'],
         'pass_percent': PASS_PERCENT,
-        'recent': [{
-            'test_id': attempt.test_id,
-            'title': attempt.test.title,
-            'score': attempt.score,
-            'max_score': attempt.max_score,
-            # max_score = 0 у теста без вопросов: делить на ноль нельзя
-            'percent': round(attempt.score * 100 / attempt.max_score) if attempt.max_score else None,
-            'finished_at': attempt.finished_at.isoformat(),
-        } for attempt in rows],
+        'recent': [
+            {
+                'test_id': attempt.test_id,
+                'title': attempt.test.title,
+                'score': attempt.score,
+                'max_score': attempt.max_score,
+                # max_score = 0 у теста без вопросов: делить на ноль нельзя
+                'percent': round(attempt.score * 100 / attempt.max_score) if attempt.max_score else None,
+                'finished_at': attempt.finished_at.isoformat(),
+            }
+            for attempt in rows
+        ],
     }
 
 

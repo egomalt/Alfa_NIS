@@ -1,12 +1,13 @@
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from companies.models import Company
 from core.auth import moderator_required
 from core.pagination import paginate
 from core.utils import load_json_body
-from companies.models import Company
 
 VALID_STATUSES = [Company.VERIF_PENDING, Company.VERIF_APPROVED, Company.VERIF_REJECTED]
 
@@ -22,7 +23,7 @@ def serialize_verification(company):
         'industry': company.industry,
         'city': company.city,
         # Ссылка ведёт на вьюху под проверкой роли, а не на путь в /media/
-        'document_url': f'/administration/verification/{company.username}/document/' if has_document else '',
+        'document_url': reverse('admin_verification_document', args=[company.username]) if has_document else '',
         'document_name': company.registration_document.name.split('/')[-1] if has_document else '',
         'status': company.verification_status,
         'reason': company.verification_reason,
@@ -38,11 +39,13 @@ def api_verifications(request):
         status = Company.VERIF_PENDING
     qs = Company.objects.filter(verification_status=status).order_by('submitted_at')
     companies, page_meta = paginate(request, qs, VERIFICATIONS_PER_PAGE)
-    return JsonResponse({
-        'ok': True,
-        'verifications': [serialize_verification(c) for c in companies],
-        **page_meta,
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'verifications': [serialize_verification(c) for c in companies],
+            **page_meta,
+        }
+    )
 
 
 def _pending_or_error(company):

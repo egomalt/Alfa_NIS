@@ -2,14 +2,16 @@ from django.contrib.auth import authenticate, login, logout
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
-from core.utils import serialize_form_errors
-from .forms import AccountLoginForm, AccountRegistrationForm
-from .models import Account, ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER
 from companies.models import Company
+from core.utils import serialize_form_errors
 from users.models import UserProfile
+
+from .forms import AccountLoginForm, AccountRegistrationForm
+from .models import ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER, Account
 
 
 def get_current_account(request):
@@ -58,16 +60,16 @@ def api_register(request):
             UserProfile.objects.create(username=account.username)
 
     login(request, account, backend='django.contrib.auth.backends.ModelBackend')
-    cabinet_url = '/cabinet/company/' if is_company else '/cabinet/user/'
+    cabinet_url = reverse('company_cabinet' if is_company else 'user_cabinet')
     return JsonResponse({'ok': True, 'next_url': cabinet_url}, status=201)
 
 
 def _cabinet_url(account):
     if account.role == ROLE_MODERATOR:
-        return '/administration/'
+        return reverse('admin_dashboard')
     if account.role == ROLE_COMPANY:
-        return '/cabinet/company/'
-    return '/cabinet/user/'
+        return reverse('company_cabinet')
+    return reverse('user_cabinet')
 
 
 @require_POST
@@ -122,17 +124,19 @@ def api_me(request):
         if company and company.avatar:
             avatar = company.avatar.url
 
-    return JsonResponse({
-        'ok': True,
-        'account': {
-            'username': account.username,
-            'name': account.name,
-            'role': account.role,
-            'email': account.email or '',
-            'avatar': avatar,
-            'profile_url': _cabinet_url(account),
-            'banned': account.is_banned,
-            'ban_reason': account.ban_reason if account.is_banned else '',
-            'ban_until': account.ban_until.isoformat() if account.is_banned and account.ban_until else None,
-        },
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'account': {
+                'username': account.username,
+                'name': account.name,
+                'role': account.role,
+                'email': account.email or '',
+                'avatar': avatar,
+                'profile_url': _cabinet_url(account),
+                'banned': account.is_banned,
+                'ban_reason': account.ban_reason if account.is_banned else '',
+                'ban_until': account.ban_until.isoformat() if account.is_banned and account.ban_until else None,
+            },
+        }
+    )

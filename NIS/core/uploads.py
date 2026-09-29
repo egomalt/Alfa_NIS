@@ -1,4 +1,5 @@
 """Проверка расширения и размера загружаемых файлов."""
+
 import os
 
 MB = 1024 * 1024
@@ -8,8 +9,19 @@ MAX_DOCUMENT_SIZE = 25 * MB
 
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 DOCUMENT_EXTENSIONS = {
-    '.pdf', '.zip', '.doc', '.docx', '.txt', '.md', '.csv',
-    '.xls', '.xlsx', '.ppt', '.pptx', '.rar', '.7z',
+    '.pdf',
+    '.zip',
+    '.doc',
+    '.docx',
+    '.txt',
+    '.md',
+    '.csv',
+    '.xls',
+    '.xlsx',
+    '.ppt',
+    '.pptx',
+    '.rar',
+    '.7z',
 }
 ATTACHMENT_EXTENSIONS = DOCUMENT_EXTENSIONS | IMAGE_EXTENSIONS
 

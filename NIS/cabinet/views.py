@@ -2,16 +2,16 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from authorization.models import ROLE_COMPANY, ROLE_USER
-from core.auth import page_login_required
 from companies.models import ensure_company
+from core.auth import page_login_required
 
 
 @page_login_required()
 def cabinet_root(request):
     if request.account.role == ROLE_COMPANY:
-        return redirect('/cabinet/company/')
+        return redirect('company_cabinet')
     if request.account.role == ROLE_USER:
-        return redirect('/cabinet/user/')
+        return redirect('user_cabinet')
     return redirect('/')
 
 

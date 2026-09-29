@@ -3,9 +3,8 @@ from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
-from core.utils import load_json_body
-
 from authorization.views import get_current_account
+from core.utils import load_json_body
 from tests import attempts, code_results
 from tests.constructor.models import Test, TestPage
 from tests.constructor.views import public_code_meta
@@ -36,13 +35,17 @@ def test_view_shell(request, test_id):
     if test is None:
         raise Http404
 
-    return render(request, 'tests_app/test_view.html', {
-        'app_path': request.path,
-        'test_id': test_id,
-        'test_title': test.title,
-        'owner_username': test.owner_username,
-        'is_preview': is_preview,
-    })
+    return render(
+        request,
+        'tests_app/test_view.html',
+        {
+            'app_path': request.path,
+            'test_id': test_id,
+            'test_title': test.title,
+            'owner_username': test.owner_username,
+            'is_preview': is_preview,
+        },
+    )
 
 
 @require_GET
@@ -76,17 +79,19 @@ def api_test_view(request, test_id):
     if not is_preview:
         attempts.start(request, test)
 
-    return JsonResponse({
-        'ok': True,
-        'test': {
-            'id': test.id,
-            'title': test.title,
-            'description': test.description,
-            'page_count': len(pages),
-        },
-        'pages': pages,
-        'is_preview': is_preview,
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'test': {
+                'id': test.id,
+                'title': test.title,
+                'description': test.description,
+                'page_count': len(pages),
+            },
+            'pages': pages,
+            'is_preview': is_preview,
+        }
+    )
 
 
 @require_http_methods(['POST'])
@@ -142,9 +147,11 @@ def api_test_submit(request, test_id):
     if not is_preview:
         attempts.finish(request, test, score, total)
 
-    return JsonResponse({
-        'ok': True,
-        'score': score,
-        'total': total,
-        'results': results,
-    })
+    return JsonResponse(
+        {
+            'ok': True,
+            'score': score,
+            'total': total,
+            'results': results,
+        }
+    )

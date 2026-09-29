@@ -12,17 +12,19 @@
     manage.py seed_moderation
     manage.py seed_moderation --clear    # удалить созданное этой командой
 """
+
 from datetime import timedelta
 from io import BytesIO
 
-from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
+from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.urls import reverse
 from django.utils import timezone
 
 from administration.reports.models import ESCALATION_THRESHOLD, Report
 from articles.constructor.models import Article
-from authorization.models import Account, ROLE_USER, STATUS_ACTIVE, STATUS_BANNED
+from authorization.models import ROLE_USER, STATUS_ACTIVE, STATUS_BANNED, Account
 from companies.models import Company
 from contests.contests_cabinet.models import Contest
 from core.demo import DEMO_PASSWORD, MARK
@@ -107,8 +109,7 @@ class Command(BaseCommand):
     help = 'Наполняет панель модератора заявками, жалобами и блокировками.'
 
     def add_arguments(self, parser):
-        parser.add_argument('--clear', action='store_true',
-                            help='Удалить записи, созданные этой командой')
+        parser.add_argument('--clear', action='store_true', help='Удалить записи, созданные этой командой')
 
     def handle(self, *args, **options):
         if options['clear']:
@@ -119,16 +120,14 @@ class Command(BaseCommand):
             reports = self._make_reports()
             banned = self._make_banned()
 
-        self.stdout.write(self.style.SUCCESS(
-            f'Заявок на проверку {applicants}, жалоб {reports}, блокировок {banned}.'))
+        self.stdout.write(self.style.SUCCESS(f'Заявок на проверку {applicants}, жалоб {reports}, блокировок {banned}.'))
         self.stdout.write(f'Панель: /administration/   Пароль демо-аккаунтов: {DEMO_PASSWORD}')
         self.stdout.write('Удалить: manage.py seed_moderation --clear')
 
     def _account(self, username, name, role=ROLE_USER):
         account = Account.objects.filter(username=username).first()
         if account is None:
-            account = Account.objects.create_user(
-                username, name=name, password=DEMO_PASSWORD, role=role)
+            account = Account.objects.create_user(username, name=name, password=DEMO_PASSWORD, role=role)
         return account
 
     def _make_applicants(self):
@@ -151,8 +150,7 @@ class Command(BaseCommand):
                 submitted_at=now - timedelta(days=index * 2, hours=index * 5),
             )
             if with_document:
-                company.registration_document.save(
-                    f'{username}-egrul.pdf', ContentFile(demo_document(name)), save=True)
+                company.registration_document.save(f'{username}-egrul.pdf', ContentFile(demo_document(name)), save=True)
             created += 1
         return created
 
@@ -168,8 +166,7 @@ class Command(BaseCommand):
         for target_type, reasons in REASONS.items():
             target = targets.get(target_type)
             if target is None:
-                self.stdout.write(self.style.WARNING(
-                    f'Нет материала типа «{target_type}» — жалобу на него пропускаю'))
+                self.stdout.write(self.style.WARNING(f'Нет материала типа «{target_type}» — жалобу на него пропускаю'))
                 continue
             for number, reason in enumerate(reasons):
                 reporter = COMPLAINERS[(created + number) % len(COMPLAINERS)]
@@ -213,43 +210,57 @@ class Command(BaseCommand):
         article = Article.objects.filter(status=Article.STATUS_PUBLISHED).first()
         if article:
             targets['article'] = {
-                'id': str(article.id), 'title': article.title or f'Статья #{article.id}',
-                'url': f'/articles/{article.id}/', 'author': article.author_username,
+                'id': str(article.id),
+                'title': article.title or f'Статья #{article.id}',
+                'url': reverse('article_read', args=[article.id]),
+                'author': article.author_username,
             }
         test = Test.objects.filter(status=Test.STATUS_PUBLISHED).first()
         if test:
             targets['test'] = {
-                'id': str(test.id), 'title': test.title or f'Тест #{test.id}',
-                'url': f'/tests/{test.id}/', 'author': test.owner_username,
+                'id': str(test.id),
+                'title': test.title or f'Тест #{test.id}',
+                'url': reverse('test_view_page', args=[test.id]),
+                'author': test.owner_username,
             }
         contest = Contest.objects.filter(status=Contest.STATUS_ACTIVE).first()
         if contest:
             targets['contest'] = {
-                'id': str(contest.id), 'title': contest.title or f'Конкурс #{contest.id}',
-                'url': f'/contests/{contest.id}/', 'author': contest.company_username,
+                'id': str(contest.id),
+                'title': contest.title or f'Конкурс #{contest.id}',
+                'url': reverse('contest_view', args=[contest.id]),
+                'author': contest.company_username,
             }
         # На человека и компанию жалуются по логину, а не по id материала.
         # Своих демо-жалобщиков исключаем: жалоба сама на себя выглядит дико
-        candidate = (Account.objects
-                     .filter(role=ROLE_USER, status=STATUS_ACTIVE)
-                     .exclude(username__startswith=PREFIX)
-                     .exclude(username__in=COMPLAINERS)
-                     .order_by('id').first())
+        candidate = (
+            Account.objects.filter(role=ROLE_USER, status=STATUS_ACTIVE)
+            .exclude(username__startswith=PREFIX)
+            .exclude(username__in=COMPLAINERS)
+            .order_by('id')
+            .first()
+        )
         if candidate:
             targets['user'] = {
-                'id': candidate.username, 'title': candidate.name or candidate.username,
-                'url': f'/{candidate.username}/', 'author': candidate.username,
+                'id': candidate.username,
+                'title': candidate.name or candidate.username,
+                'url': f'/{candidate.username}/',
+                'author': candidate.username,
             }
         # Компания с названием: на безымянную жалоба читается как ошибка данных
-        company = (Company.objects
-                   .filter(verification_status=Company.VERIF_APPROVED)
-                   .exclude(username__startswith=PREFIX)
-                   .exclude(name='')
-                   .order_by('id').first())
+        company = (
+            Company.objects.filter(verification_status=Company.VERIF_APPROVED)
+            .exclude(username__startswith=PREFIX)
+            .exclude(name='')
+            .order_by('id')
+            .first()
+        )
         if company:
             targets['company'] = {
-                'id': company.username, 'title': company.name or company.username,
-                'url': f'/{company.username}/', 'author': company.username,
+                'id': company.username,
+                'title': company.name or company.username,
+                'url': f'/{company.username}/',
+                'author': company.username,
             }
         return targets
 
@@ -269,8 +280,7 @@ class Command(BaseCommand):
         return created
 
     def _clear(self):
-        usernames = [PREFIX + slug for slug, *_ in APPLICANTS] \
-            + [PREFIX + slug for slug, *_ in BANNED] + COMPLAINERS
+        usernames = [PREFIX + slug for slug, *_ in APPLICANTS] + [PREFIX + slug for slug, *_ in BANNED] + COMPLAINERS
         reports = Report.objects.filter(evidence=MARK).delete()[0]
 
         # Файлы удаляем отдельно: delete() у модели убирает строку, а документ
@@ -282,5 +292,4 @@ class Command(BaseCommand):
         companies = company_qs.delete()[0]
         UserProfile.objects.filter(username__in=usernames).delete()
         accounts = Account.objects.filter(username__in=usernames).delete()[0]
-        self.stdout.write(self.style.SUCCESS(
-            f'Удалено: жалоб {reports}, компаний {companies}, аккаунтов {accounts}.'))
+        self.stdout.write(self.style.SUCCESS(f'Удалено: жалоб {reports}, компаний {companies}, аккаунтов {accounts}.'))

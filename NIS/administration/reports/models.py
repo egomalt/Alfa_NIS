@@ -27,10 +27,10 @@ class Report(models.Model):
     ]
 
     target_type = models.CharField(max_length=20, choices=TARGET_CHOICES)
-    target_id = models.CharField(max_length=100)          # id материала или username пользователя/компании
-    target_title = models.CharField(max_length=255)       # денормализовано для отображения
+    target_id = models.CharField(max_length=100)  # id материала или username пользователя/компании
+    target_title = models.CharField(max_length=255)  # денормализовано для отображения
     target_url = models.CharField(max_length=255, blank=True)
-    author_username = models.SlugField(max_length=50, blank=True)   # автор материала / нарушитель
+    author_username = models.SlugField(max_length=50, blank=True)  # автор материала / нарушитель
     reporter_username = models.SlugField(max_length=50, blank=True)  # кто пожаловался
     reason = models.TextField()
     evidence = models.TextField(blank=True)
