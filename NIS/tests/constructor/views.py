@@ -282,6 +282,35 @@ def api_test_detail(request, test_id):
     return JsonResponse({'ok': True, 'test': _serialize_test(test, include_pages=True)})
 
 
+def _publish_problem(test):
+    """Чем тест не готов к публикации — первая найденная проблема или None.
+
+    Страницы нумеруются так же, как в списке конструктора: с единицы.
+    """
+    pages = list(test.pages.prefetch_related('answers'))
+    if not pages:
+        return 'Нельзя опубликовать тест без страниц.'
+    if not any(page.type in TestPage.SCORED_TYPES for page in pages):
+        return 'Добавьте хотя бы один вопрос: тест из одних материалов нечего проходить.'
+
+    for number, page in enumerate(pages, start=1):
+        where = f'Страница {number}' + (f' «{page.title.strip()}»' if page.title.strip() else '')
+        if page.type in (TestPage.TYPE_QUIZ, TestPage.TYPE_INPUT) and not page.title.strip():
+            return f'Страница {number}: напишите текст вопроса.'
+        if page.type == TestPage.TYPE_QUIZ:
+            answers = [answer for answer in page.answers.all() if answer.text.strip()]
+            if len(answers) < 2:
+                return f'{where}: нужно хотя бы два заполненных варианта ответа.'
+            if not any(answer.is_correct for answer in answers):
+                return f'{where}: отметьте правильный вариант ответа.'
+        if page.type == TestPage.TYPE_CODE:
+            if not page.content.strip():
+                return f'{where}: опишите условие задачи.'
+            if not (page.page_meta or {}).get('test_cases'):
+                return f'{where}: добавьте хотя бы один тест-кейс, иначе решение нечем проверить.'
+    return None
+
+
 @require_http_methods(['POST'])
 @api_login_required()
 def api_test_publish(request, test_id):
@@ -289,8 +318,9 @@ def api_test_publish(request, test_id):
     if error:
         return error
 
-    if not test.pages.exists():
-        return JsonResponse({'ok': False, 'message': 'Нельзя опубликовать тест без страниц.'}, status=400)
+    problem = _publish_problem(test)
+    if problem:
+        return JsonResponse({'ok': False, 'message': problem}, status=400)
 
     test.status = Test.STATUS_PUBLISHED
     test.save(update_fields=['status', 'updated_at'])

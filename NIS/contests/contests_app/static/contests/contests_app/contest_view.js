@@ -421,9 +421,12 @@ if (state.contest) {
   renderRules(state.contest);
   renderSidebar(state.contest);
   if (state.me) {
-    ({ submissions: state.submissions = [] } = await api
-      .get(`/api/v1/contests/${contestId}/my-submissions/`)
-      .catch(() => ({})));
+    try {
+      ({ submissions: state.submissions = [] } = await api.get(`/api/v1/contests/${contestId}/my-submissions/`));
+    } catch {
+      // Форма всё равно покажется, а повторную отправку сервер отклонит сам
+      toast('Не удалось проверить ваши прошлые решения по этому конкурсу. Обновите страницу.');
+    }
   }
   renderMySubmissions();
   renderSubmitArea();

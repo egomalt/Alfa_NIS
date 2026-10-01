@@ -35,6 +35,8 @@ class TestPage(models.Model):
     TYPE_QUIZ = 'quiz'
     TYPE_INPUT = 'input'
     TYPE_CODE = 'code'
+    # Страницы, за которые начисляются баллы; текстовая — просто материал
+    SCORED_TYPES = (TYPE_QUIZ, TYPE_INPUT, TYPE_CODE)
 
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='pages')
     order = models.PositiveIntegerField(default=0)

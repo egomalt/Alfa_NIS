@@ -13,14 +13,20 @@ export const state = {
   contestHistory: [],
   myRatings: [],
   attempts: null,
+  // Источники, которые не загрузились: раздел пишет «не удалось», а не «пусто»
+  failed: new Set(),
 };
 
 const SOURCES = {
-  tests: ['/api/v1/tests/', (data) => (state.tests = data?.tests ?? [])],
-  articles: ['/api/v1/articles/my/', (data) => (state.articles = data?.articles ?? [])],
-  contestHistory: ['/api/v1/contests/user-history/', (data) => (state.contestHistory = data?.submissions ?? [])],
-  myRatings: ['/api/v1/companies/my-ratings/', (data) => (state.myRatings = data?.ratings ?? [])],
-  attempts: ['/api/v1/tests/my-attempts/', (data) => (state.attempts = data)],
+  tests: ['/api/v1/tests/', 'тесты', (data) => (state.tests = data.tests ?? [])],
+  articles: ['/api/v1/articles/my/', 'статьи', (data) => (state.articles = data.articles ?? [])],
+  contestHistory: [
+    '/api/v1/contests/user-history/',
+    'конкурсы',
+    (data) => (state.contestHistory = data.submissions ?? []),
+  ],
+  myRatings: ['/api/v1/companies/my-ratings/', 'оценки компаний', (data) => (state.myRatings = data.ratings ?? [])],
+  attempts: ['/api/v1/tests/my-attempts/', 'прохождения тестов', (data) => (state.attempts = data)],
 };
 
 export const ICONS = {
@@ -62,7 +68,7 @@ export const avatarHtml = (candidate) =>
 /* Таблица раздела с фильтром-чипами и пустым состоянием — одинакова
    у тестов, статей и конкурсов. Плашки сверху раздел считает сам по всем
    записям: это сводка, а не срез под фильтром */
-export function listPanel({ key, items, matches, row, empty }) {
+export function listPanel({ key, source, items, matches, row, empty }) {
   const body = byId(`ud-${key}-body`);
   let filter = 'all';
 
@@ -74,10 +80,15 @@ export function listPanel({ key, items, matches, row, empty }) {
     byId(`ud-${key}-wrapper`).hidden = !shown.length;
     byId('tests-empty').hidden = Boolean(shown.length);
     // Пусто из-за фильтра и пусто вообще — разные сообщения
-    const [title, sub] = list.length ? empty.filtered : empty.none;
+    const failed = state.failed.has(source);
+    const [title, sub] = failed
+      ? ['Не удалось загрузить список', 'Обновите страницу. Если не поможет — попробуйте чуть позже.']
+      : list.length
+        ? empty.filtered
+        : empty.none;
     setText('tests-empty-title', title);
     setText('tests-empty-sub', sub);
-    byId('tests-empty-create').hidden = Boolean(list.length);
+    byId('tests-empty-create').hidden = failed || Boolean(list.length);
   }
 
   byId(`panel-${key}`).addEventListener('click', (event) => {
@@ -136,10 +147,18 @@ async function start() {
   const needed = [...new Set(panels.flatMap((panel) => panel.needs))];
   await Promise.all(
     needed.map(async (key) => {
-      const [url, apply] = SOURCES[key];
-      apply(await api.get(url).catch(() => null));
+      const [url, , apply] = SOURCES[key];
+      try {
+        apply(await api.get(url));
+      } catch {
+        state.failed.add(key);
+      }
     }),
   );
+  // Без уведомления пустой раздел выглядел бы как «у вас ничего нет»
+  if (state.failed.size) {
+    toast(`Не удалось загрузить: ${[...state.failed].map((key) => SOURCES[key][1]).join(', ')}. Обновите страницу.`);
+  }
   renderPanels();
 }
 

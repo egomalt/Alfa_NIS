@@ -67,6 +67,18 @@ def clean(raw):
     return result
 
 
+def first_invalid(raw):
+    """Подпись первой ссылки, которую не удалось разобрать, или None.
+
+    Пустое поле — не ошибка: так ссылку убирают из профиля."""
+    if not isinstance(raw, dict):
+        return None
+    for kind in KINDS:
+        if str(raw.get(kind) or '').strip() and not _normalize(kind, raw.get(kind)):
+            return LABELS[kind]
+    return None
+
+
 def as_list(links):
     """Ссылки для показа: [(ключ, подпись, адрес)] в постоянном порядке."""
     links = links or {}

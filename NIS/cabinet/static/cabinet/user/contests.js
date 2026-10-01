@@ -15,6 +15,7 @@ const row = (entry) => `<tr>
 
 const renderTable = listPanel({
   key: 'contests',
+  source: 'contestHistory',
   items: () => state.contestHistory,
   matches: (entry, filter) => (filter === 'winner' ? entry.winner : entry.status === filter),
   row,

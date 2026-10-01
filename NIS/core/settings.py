@@ -160,4 +160,7 @@ SERVE_MEDIA = env_flag('SERVE_MEDIA', True)
 # (core.storage). Сюда складываются регистрационные документы компаний.
 PRIVATE_MEDIA_ROOT = BASE_DIR / 'private_media'
 
+# Тесты пишут загрузки во временные папки, а не в media/ и private_media/
+TEST_RUNNER = 'core.tests.runner.TempMediaRunner'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -2,13 +2,12 @@
 
 import json
 import re
-import tempfile
 from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, override_settings
+from django.test import Client
 from django.utils import timezone
 
 from authorization.models import Account
@@ -17,7 +16,7 @@ from contests.contests_cabinet.models import Contest, ContestSubmission
 from tests.constructor.models import Test
 from users.models import UserProfile
 
-from .base import BaseCase
+from .base import BaseCase, image_upload
 
 
 class UserTestsSectionTests(BaseCase):
@@ -532,7 +531,6 @@ class CabinetSidebarTests(BaseCase):
         self.assertNotIn('cp-sidebar', candidate_page)
 
 
-@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
 class CandidateSettingsTests(BaseCase):
     """Настройки кандидата: те же блоки, что у компании."""
 
@@ -565,7 +563,7 @@ class CandidateSettingsTests(BaseCase):
 
     def test_photo_can_be_uploaded_and_removed(self):
         client = self.login('kandidat')
-        photo = SimpleUploadedFile('me.png', b'x' * 100, content_type='image/png')
+        photo = image_upload('me.png')
         response = client.post('/api/v1/candidates/kandidat/avatar/', {'avatar': photo})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(self.profile().avatar)
@@ -588,7 +586,6 @@ class CandidateSettingsTests(BaseCase):
         self.assertIn('class="pic-row"', page)
 
 
-@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
 class CompanySettingsTests(BaseCase):
     """Настройки компании: частичное сохранение, направления и логотип."""
 
@@ -638,7 +635,7 @@ class CompanySettingsTests(BaseCase):
 
     def test_logo_can_be_uploaded_and_removed(self):
         client = self.login('firma')
-        logo = SimpleUploadedFile('logo.png', b'x' * 100, content_type='image/png')
+        logo = image_upload('logo.png')
         response = client.post(self.URL, {'avatar': logo})
         self.assertTrue(response.json()['company']['avatar_url'])
         self.assertTrue(self.firma().avatar)
@@ -660,6 +657,8 @@ class CompanySettingsTests(BaseCase):
 
 
 class UploadValidationTests(BaseCase):
+    """Загрузки проверяются по содержимому, а не по расширению и типу из браузера."""
+
     def test_avatar_rejects_svg_and_oversized(self):
         client = self.login('kandidat')
         url = '/api/v1/candidates/kandidat/avatar/'
@@ -667,7 +666,7 @@ class UploadValidationTests(BaseCase):
         self.assertEqual(client.post(url, {'avatar': svg}).status_code, 400)
         big = SimpleUploadedFile('big.png', b'x' * (6 * 1024 * 1024), content_type='image/png')
         self.assertEqual(client.post(url, {'avatar': big}).status_code, 400)
-        ok = SimpleUploadedFile('ok.png', b'x' * 1000, content_type='image/png')
+        ok = image_upload('ok.png')
         self.assertEqual(client.post(url, {'avatar': ok}).status_code, 200)
 
     def test_email_is_validated(self):
@@ -680,3 +679,45 @@ class UploadValidationTests(BaseCase):
         bad = client.patch(url, json.dumps({'name': 'К', 'email': 'не-email'}), 'application/json')
         self.assertEqual(bad.status_code, 400)
         self.assertEqual(Account.objects.get(username='kandidat').email, 'a@b.ru')
+
+    def test_avatar_must_really_be_an_image(self):
+        """Проверялось только расширение: текстовый файл x.png принимался как фото."""
+        client = self.login('kandidat')
+        fake = SimpleUploadedFile('x.png', b'not an image', content_type='image/png')
+        response = client.post('/api/v1/candidates/kandidat/avatar/', {'avatar': fake})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('не является изображением', response.json()['message'])
+
+    def test_company_logo_and_document_are_checked_by_content(self):
+        client = self.login('firma')
+        fake_logo = SimpleUploadedFile('logo.png', b'not an image', content_type='image/png')
+        response = client.post('/api/v1/companies/firma/profile/', {'avatar': fake_logo})
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Company.objects.get(username='firma').avatar)
+
+        # Тип application/pdf присылает браузер — его легко подделать
+        fake_pdf = SimpleUploadedFile('doc.pdf', b'MZ not a pdf', content_type='application/pdf')
+        response = client.post('/api/v1/companies/firma/verification/', {'registration_document': fake_pdf})
+        self.assertEqual(response.status_code, 400)
+        real_pdf = SimpleUploadedFile('doc.pdf', b'%PDF-1.4 minimal', content_type='application/pdf')
+        self.assertEqual(
+            client.post('/api/v1/companies/firma/verification/', {'registration_document': real_pdf}).status_code, 200
+        )
+
+    def test_bad_link_is_an_error_and_nothing_is_saved(self):
+        """Недопустимая ссылка молча выбрасывалась — и стирала уже сохранённые,
+        а имя и почта из того же запроса успевали записаться."""
+        UserProfile.objects.update_or_create(username='kandidat', defaults={'links': {'site': 'https://example.com'}})
+        client = self.login('kandidat')
+        payload = {'name': 'Новое имя', 'links': {'site': 'javascript:alert(1)'}}
+        response = client.patch('/api/v1/candidates/kandidat/update/', json.dumps(payload), 'application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Сайт', response.json()['message'])
+        self.assertEqual(UserProfile.objects.get(username='kandidat').links, {'site': 'https://example.com'})
+        self.assertNotEqual(Account.objects.get(username='kandidat').name, 'Новое имя')
+
+    def test_empty_name_is_an_error(self):
+        client = self.login('kandidat')
+        response = client.patch('/api/v1/candidates/kandidat/update/', json.dumps({'name': '   '}), 'application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Account.objects.get(username='kandidat').name, 'Кандидат')

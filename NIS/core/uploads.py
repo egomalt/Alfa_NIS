@@ -1,6 +1,8 @@
-"""Проверка расширения и размера загружаемых файлов."""
+"""Проверка загружаемых файлов: расширение, размер и содержимое."""
 
 import os
+
+from PIL import Image, UnidentifiedImageError
 
 MB = 1024 * 1024
 
@@ -56,8 +58,35 @@ def validate_upload(uploaded_file, allowed_extensions, max_size):
     return uploaded_file
 
 
+# Что Pillow называет форматом — для сверки с расширением файла
+IMAGE_FORMATS = {'JPEG', 'PNG', 'WEBP', 'GIF'}
+
+
 def validate_image(uploaded_file, max_size=MAX_AVATAR_SIZE):
-    return validate_upload(uploaded_file, IMAGE_EXTENSIONS, max_size)
+    """Картинка проверяется по содержимому: расширение .png у текстового
+    файла или у чего похуже ещё не делает его изображением."""
+    validate_upload(uploaded_file, IMAGE_EXTENSIONS, max_size)
+    try:
+        with Image.open(uploaded_file) as image:
+            image_format = image.format
+            image.verify()
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
+        raise UploadError('Файл повреждён или не является изображением.') from None
+    finally:
+        uploaded_file.seek(0)
+    if image_format not in IMAGE_FORMATS:
+        raise UploadError('Загрузите изображение в формате JPG, PNG, WebP или GIF.')
+    return uploaded_file
+
+
+def validate_pdf(uploaded_file, max_size=MAX_DOCUMENT_SIZE):
+    """PDF узнаётся по первым байтам: тип, присланный браузером, подделывается."""
+    validate_upload(uploaded_file, {'.pdf'}, max_size)
+    header = uploaded_file.read(5)
+    uploaded_file.seek(0)
+    if header != b'%PDF-':
+        raise UploadError('Файл повреждён или не является PDF-документом.')
+    return uploaded_file
 
 
 def validate_attachment(uploaded_file, max_size=MAX_DOCUMENT_SIZE):

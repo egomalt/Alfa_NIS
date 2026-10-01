@@ -26,6 +26,7 @@ function row(test) {
 
 const renderTable = listPanel({
   key: 'tests',
+  source: 'tests',
   items: () => state.tests,
   matches: (test, filter) => test.status === filter,
   row,

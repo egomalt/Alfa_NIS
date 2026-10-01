@@ -1,5 +1,5 @@
 /* Страница чтения статьи: прогресс чтения, оглавление, голосование, ссылка. */
-import { api, byId, esc, pageData } from 'alfa/core';
+import { api, byId, esc, pageData, toast } from 'alfa/core';
 
 const { articleId, isLoggedIn } = pageData();
 const CHECK_ICON =
@@ -53,8 +53,9 @@ document.querySelectorAll('[data-vote]').forEach((button) =>
       counter.classList.toggle('down', vote === -1);
       byId('btn-up').classList.toggle('active', vote === 1);
       byId('btn-down').classList.toggle('active', vote === -1);
-    } catch {
-      // Голос не записался — счётчик остаётся прежним
+    } catch (error) {
+      // Голос не записался — счётчик остаётся прежним, а человек узнаёт почему
+      toast(error.message);
     }
   }),
 );

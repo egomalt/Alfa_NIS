@@ -2,6 +2,7 @@ import re
 
 from django import forms
 
+from core.uploads import UploadError, validate_image, validate_pdf
 from core.utils import validate_username
 
 from .models import Company
@@ -33,8 +34,12 @@ def clean_directions(values):
 class PDFValidationMixin:
     def clean_registration_document(self):
         document = self.cleaned_data.get('registration_document')
-        if document and getattr(document, 'content_type', 'application/pdf') != 'application/pdf':
-            raise forms.ValidationError('Загрузите файл в формате PDF.')
+        # Проверяем только новый файл: уже сохранённый документ не перечитываем
+        if document and hasattr(document, 'content_type'):
+            try:
+                validate_pdf(document)
+            except UploadError as error:
+                raise forms.ValidationError(str(error)) from None
         return document
 
 
@@ -59,6 +64,16 @@ class CompanyProfileForm(PDFValidationMixin, forms.ModelForm):
 
     def clean_username(self):
         return validate_username(self.cleaned_data.get('username'))
+
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get('avatar')
+        # Проверяем только новый файл: уже сохранённый логотип не перечитываем
+        if avatar and hasattr(avatar, 'content_type'):
+            try:
+                validate_image(avatar)
+            except UploadError as error:
+                raise forms.ValidationError(str(error)) from None
+        return avatar
 
     def clean_company_size(self):
         value = (self.cleaned_data.get('company_size') or '').strip()

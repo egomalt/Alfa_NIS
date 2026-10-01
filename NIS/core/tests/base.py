@@ -4,10 +4,13 @@
 занят доменным приложением (конструктор тестов, прохождение, каталог).
 """
 
+import io
 from datetime import timedelta
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.utils import timezone
+from PIL import Image
 
 from articles.constructor.models import Article
 from authorization.models import ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER, Account
@@ -16,6 +19,13 @@ from contests.contests_cabinet.models import Contest
 from tests.constructor.models import Test, TestAnswer, TestPage
 
 PASSWORD = 'Prochniy-Parol-77'
+
+
+def image_upload(name='photo.png', size=(4, 4)):
+    """Настоящая PNG-картинка: сервер проверяет изображение по содержимому."""
+    buffer = io.BytesIO()
+    Image.new('RGB', size, 'red').save(buffer, 'PNG')
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type='image/png')
 
 
 class BaseCase(TestCase):

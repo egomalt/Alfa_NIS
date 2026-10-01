@@ -111,8 +111,7 @@ def api_test_submit(request, test_id):
     score = 0
     total = 0
 
-    scored_types = [TestPage.TYPE_QUIZ, TestPage.TYPE_INPUT, TestPage.TYPE_CODE]
-    for page in test.pages.filter(type__in=scored_types).prefetch_related('answers'):
+    for page in test.pages.filter(type__in=TestPage.SCORED_TYPES).prefetch_related('answers'):
         user_answer = submitted.get(str(page.id))
         result = {'page_id': page.id, 'type': page.type}
         answers = list(page.answers.all())

@@ -43,6 +43,21 @@ const firstFieldError = (errors) => {
   return Array.isArray(first) ? (first[0]?.message ?? first[0]) : null;
 };
 
+/* Текст ошибки, когда сервер не объяснил её сам */
+function statusMessage(status) {
+  if (status >= 500) return 'Ошибка на сервере. Попробуйте ещё раз чуть позже.';
+  return (
+    {
+      400: 'Проверьте введённые данные.',
+      401: 'Сессия закончилась — войдите заново.',
+      403: 'Нет доступа. Если вы только что входили или выходили — обновите страницу.',
+      404: 'Не найдено — возможно, это уже удалили.',
+      413: 'Файл слишком большой.',
+      429: 'Слишком много запросов — подождите немного.',
+    }[status] ?? 'Не удалось выполнить запрос.'
+  );
+}
+
 async function request(method, url, data) {
   const headers = {};
   let body;
@@ -54,14 +69,17 @@ async function request(method, url, data) {
   }
   if (method !== 'GET') headers['X-CSRFToken'] = csrfToken();
 
-  const response = await fetch(url, { method, headers, body, credentials: 'same-origin' });
-  // Сервер может ответить не JSON — например, страницей ошибки 500
+  let response;
+  try {
+    response = await fetch(url, { method, headers, body, credentials: 'same-origin' });
+  } catch {
+    // Браузер отклоняет запрос без ответа сервера: нет сети, сервер выключен
+    throw new ApiError('Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.', 0, {});
+  }
+  // Сервер может ответить не JSON — например, страницей ошибки 500 или отказом прокси
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || payload.ok === false) {
-    const message =
-      payload.message ||
-      firstFieldError(payload.errors) ||
-      (response.status >= 500 ? 'Сервер временно недоступен' : 'Не удалось выполнить запрос');
+    const message = payload.message || firstFieldError(payload.errors) || statusMessage(response.status);
     throw new ApiError(message, response.status, payload);
   }
   return payload;

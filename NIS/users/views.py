@@ -86,15 +86,27 @@ def api_candidate_update(request, username):
     phone = body.get('phone', None)
     skills_raw = body.get('skills', None)
 
-    changed_fields = []
-    if name:
-        account.name = name[:255]
-        changed_fields.append('name')
+    # Сначала проверяем весь запрос: иначе при ошибке в ссылке имя и почта
+    # успели бы сохраниться, а человек увидел бы «не сохранено»
+    if 'name' in body and not name:
+        return JsonResponse({'ok': False, 'message': 'Имя не может быть пустым.'}, status=400)
     if email:
         try:
             validate_email(email)
         except ValidationError:
             return JsonResponse({'ok': False, 'message': 'Некорректный email.'}, status=400)
+    bad_link = links.first_invalid(body.get('links'))
+    if bad_link:
+        return JsonResponse(
+            {'ok': False, 'message': f'{bad_link}: не получилось разобрать ссылку. Укажите адрес вида https://… или логин.'},
+            status=400,
+        )
+
+    changed_fields = []
+    if name:
+        account.name = name[:255]
+        changed_fields.append('name')
+    if email:
         account.email = email
         changed_fields.append('email')
     if changed_fields:

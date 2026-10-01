@@ -16,6 +16,38 @@ from .base import BaseCase
 class ConstructorTests(BaseCase):
     """Конструкторы не должны обещать больше, чем умеет сервер."""
 
+    def publish(self, test):
+        return self.login('firma').post(f'/api/v1/tests/{test.id}/publish/')
+
+    def test_question_without_correct_answer_blocks_publishing(self):
+        """Тест с вопросом, на который нет верного ответа, публиковался — и его нельзя было решить."""
+        test = self.make_test(owner='firma', published=False, with_quiz=False)
+        page = TestPage.objects.create(test=test, order=0, type=TestPage.TYPE_QUIZ, title='Сколько будет 2+2?')
+        page.answers.create(text='3', is_correct=False, order=0)
+        page.answers.create(text='5', is_correct=False, order=1)
+
+        response = self.publish(test)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Страница 1 «Сколько будет 2+2?»', response.json()['message'])
+        self.assertIn('правильный', response.json()['message'])
+
+        page.answers.create(text='4', is_correct=True, order=2)
+        self.assertEqual(self.publish(test).status_code, 200)
+
+    def test_test_without_questions_is_not_published(self):
+        test = self.make_test(owner='firma', published=False, with_quiz=False)
+        TestPage.objects.create(test=test, order=0, type=TestPage.TYPE_TEXT, title='Теория', content='Текст')
+        response = self.publish(test)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('хотя бы один вопрос', response.json()['message'])
+
+    def test_code_task_needs_a_test_case(self):
+        test = self.make_test(owner='firma', published=False, with_quiz=False)
+        TestPage.objects.create(test=test, order=0, type=TestPage.TYPE_CODE, title='Сумма', content='Сложите a и b')
+        response = self.publish(test)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('тест-кейс', response.json()['message'])
+
     def test_code_languages_match_executor(self):
         """В селекте были python, js, ts, java, cpp, go, rust — исполнитель знает три."""
         from tests.constructor.executor import LANGUAGES

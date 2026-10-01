@@ -21,6 +21,12 @@ const fact = (label, value) =>
 function renderAttempts() {
   const attempts = state.attempts;
   const recentBox = byId('ud-attempts-recent');
+  if (state.failed.has('attempts')) {
+    byId('ud-attempts-facts').innerHTML = '';
+    recentBox.innerHTML = '<div class="ud-note">Не удалось загрузить прохождения. Обновите страницу.</div>';
+    setText('ud-attempts-note', '');
+    return;
+  }
   if (!attempts?.started) {
     byId('ud-attempts-facts').innerHTML = '';
     recentBox.innerHTML = `<div class="ud-note">Вы ещё не проходили тесты.

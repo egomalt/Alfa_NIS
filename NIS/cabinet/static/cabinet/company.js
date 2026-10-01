@@ -524,13 +524,23 @@ async function init() {
 
   // Списки конкурсов и тестов нужны только профилю: у остальных разделов свои запросы
   const needsLists = panel === 'profile';
-  const optional = (url, fallback) => (needsLists ? api.get(url).catch(() => fallback) : fallback);
+  const failed = [];
+  // Отказ в доступе здесь штатный: неподтверждённой компании тесты не положены.
+  // Сообщаем только о настоящем сбое — нет связи или ошибка сервера
+  const optional = (url, label, fallback) =>
+    needsLists
+      ? api.get(url).catch((error) => {
+          if (error.status === 0 || error.status >= 500) failed.push(label);
+          return fallback;
+        })
+      : fallback;
   try {
     const [companyData, contestsData, testsData] = await Promise.all([
       api.get(`/api/v1/companies/${username}/`),
-      optional('/api/v1/contests/company/', { contests: [] }),
-      optional(`/api/v1/companies/${username}/tests/`, { tests: [] }),
+      optional('/api/v1/contests/company/', 'конкурсы', { contests: [] }),
+      optional(`/api/v1/companies/${username}/tests/`, 'тесты', { tests: [] }),
     ]);
+    if (failed.length) toast(`Не удалось загрузить: ${failed.join(', ')}. Обновите страницу.`);
     state.company = companyData.company;
     state.contests = contestsData.contests ?? [];
     state.tests = testsData.tests ?? [];
