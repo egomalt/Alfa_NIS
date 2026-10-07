@@ -35,8 +35,9 @@ DEPLOY.md
 backups/
 staticfiles/
 
-# Локальные инструменты проверки стиля фронтенда (Prettier, ESLint, djlint)
-tools/
+# Установленные инструменты проверки стиля (настройки лежат в tools/ и в репозитории)
+tools/node_modules/
+tools/.venv/
 
 # Боевые настройки сервера: ключи и пароли
 .env

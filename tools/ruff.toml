@@ -1,0 +1,17 @@
+# Проверка Python-кода NIS: ошибки, стиль, современный синтаксис, порядок импортов
+target-version = "py312"
+line-length = 130
+src = ["../NIS"]
+extend-exclude = ["venv", "migrations", "staticfiles"]
+
+[lint]
+select = ["E", "F", "W", "B", "UP", "I"]
+
+[lint.isort]
+known-first-party = [
+  "administration", "api", "articles", "authorization", "cabinet", "companies", "company_catalog",
+  "contests", "core", "exports", "home", "profiles", "tests", "users",
+]
+
+[format]
+quote-style = "single"

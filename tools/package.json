@@ -1,0 +1,15 @@
+{
+  "name": "alfa-nis-style-tools",
+  "private": true,
+  "description": "Проверка и форматирование кода NIS: JS, CSS, шаблоны Django и Python",
+  "scripts": {
+    "check": "bash style.sh check",
+    "fix": "bash style.sh fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9"
+  }
+}
