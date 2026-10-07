@@ -1,0 +1,11 @@
+# В образ идёт только код: окружение, база и загрузки живут отдельно
+venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.sqlite3.*
+media/
+private_media/
+staticfiles/
+backups/
+.env

@@ -1,0 +1,58 @@
+# Боевой запуск на сервере: PostgreSQL, сайт на gunicorn и Caddy с HTTPS.
+# Настройки — в файле .env рядом (образец: .env.example).
+#   docker compose -f docker-compose.prod.yml up -d --build
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: ./NIS
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DJANGO_DEBUG: "0"
+      POSTGRES_HOST: db
+      BEHIND_PROXY: "1"
+    # Таймаут с запасом: проверка задачи на код прогоняет решение на всех тест-кейсах
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"
+    volumes:
+      - media_data:/app/media
+      - private_media:/app/private_media
+      # Проверка задач на код запускает решения соседними контейнерами
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      db:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  pg_data:
+  media_data:
+  private_media:
+  caddy_data:
+  caddy_config:
