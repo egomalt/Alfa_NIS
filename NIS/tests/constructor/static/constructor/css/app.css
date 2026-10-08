@@ -862,6 +862,10 @@ textarea {
     justify-content: center;
     text-align: center;
   }
+  /* У черновика кнопки «Статистика» нет — «Опубликовать» остаётся одна в ряду и тянется на всю ширину */
+  .actions:has(#cst-stats-btn[hidden]) .btn-publish {
+    grid-column: 1 / -1;
+  }
   .editor-content {
     padding: 18px 14px 52px;
   }
