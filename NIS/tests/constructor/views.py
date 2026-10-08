@@ -339,7 +339,6 @@ def api_code_run(request, page_id):
     body = load_json_body(request)
 
     code = (body.get('code') or '').strip()
-    sample_only = body.get('sample_only', True)
 
     if not code:
         return JsonResponse({'ok': False, 'message': 'Код не может быть пустым.'}, status=400)
@@ -354,9 +353,6 @@ def api_code_run(request, page_id):
 
     test_cases = (meta.get('test_cases') or [])[:MAX_TEST_CASES]
     time_limit = _safe_time_limit(meta.get('time_limit'))
-
-    if sample_only:
-        test_cases = [tc for tc in test_cases if tc.get('is_sample')]
 
     if not test_cases:
         return JsonResponse({'ok': False, 'message': 'Нет тест-кейсов для проверки'}, status=400)
@@ -401,11 +397,10 @@ def api_code_run(request, page_id):
 
         results.append(tc_result)
 
-    # Полный прогон — отправка решения: вердикт запоминаем на сервере,
-    # чтобы при подведении итогов не верить числам от клиента. Прерванный
-    # прогон записывается как есть: непроверенные кейсы не засчитываются.
-    if not sample_only:
-        code_results.remember(request, page.id, passed, len(test_cases))
+    # Вердикт запоминаем на сервере, чтобы при подведении итогов не верить
+    # числам от клиента. Прерванный прогон записывается как есть:
+    # непроверенные кейсы не засчитываются.
+    code_results.remember(request, page.id, passed, len(test_cases))
 
     response = {
         'ok': True,

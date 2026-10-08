@@ -25,7 +25,6 @@ const ICONS = {
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
   clock:
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
-  run: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>',
   upload:
     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 17V5M7 10l5-5 5 5M4 19h16"/></svg>',
   reset:
@@ -219,7 +218,6 @@ function renderCodePage(page) {
     </div>
     <div id="tv-code-results"></div>
     <div class="tv-code-actions">
-      <button type="button" id="tv-code-run-btn" class="tv-btn">${ICONS.run} Запустить на примерах</button>
       <button type="button" id="tv-code-submit-btn" class="tv-btn tv-btn-primary">${ICONS.check} Проверить решение</button>
     </div>
     ${navButtonsHtml()}`;
@@ -239,39 +237,31 @@ function renderCodePage(page) {
     editor.value = '';
     saveCode();
   });
-  byId('tv-code-run-btn').addEventListener('click', () => runCode(page.id, editor.value, true));
-  byId('tv-code-submit-btn').addEventListener('click', () => runCode(page.id, editor.value, false));
+  byId('tv-code-submit-btn').addEventListener('click', () => checkCode(page.id, editor.value));
 }
 
-async function runCode(pageId, code, sampleOnly) {
-  const runButton = byId('tv-code-run-btn');
-  const submitButton = byId('tv-code-submit-btn');
+/* Решение прогоняется на всех тест-кейсах, результат засчитывается в ответ на задачу */
+async function checkCode(pageId, code) {
+  const button = byId('tv-code-submit-btn');
   const results = byId('tv-code-results');
-  const runLabel = runButton.innerHTML;
-  runButton.disabled = true;
-  submitButton.disabled = true;
-  runButton.textContent = 'Выполняется…';
-  results.innerHTML = '<div class="tv-editor-hint tv-code-running">Выполнение…</div>';
+  const label = button.innerHTML;
+  button.disabled = true;
+  button.textContent = 'Проверяем…';
+  results.innerHTML = '<div class="tv-editor-hint tv-code-running">Проверяем решение…</div>';
   try {
-    const data = await api.post(`/api/v1/tests/pages/${pageId}/run/${PREVIEW_QUERY}`, {
-      code,
-      sample_only: sampleOnly,
-    });
-    if (!sampleOnly) {
-      state.answers[pageId] = { ...state.answers[pageId], type: 'code', passed: data.passed, total: data.total };
-      renderToc();
-    }
-    renderCodeResults(results, data, sampleOnly);
+    const data = await api.post(`/api/v1/tests/pages/${pageId}/run/${PREVIEW_QUERY}`, { code });
+    state.answers[pageId] = { ...state.answers[pageId], type: 'code', passed: data.passed, total: data.total };
+    renderToc();
+    renderCodeResults(results, data);
   } catch (error) {
     results.innerHTML = `<div class="tv-code-error">${esc(error.message)}</div>`;
   } finally {
-    runButton.disabled = false;
-    submitButton.disabled = false;
-    runButton.innerHTML = runLabel;
+    button.disabled = false;
+    button.innerHTML = label;
   }
 }
 
-function renderCodeResults(box, data, sampleOnly) {
+function renderCodeResults(box, data) {
   const items = data.results
     .map((result) => {
       const icon = result.passed ? ICONS.check : result.timed_out ? ICONS.clock : ICONS.cross;
@@ -300,7 +290,7 @@ function renderCodeResults(box, data, sampleOnly) {
     <div class="tv-code-results-wrap">
       <div class="tv-code-results-header">
         <span><strong>${data.passed} / ${data.total}</strong> тестов пройдено</span>
-        ${sampleOnly ? '' : verdict}
+        ${verdict}
       </div>
       ${data.interrupted && data.message ? `<div class="tv-code-note">${esc(data.message)}</div>` : ''}
       <div class="tv-code-result-list">${items}</div>

@@ -92,14 +92,10 @@ class CodeRunBudgetTests(BaseCase):
             page_meta={'language': 'python', 'time_limit': 10, 'test_cases': cases},
         )
 
-    def _run(self, page, sample_only=False):
+    def _run(self, page):
         return (
             self.login('kandidat')
-            .post(
-                f'/api/v1/tests/pages/{page.id}/run/',
-                json.dumps({'code': 'print(1)', 'sample_only': sample_only}),
-                'application/json',
-            )
+            .post(f'/api/v1/tests/pages/{page.id}/run/', json.dumps({'code': 'print(1)'}), 'application/json')
             .json()
         )
 
@@ -131,7 +127,7 @@ class CodeRunBudgetTests(BaseCase):
         with mock.patch.object(
             views, 'run_in_docker', return_value={'ok': True, 'stdout': '1', 'stderr': '', 'exit_code': 0, 'timed_out': False}
         ):
-            data = self._run(page, sample_only=True)
+            data = self._run(page)
 
         self.assertFalse(data['interrupted'])
         self.assertEqual((data['passed'], data['total'], data['checked']), (3, 3, 3))
@@ -151,9 +147,7 @@ class CodeRunBudgetTests(BaseCase):
             mock.patch.object(views, 'run_in_docker', slow_run),
             mock.patch.object(views.time, 'monotonic', lambda: slow_run.clock[0]),
         ):
-            client.post(
-                f'/api/v1/tests/pages/{page.id}/run/', json.dumps({'code': 'print(1)', 'sample_only': False}), 'application/json'
-            )
+            client.post(f'/api/v1/tests/pages/{page.id}/run/', json.dumps({'code': 'print(1)'}), 'application/json')
 
         result = client.post(f'/api/v1/tests/{page.test.id}/submit/', json.dumps({'answers': {}}), 'application/json').json()
         self.assertEqual(result['score'], 0)
