@@ -1,5 +1,5 @@
 /* Конструктор конкурса: основное, кейс со стартовыми файлами, правила, формат решения. */
-import { api, byId, esc, pageData } from 'alfa/core';
+import { api, byId, esc, pageData, toast } from 'alfa/core';
 
 const page = pageData();
 let contestId = page.contestId || null;
@@ -16,9 +16,16 @@ function markDirty() {
 }
 
 /* Сообщения в шапке вместо системного alert() */
+/* Ошибки показываются уведомлением, в шапке — только ход работы: «Сохранение…», «Черновик» */
 function setStatus(message = '', kind = '') {
   const status = byId('ccon-status');
+  if (kind === 'error') {
+    toast(message);
+    status.textContent = '';
+    return;
+  }
   status.textContent = message;
+  status.title = message;
   status.className = `ccon-status${kind ? ` ${kind}` : ''}`;
 }
 

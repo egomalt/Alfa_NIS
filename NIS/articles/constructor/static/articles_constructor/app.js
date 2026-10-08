@@ -1,5 +1,5 @@
 /* Редактор статьи кандидата: обложка, текст с плавающей панелью, теги, сохранение. */
-import { api, byId, esc, pageData, promptDialog } from 'alfa/core';
+import { api, byId, esc, pageData, promptDialog, toast } from 'alfa/core';
 
 const { articleId, articleData, covers = [] } = pageData();
 const MAX_TAGS = 8;
@@ -26,9 +26,16 @@ const markDirty = () => {
 };
 
 /* Любой сбой сохранения и публикации виден в шапке редактора */
+/* Ошибки показываются уведомлением, в шапке — только ход работы: «Сохранение…», «Черновик» */
 function setStatus(message = '', kind = '') {
   const status = byId('status-msg');
+  if (kind === 'error') {
+    toast(message);
+    status.textContent = '';
+    return;
+  }
   status.textContent = message;
+  status.title = message;
   status.className = `status-msg${kind ? ` ${kind}` : ''}`;
 }
 

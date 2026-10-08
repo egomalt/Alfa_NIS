@@ -28,8 +28,7 @@ class ConstructorTests(BaseCase):
 
         response = self.publish(test)
         self.assertEqual(response.status_code, 400)
-        self.assertIn('Страница 1 «Сколько будет 2+2?»', response.json()['message'])
-        self.assertIn('правильный', response.json()['message'])
+        self.assertEqual(response.json()['message'], 'Страница 1: отметьте правильный вариант ответа.')
 
         page.answers.create(text='4', is_correct=True, order=2)
         self.assertEqual(self.publish(test).status_code, 200)

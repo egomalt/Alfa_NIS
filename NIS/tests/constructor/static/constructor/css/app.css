@@ -728,11 +728,15 @@ textarea {
   align-self: flex-start;
 }
 /* Строка состояния: сохранение, загрузка, публикация и их ошибки */
+/* Длинное сообщение обрезается, а не раздвигает шапку: целиком его показывает уведомление */
 .save-status {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .save-status.error {
   color: var(--red-text);

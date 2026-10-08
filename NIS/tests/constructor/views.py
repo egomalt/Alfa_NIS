@@ -294,7 +294,7 @@ def _publish_problem(test):
         return 'Добавьте хотя бы один вопрос: тест из одних материалов нечего проходить.'
 
     for number, page in enumerate(pages, start=1):
-        where = f'Страница {number}' + (f' «{page.title.strip()}»' if page.title.strip() else '')
+        where = f'Страница {number}'
         if page.type in (TestPage.TYPE_QUIZ, TestPage.TYPE_INPUT) and not page.title.strip():
             return f'Страница {number}: напишите текст вопроса.'
         if page.type == TestPage.TYPE_QUIZ:

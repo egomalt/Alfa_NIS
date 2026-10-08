@@ -1,7 +1,7 @@
 /* Конструктор теста: страница «Информация», вопросы трёх типов, задачи на код.
    Тест живёт в памяти страницы до сохранения; первая страница — виртуальная
    «Информация о тесте», на сервер она не уходит. */
-import { api, byId, confirmDialog, esc, pageData } from 'alfa/core';
+import { api, byId, confirmDialog, esc, pageData, toast } from 'alfa/core';
 
 const page = pageData();
 const TYPE_LABELS = { info: 'Инфо', text: 'Текст', quiz: 'Выбор', input: 'Ввод', code: 'Код' };
@@ -101,9 +101,16 @@ function applySavedIds(saved) {
   });
 }
 
+/* Ошибки показываются уведомлением, в шапке — только ход работы: «Сохранение…», «Черновик» */
 function setStatus(message = '', kind = '') {
   const status = byId('cst-save-status');
+  if (kind === 'error') {
+    toast(message);
+    status.textContent = '';
+    return;
+  }
   status.textContent = message;
+  status.title = message;
   status.className = `save-status${kind ? ` ${kind}` : ''}`;
 }
 
