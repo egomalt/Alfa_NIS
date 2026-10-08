@@ -11,6 +11,7 @@
 
 import base64
 import subprocess
+import uuid
 
 # Как разложить код в файл и запустить его. {b64} подставляется командой.
 _UNPACK = 'echo {b64} | base64 -d > {path}'
@@ -52,11 +53,13 @@ def run_in_docker(language, code, stdin_data='', time_limit=5):
     if not cfg:
         return {'ok': False, 'error': f'Неподдерживаемый язык: {language}'}
 
+    name = f'alfa-run-{uuid.uuid4().hex[:12]}'
     cmd = [
         'docker',
         'run',
         '--rm',
         '-i',
+        f'--name={name}',
         '--network=none',
         '--memory=128m',
         '--cpus=0.5',
@@ -83,6 +86,7 @@ def run_in_docker(language, code, stdin_data='', time_limit=5):
             'timed_out': False,
         }
     except subprocess.TimeoutExpired:
+        _remove_container(name)
         return {
             'ok': True,
             'stdout': '',
@@ -95,3 +99,10 @@ def run_in_docker(language, code, stdin_data='', time_limit=5):
     except OSError:
         # Текст системной ошибки наружу не отдаём
         return {'ok': False, 'error': 'Не удалось запустить проверку'}
+
+
+def _remove_container(name):
+    try:
+        subprocess.run(['docker', 'rm', '-f', name], capture_output=True, timeout=15)
+    except (OSError, subprocess.TimeoutExpired):
+        pass

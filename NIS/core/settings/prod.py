@@ -26,6 +26,9 @@ CSRF_COOKIE_SECURE = HTTPS
 SECURE_CONTENT_TYPE_NOSNIFF = True
 # Браузер запоминает на год, что сайт открывается только по HTTPS
 SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365 if HTTPS else 0
+SECURE_SSL_REDIRECT = HTTPS
+SECURE_REDIRECT_EXEMPT = [r'^healthz/$']
+SILENCED_SYSTEM_CHECKS = ['security.W005', 'security.W021']
 
 LOGGING = {
     'version': 1,

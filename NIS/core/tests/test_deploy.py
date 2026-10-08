@@ -46,6 +46,7 @@ class SettingsTests(SimpleTestCase):
         self.assertTrue(module.SESSION_COOKIE_SECURE)
         self.assertTrue(module.CSRF_COOKIE_SECURE)
         self.assertGreater(module.SECURE_HSTS_SECONDS, 0)
+        self.assertTrue(module.SECURE_SSL_REDIRECT)
         # Проверка живости Docker идёт изнутри контейнера
         self.assertIn('127.0.0.1', module.ALLOWED_HOSTS)
 
@@ -54,6 +55,15 @@ class SettingsTests(SimpleTestCase):
         module = self._load('prod', COOKIE_SECURE='0', **self.PROD_ENV)
         self.assertFalse(module.SESSION_COOKIE_SECURE)
         self.assertEqual(module.SECURE_HSTS_SECONDS, 0)
+        self.assertFalse(module.SECURE_SSL_REDIRECT)
+
+    def test_https_redirect_spares_the_health_check(self):
+        from django.test import Client
+
+        module = self._load('prod', **self.PROD_ENV)
+        with self.settings(SECURE_SSL_REDIRECT=True, SECURE_REDIRECT_EXEMPT=module.SECURE_REDIRECT_EXEMPT):
+            self.assertEqual(Client().get('/healthz/').status_code, 200)
+            self.assertEqual(Client().get('/').status_code, 301)
 
     def test_dates_are_shown_in_moscow_time(self):
         self.assertEqual(settings.TIME_ZONE, 'Europe/Moscow')

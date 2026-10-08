@@ -53,6 +53,8 @@ class CodeExecutorTests(SimpleTestCase):
         result = run_in_docker('python', 'while True: pass', time_limit=1)
         self.assertTrue(result['ok'])
         self.assertTrue(result['timed_out'])
+        left = subprocess.run(['docker', 'ps', '-aq', '--filter', 'name=alfa-run-'], capture_output=True, text=True)
+        self.assertEqual(left.stdout.strip(), '')
 
     def test_network_is_closed(self):
         code = (
