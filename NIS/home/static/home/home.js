@@ -48,7 +48,7 @@ async function loadList(container, url, key, limit, render, emptyText, errorText
 
 loadList(
   byId('home-companies'),
-  '/api/v1/companies/',
+  '/api/v1/companies/?per_page=5',
   'companies',
   5,
   companyRow,
@@ -57,7 +57,7 @@ loadList(
 );
 loadList(
   byId('home-tests'),
-  '/api/v1/tests/catalog/',
+  '/api/v1/tests/catalog/?per_page=3',
   'tests',
   3,
   testCard,

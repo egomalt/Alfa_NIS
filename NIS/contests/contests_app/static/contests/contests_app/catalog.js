@@ -1,5 +1,6 @@
 /* Каталог конкурсов. Полоса слева показывает срочность,
    вместо даты выводится обратный отсчёт до дедлайна. */
+import { catalog, syncUrl } from 'alfa/catalog';
 import {
   api,
   byId,
@@ -55,31 +56,10 @@ function deadlineLabel(contest) {
 const params = new URLSearchParams(location.search);
 const state = {
   me: null,
-  contests: [],
   status: params.get('status') || 'all',
   category: params.get('cat') || 'all',
   query: params.get('q') || '',
-  shown: PAGE_SIZE,
 };
-
-function syncUrl() {
-  const next = new URLSearchParams();
-  if (state.status !== 'all') next.set('status', state.status);
-  if (state.category !== 'all') next.set('cat', state.category);
-  if (state.query.trim()) next.set('q', state.query.trim());
-  history.replaceState(null, '', `${location.pathname}${next.size ? `?${next}` : ''}`);
-}
-
-function filtered() {
-  const query = state.query.trim().toLowerCase();
-  return state.contests.filter(
-    (contest) =>
-      (state.status === 'all' || contest.status === state.status) &&
-      (state.category === 'all' || (contest.category ?? '').toLowerCase() === state.category) &&
-      (!query ||
-        `${contest.title} ${contest.excerpt} ${contest.company_name} ${contest.prize}`.toLowerCase().includes(query)),
-  );
-}
 
 function card(contest) {
   const urgency = urgencyOf(contest);
@@ -111,24 +91,7 @@ function card(contest) {
     </article>`;
 }
 
-function renderGrid() {
-  const list = filtered();
-  byId('cat-count').textContent = list.length ? countOf(list.length, WORDS.contests) : '';
-  byId('cat-grid').innerHTML = list.length
-    ? list.slice(0, state.shown).map(card).join('')
-    : `<div class="state-msg">${
-        state.query.trim()
-          ? `По запросу «${esc(state.query.trim())}» ничего не нашлось`
-          : 'Под выбранные фильтры ничего не подходит'
-      }</div>`;
-  byId('load-more-row').hidden = state.shown >= list.length;
-}
-
-function renderClosing() {
-  const soon = state.contests
-    .filter((contest) => isOpen(contest) && contest.deadline)
-    .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
-    .slice(0, 5);
+function renderClosing(soon) {
   byId('closing-list').innerHTML = soon.length
     ? soon
         .map(
@@ -154,11 +117,29 @@ function syncChips() {
     .forEach((chip) => chip.classList.toggle('active', chip.dataset.cat === state.category));
 }
 
-function applyFilters(changes) {
-  Object.assign(state, changes, { shown: PAGE_SIZE });
+const list = catalog({
+  url: '/api/v1/contests/catalog/',
+  key: 'contests',
+  perPage: PAGE_SIZE,
+  gridId: 'cat-grid',
+  card,
+  empty: () =>
+    state.query.trim()
+      ? `По запросу «${state.query.trim()}» ничего не нашлось`
+      : 'Под выбранные фильтры ничего не подходит',
+  params: () => ({ q: state.query.trim(), status: state.status, category: state.category }),
+  onTotal: (total) => {
+    byId('cat-count').textContent = total ? countOf(total, WORDS.contests) : '';
+  },
+  onExtras: ({ closing }) => renderClosing(closing),
+});
+
+function applyFilters(changes, { typing = false } = {}) {
+  Object.assign(state, changes);
   syncChips();
-  syncUrl();
-  renderGrid();
+  syncUrl({ status: state.status, cat: state.category, q: state.query.trim() });
+  if (typing) list.reloadSoon();
+  else list.reload();
 }
 
 document
@@ -170,12 +151,7 @@ document
 
 const searchInput = byId('search-input');
 searchInput.value = state.query;
-searchInput.addEventListener('input', () => applyFilters({ query: searchInput.value }));
-
-byId('btn-load').addEventListener('click', () => {
-  state.shown += PAGE_SIZE;
-  renderGrid();
-});
+searchInput.addEventListener('input', () => applyFilters({ query: searchInput.value }, { typing: true }));
 
 const authModal = byId('cat-auth-modal');
 const closeAuthModal = () => authModal.classList.remove('open');
@@ -214,10 +190,4 @@ api
   .catch(() => null);
 
 syncChips();
-try {
-  ({ contests: state.contests = [] } = await api.get('/api/v1/contests/catalog/'));
-  renderClosing();
-  renderGrid();
-} catch {
-  byId('cat-grid').innerHTML = '<div class="state-msg">Не удалось загрузить конкурсы</div>';
-}
+list.reload();

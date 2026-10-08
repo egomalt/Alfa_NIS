@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}API — Alfa Career{% endblock %}
+{% block styles %}
+  <link rel="stylesheet" href="{% static 'home/help.css' %}?v={{ ASSET_V }}">
+  <link rel="stylesheet"
+        href="{% static 'css/api-docs.css' %}?v={{ ASSET_V }}">
+{% endblock %}
+{% block body %}
+  <main class="hp-page">
+    <section class="hp-hero">
+      <h1>API платформы</h1>
+      <p>
+        Все страницы сайта получают данные через эти {{ total }} методов. Ответы — JSON вида
+        <code>{"ok": true, …}</code>, ошибки — <code>{"ok": false, "message": "…"}</code> с кодом 4xx.
+        Изменяющие запросы требуют cookie сессии и заголовок <code>X-CSRFToken</code>.
+      </p>
+      <nav class="hp-anchors" aria-label="Разделы API">
+        {% for title, rows in groups %}<a class="cr-chip"
+   href="#group-{{ forloop.counter }}">{{ title }}</a>{% endfor %}
+      </nav>
+    </section>
+    {% for title, rows in groups %}
+      <section class="hp-section {% if forloop.last %}hp-section-last{% endif %}"
+               id="group-{{ forloop.counter }}">
+        <h2 class="cr-section-title">{{ title }}</h2>
+        <div class="api-table">
+          {% for row in rows %}
+            <div class="api-row">
+              <div class="api-methods">
+                {% for method in row.methods %}<span class="api-method api-method-{{ method|lower }}">{{ method }}</span>{% endfor %}
+              </div>
+              <code class="api-path">{{ row.path }}</code>
+              <div class="api-description">{{ row.description }}</div>
+              <div class="api-access">{{ row.access }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  </main>
+  {% include "partials/footer.html" %}
+{% endblock %}

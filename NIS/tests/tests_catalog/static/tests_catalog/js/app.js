@@ -1,6 +1,7 @@
 /* Каталог тренировочных тестов.
    Фильтры читаются из адреса (?q=, ?cat=, ?level=) — по таким ссылкам
    сюда ведут поиск и чипы с главной страницы. */
+import { catalog, syncUrl } from 'alfa/catalog';
 import { api, byId, countOf, esc, initial, LEVELS, TEST_CATEGORIES, WORDS } from 'alfa/core';
 
 const PAGE_SIZE = 9;
@@ -23,31 +24,10 @@ const passedLabel = (count) => {
 
 const params = new URLSearchParams(location.search);
 const state = {
-  tests: [],
   level: params.get('level') || 'all',
   category: params.get('cat') || 'all',
   query: params.get('q') || '',
-  shown: PAGE_SIZE,
 };
-
-function syncUrl() {
-  const next = new URLSearchParams();
-  if (state.query.trim()) next.set('q', state.query.trim());
-  if (state.category !== 'all') next.set('cat', state.category);
-  if (state.level !== 'all') next.set('level', state.level);
-  history.replaceState(null, '', `${location.pathname}${next.size ? `?${next}` : ''}`);
-}
-
-function filtered() {
-  const query = state.query.trim().toLowerCase();
-  return state.tests.filter(
-    (test) =>
-      (state.level === 'all' || test.level === state.level) &&
-      (state.category === 'all' || test.category === state.category) &&
-      (!query ||
-        `${test.title} ${test.description} ${test.owner_name} ${test.owner_username}`.toLowerCase().includes(query)),
-  );
-}
 
 function card(test) {
   const level = LEVELS[test.level] ? test.level : '';
@@ -71,24 +51,7 @@ function card(test) {
     </article>`;
 }
 
-function renderGrid() {
-  const list = filtered();
-  byId('count').textContent = list.length ? countOf(list.length, WORDS.tests) : '';
-  byId('grid').innerHTML = list.length
-    ? list.slice(0, state.shown).map(card).join('')
-    : `<div class="state-msg">${
-        state.query.trim()
-          ? `По запросу «${esc(state.query.trim())}» ничего не нашлось`
-          : 'Под выбранные фильтры ничего не подходит'
-      }</div>`;
-  byId('load-more-row').hidden = state.shown >= list.length;
-}
-
-function renderTrending() {
-  const top = state.tests
-    .filter((test) => test.submissions > 0)
-    .sort((a, b) => b.submissions - a.submissions)
-    .slice(0, 5);
+function renderTrending(top) {
   byId('trending-list').innerHTML = top.length
     ? top
         .map(
@@ -114,11 +77,29 @@ function syncChips() {
     .forEach((chip) => chip.classList.toggle('active', chip.dataset.cat === state.category));
 }
 
-function applyFilters(changes) {
-  Object.assign(state, changes, { shown: PAGE_SIZE });
+const list = catalog({
+  url: '/api/v1/tests/catalog/',
+  key: 'tests',
+  perPage: PAGE_SIZE,
+  gridId: 'grid',
+  card,
+  empty: () =>
+    state.query.trim()
+      ? `По запросу «${state.query.trim()}» ничего не нашлось`
+      : 'Под выбранные фильтры ничего не подходит',
+  params: () => ({ q: state.query.trim(), level: state.level, category: state.category }),
+  onTotal: (total) => {
+    byId('count').textContent = total ? countOf(total, WORDS.tests) : '';
+  },
+  onExtras: ({ trending }) => renderTrending(trending),
+});
+
+function applyFilters(changes, { typing = false } = {}) {
+  Object.assign(state, changes);
   syncChips();
-  syncUrl();
-  renderGrid();
+  syncUrl({ q: state.query.trim(), cat: state.category, level: state.level });
+  if (typing) list.reloadSoon();
+  else list.reload();
 }
 
 document
@@ -130,12 +111,7 @@ document
 
 const searchInput = byId('search-input');
 searchInput.value = state.query;
-searchInput.addEventListener('input', () => applyFilters({ query: searchInput.value }));
-
-byId('btn-load').addEventListener('click', () => {
-  state.shown += PAGE_SIZE;
-  renderGrid();
-});
+searchInput.addEventListener('input', () => applyFilters({ query: searchInput.value }, { typing: true }));
 
 // Кнопку «Создать тест» видят только те, кто может завести тест
 api
@@ -146,10 +122,4 @@ api
   .catch(() => null);
 
 syncChips();
-try {
-  ({ tests: state.tests = [] } = await api.get('/api/v1/tests/catalog/'));
-  renderTrending();
-  renderGrid();
-} catch {
-  byId('grid').innerHTML = '<div class="state-msg">Не удалось загрузить тесты</div>';
-}
+list.reload();

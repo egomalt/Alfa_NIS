@@ -15,33 +15,53 @@ from tests.constructor.models import TestPage
 
 
 class SettingsTests(SimpleTestCase):
-    def _load(self, **env):
-        """Перечитывает core.settings с подменённым окружением."""
-        import core.settings as module
+    def _load(self, name, **env):
+        """Загружает модуль настроек с подменённым окружением, не трогая текущий запуск."""
+        import sys
 
         with mock.patch.dict(os.environ, env, clear=False):
-            return importlib.reload(module)
+            for module in ('core.settings.prod', 'core.settings.dev', 'core.settings.base'):
+                sys.modules.pop(module, None)
+            try:
+                return importlib.import_module(f'core.settings.{name}')
+            finally:
+                for module in ('core.settings.prod', 'core.settings.dev', 'core.settings.base'):
+                    sys.modules.pop(module, None)
 
-    def tearDown(self):
-        # Возвращаем модуль в состояние текущего запуска
-        import core.settings
+    PROD_ENV = {'SECRET_KEY': 'n' * 40, 'ALLOWED_HOSTS': 'career.example.com'}
 
-        importlib.reload(core.settings)
-
-    def test_debug_key_is_refused_in_production(self):
-        """С выключенным DEBUG отладочный SECRET_KEY запускать нельзя."""
+    def test_production_refuses_a_short_or_missing_key(self):
         with self.assertRaises(RuntimeError):
-            self._load(DJANGO_DEBUG='0', SECRET_KEY='dev-secret-key-change-in-prod')
+            self._load('prod', SECRET_KEY='', ALLOWED_HOSTS='career.example.com')
+        with self.assertRaises(RuntimeError):
+            self._load('prod', SECRET_KEY='korotkiy', ALLOWED_HOSTS='career.example.com')
 
-    def test_production_mode_tightens_cookies(self):
-        module = self._load(DJANGO_DEBUG='0', SECRET_KEY='nastoyashiy-klyuch-dlya-testa')
+    def test_production_needs_a_real_domain(self):
+        with self.assertRaises(RuntimeError):
+            self._load('prod', SECRET_KEY='n' * 40, ALLOWED_HOSTS='*')
+
+    def test_production_mode_tightens_security(self):
+        module = self._load('prod', **self.PROD_ENV)
         self.assertFalse(module.DEBUG)
         self.assertTrue(module.SESSION_COOKIE_SECURE)
         self.assertTrue(module.CSRF_COOKIE_SECURE)
+        self.assertGreater(module.SECURE_HSTS_SECONDS, 0)
+        # Проверка живости Docker идёт изнутри контейнера
+        self.assertIn('127.0.0.1', module.ALLOWED_HOSTS)
+
+    def test_site_without_https_keeps_cookies_working(self):
+        """Сайт по IP без сертификата: защищённые cookie сломали бы вход."""
+        module = self._load('prod', COOKIE_SECURE='0', **self.PROD_ENV)
+        self.assertFalse(module.SESSION_COOKIE_SECURE)
+        self.assertEqual(module.SECURE_HSTS_SECONDS, 0)
+
+    def test_dates_are_shown_in_moscow_time(self):
+        self.assertEqual(settings.TIME_ZONE, 'Europe/Moscow')
+        self.assertTrue(settings.USE_TZ)
 
     def test_hosts_and_origins_are_split_by_comma(self):
         module = self._load(
-            DJANGO_DEBUG='1',
+            'dev',
             ALLOWED_HOSTS='career.example.com, www.example.com',
             CSRF_TRUSTED_ORIGINS='https://career.example.com',
         )
@@ -52,6 +72,13 @@ class SettingsTests(SimpleTestCase):
         """Собранную статику отдаёт WhiteNoise — иначе сайт уйдёт в бой без стилей."""
         self.assertIn('whitenoise.middleware.WhiteNoiseMiddleware', settings.MIDDLEWARE)
         self.assertTrue(settings.STATIC_ROOT)
+
+    def test_health_endpoint_reports_the_database(self):
+        from django.test import Client
+
+        response = Client().get('/healthz/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'ok': True})
 
     def test_private_files_live_outside_media(self):
         self.assertNotEqual(settings.PRIVATE_MEDIA_ROOT, settings.MEDIA_ROOT)

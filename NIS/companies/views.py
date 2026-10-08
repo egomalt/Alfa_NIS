@@ -1,3 +1,5 @@
+from collections import Counter
+
 from django.db.models import Avg, Count, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
@@ -11,7 +13,7 @@ from authorization import bans
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from authorization.views import get_current_account
 from core.auth import api_login_required, page_login_required
-from core.pagination import paginate
+from core.pagination import paginate, text_param, wants_extras
 from core.utils import load_json_body, serialize_form_errors
 from tests import attempts
 from tests.constructor.models import Test
@@ -22,6 +24,7 @@ from .models import Company, CompanyRating, ensure_company
 
 # Каталог фильтруется в браузере, поэтому страница крупная
 CATALOG_PER_PAGE = 100
+TRENDING_SIZE = 5
 
 
 def _own_company_or_error(request, username):
@@ -91,28 +94,14 @@ def _serialize_company(company, include_private=False):
     return data
 
 
-@require_GET
-def api_companies_list(request):
-    # Сортируем по числу опубликованных тестов: компании без тестов внизу.
-    # Тесты связаны с компанией строкой owner_username, поэтому подзапрос.
-    published_tests = (
-        Test.objects.filter(status=Test.STATUS_PUBLISHED, owner_username=OuterRef('username'))
-        .values('owner_username')
-        .annotate(n=Count('id'))
-        .values('n')
+def _catalog_cards(companies):
+    ratings_qs = (
+        CompanyRating.objects.filter(company__username__in=[c.username for c in companies])
+        .values('company__username')
+        .annotate(avg=Avg('rating'), cnt=Count('id'))
     )
-    companies_qs = (
-        Company.objects.filter(verification_status=Company.VERIF_APPROVED)
-        .exclude(username__in=bans.banned_usernames())
-        .annotate(tests_total=Coalesce(Subquery(published_tests, output_field=IntegerField()), 0))
-        .order_by('-tests_total', '-created_at')
-    )
-    companies, page_meta = paginate(request, companies_qs, CATALOG_PER_PAGE)
-
-    ratings_qs = CompanyRating.objects.values('company__username').annotate(avg=Avg('rating'), cnt=Count('id'))
     ratings_map = {r['company__username']: (round(r['avg'], 1), r['cnt']) for r in ratings_qs}
-
-    result = [
+    return [
         {
             'username': c.username,
             'name': c.name,
@@ -129,7 +118,47 @@ def api_companies_list(request):
         for c in companies
     ]
 
-    return JsonResponse({'ok': True, 'companies': result, **page_meta})
+
+@require_GET
+def api_companies_list(request):
+    """Каталог: ?q= ищет по названию, описанию, городу и отрасли; ?industry= — точная отрасль."""
+    # Сортируем по числу опубликованных тестов: компании без тестов внизу.
+    # Тесты связаны с компанией строкой owner_username, поэтому подзапрос.
+    published_tests = (
+        Test.objects.filter(status=Test.STATUS_PUBLISHED, owner_username=OuterRef('username'))
+        .values('owner_username')
+        .annotate(n=Count('id'))
+        .values('n')
+    )
+    approved = (
+        Company.objects.filter(verification_status=Company.VERIF_APPROVED)
+        .exclude(username__in=bans.banned_usernames())
+        .annotate(tests_total=Coalesce(Subquery(published_tests, output_field=IntegerField()), 0))
+        .order_by('-tests_total', '-created_at')
+    )
+    companies_qs = approved
+    if industry := text_param(request, 'industry'):
+        companies_qs = companies_qs.filter(industry=industry)
+    if query := text_param(request, 'q').casefold():
+        # Регистр кириллицы LIKE в SQLite не различает — сверяем в Python
+        matching = [
+            username
+            for username, name, description, city, branch in companies_qs.values_list(
+                'username', 'name', 'description', 'city', 'industry'
+            )
+            if query in f'{name} {description} {city} {branch}'.casefold()
+        ]
+        companies_qs = companies_qs.filter(username__in=matching)
+
+    companies, page_meta = paginate(request, companies_qs, CATALOG_PER_PAGE)
+    response = {'ok': True, 'companies': _catalog_cards(companies), **page_meta}
+    if wants_extras(request):
+        industries = Counter(approved.exclude(industry='').values_list('industry', flat=True))
+        response['extras'] = {
+            'industries': [name for name, _ in industries.most_common()],
+            'trending': _catalog_cards(list(approved.filter(tests_total__gt=0)[:TRENDING_SIZE])),
+        }
+    return JsonResponse(response)
 
 
 @require_GET

@@ -1,4 +1,5 @@
 /* Каталог статей: главная статья, фильтр по тегам, поиск, популярное. */
+import { catalog } from 'alfa/catalog';
 import { api, byId, countOf, esc, formatDateLong, WORDS } from 'alfa/core';
 
 const PAGE_SIZE = 6;
@@ -17,7 +18,7 @@ const ICONS = {
     '<svg class="card-cover-pattern" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid slice"><circle cx="280" cy="30" r="100" fill="rgba(255,255,255,.08)"/><circle cx="310" cy="160" r="130" fill="rgba(255,255,255,.05)"/><circle cx="40" cy="160" r="70" fill="rgba(255,255,255,.04)"/></svg>',
 };
 
-const state = { articles: [], tag: 'all', query: '', shown: PAGE_SIZE };
+const state = { tag: 'all', query: '' };
 
 /* Собирает строку «а · б · в», пропуская пустые части */
 const joinMeta = (...parts) => parts.filter(Boolean).join(' · ');
@@ -29,19 +30,6 @@ function authorOf(article) {
   const key = article.author_username || name;
   const [background, color] = AVATAR_COLORS[key.charCodeAt(0) % AVATAR_COLORS.length];
   return { name, letter: name.trim()[0].toUpperCase(), style: `background:${background};color:${color}` };
-}
-
-function filtered() {
-  const query = state.query.trim().toLowerCase();
-  return state.articles.filter((article) => {
-    const tags = article.tags ?? [];
-    const tagMatches = state.tag === 'all' || tags.includes(state.tag);
-    const queryMatches =
-      !query ||
-      (article.title ?? '').toLowerCase().includes(query) ||
-      tags.some((tag) => tag.toLowerCase().includes(query));
-    return tagMatches && queryMatches;
-  });
 }
 
 function renderFeatured(top) {
@@ -67,18 +55,14 @@ function renderFeatured(top) {
   byId('featured-views-count').textContent = top.views || 0;
 }
 
-function renderFilters() {
-  const counts = new Map();
-  state.articles.flatMap((article) => article.tags ?? []).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
-  const tags = [...counts].sort((a, b) => b[1] - a[1]).map(([tag]) => tag);
+function renderFilters(tags) {
   byId('cats').insertAdjacentHTML(
     'beforeend',
     tags.map((tag) => `<button class="cr-chip" data-cat="${esc(tag)}">${esc(tag)}</button>`).join(''),
   );
 }
 
-function renderTrending() {
-  const top = [...state.articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
+function renderTrending(top) {
   byId('trending-list').innerHTML = top
     .map(
       (article, index) => `
@@ -117,31 +101,36 @@ function card(article) {
     </a>`;
 }
 
-function renderGrid() {
-  const list = filtered();
-  byId('art-count').textContent = countOf(list.length, WORDS.articles);
-  byId('art-grid').innerHTML = list.length
-    ? list.slice(0, state.shown).map(card).join('')
-    : '<div class="state-msg">Статей не найдено</div>';
-  byId('load-more-row').hidden = state.shown >= list.length;
-}
+const list = catalog({
+  url: '/api/v1/articles/catalog/',
+  key: 'articles',
+  perPage: PAGE_SIZE,
+  gridId: 'art-grid',
+  card,
+  empty: () => 'Статей не найдено',
+  params: () => ({ tag: state.tag, q: state.query.trim() }),
+  onTotal: (total) => {
+    byId('art-count').textContent = countOf(total, WORDS.articles);
+  },
+  // Главная статья, теги и популярное — по всему каталогу, от фильтров не зависят
+  onExtras: ({ featured, tags, trending }) => {
+    if (featured.length) renderFeatured(featured[0]);
+    renderFilters(tags);
+    renderTrending(trending);
+  },
+});
 
 byId('cats').addEventListener('click', (event) => {
   const chip = event.target.closest('[data-cat]');
   if (!chip) return;
-  Object.assign(state, { tag: chip.dataset.cat, shown: PAGE_SIZE });
+  state.tag = chip.dataset.cat;
   document.querySelectorAll('#cats .cr-chip').forEach((item) => item.classList.toggle('active', item === chip));
-  renderGrid();
+  list.reload();
 });
 
 byId('search-input').addEventListener('input', (event) => {
-  Object.assign(state, { query: event.target.value, shown: PAGE_SIZE });
-  renderGrid();
-});
-
-byId('btn-load').addEventListener('click', () => {
-  state.shown += PAGE_SIZE;
-  renderGrid();
+  state.query = event.target.value;
+  list.reloadSoon();
 });
 
 // Писать статьи могут только кандидаты
@@ -152,15 +141,4 @@ api
   })
   .catch(() => null);
 
-try {
-  const { articles = [] } = await api.get('/api/v1/articles/catalog/');
-  state.articles = articles;
-  if (articles.length) {
-    renderFeatured(articles[0]);
-    renderFilters();
-    renderTrending();
-  }
-  renderGrid();
-} catch {
-  byId('art-grid').innerHTML = '<div class="state-msg">Не удалось загрузить статьи</div>';
-}
+list.reload();

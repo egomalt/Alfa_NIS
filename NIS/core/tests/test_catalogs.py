@@ -205,3 +205,44 @@ class ContestsCatalogTests(BaseCase):
 
     def test_catalog_page_opens(self):
         self.assertEqual(Client().get('/contests/').status_code, 200)
+
+
+class CatalogFilterTests(BaseCase):
+    """Каталоги фильтруют на сервере: страница получает только нужную порцию."""
+
+    def test_articles_filter_by_tag_and_search_ignores_case(self):
+        Article.objects.create(
+            author_username='kandidat', title='Разбор Собеседования', tags=['Python'], status=Article.STATUS_PUBLISHED
+        )
+        Article.objects.create(author_username='kandidat', title='Другое', tags=['Go'], status=Article.STATUS_PUBLISHED)
+
+        by_tag = Client().get('/api/v1/articles/catalog/?tag=Python').json()
+        self.assertEqual([a['title'] for a in by_tag['articles']], ['Разбор Собеседования'])
+        # LIKE в SQLite не понимает регистр кириллицы — поиск не должен от этого зависеть
+        by_text = Client().get('/api/v1/articles/catalog/?q=собеседования').json()
+        self.assertEqual(by_text['total'], 1)
+        by_tag_text = Client().get('/api/v1/articles/catalog/?q=pyth').json()
+        self.assertEqual(by_tag_text['total'], 1)
+
+    def test_articles_extras_cover_the_whole_catalog(self):
+        for i in range(3):
+            Article.objects.create(author_username='kandidat', title=f'С{i}', tags=['A'], status=Article.STATUS_PUBLISHED)
+        data = Client().get('/api/v1/articles/catalog/?per_page=1&extras=1').json()
+        self.assertEqual(len(data['articles']), 1)
+        self.assertEqual(data['extras']['tags'], ['A'])
+        self.assertEqual(len(data['extras']['trending']), 3)
+        self.assertNotIn('extras', Client().get('/api/v1/articles/catalog/').json())
+
+    def test_tests_filter_by_level_and_category(self):
+        self.make_test(owner='firma', stats={'level': 'junior', 'category': 'backend'})
+        self.make_test(owner='firma', stats={'level': 'senior', 'category': 'backend'})
+        data = Client().get('/api/v1/tests/catalog/?level=junior&category=backend').json()
+        self.assertEqual(data['total'], 1)
+        self.assertEqual(data['tests'][0]['level'], 'junior')
+        self.assertEqual(Client().get('/api/v1/tests/catalog/?level=all').json()['total'], 2)
+
+    def test_contests_search_includes_company_name(self):
+        self.make_contest(title='Кейс про логи')
+        data = Client().get('/api/v1/contests/catalog/?q=фирма').json()
+        self.assertEqual(data['total'], 1)
+        self.assertEqual(Client().get('/api/v1/contests/catalog/?q=нет-такого').json()['total'], 0)

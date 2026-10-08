@@ -1,5 +1,6 @@
 /* Каталог компаний. API отдаёт только одобренные, поэтому фильтра
    «только верифицированные» здесь нет. */
+import { catalog } from 'alfa/catalog';
 import { api, byId, countOf, esc, initial, WORDS } from 'alfa/core';
 
 const PAGE_SIZE = 6;
@@ -11,19 +12,9 @@ const ICONS = {
     '<svg class="co-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><title>Проверена</title><path d="M5 13l4 4L19 7"/></svg>',
 };
 
-const state = { companies: [], query: '', industry: 'all', shown: PAGE_SIZE };
+const state = { query: '', industry: 'all', industries: [] };
 
 const testsLabel = (count) => (count ? countOf(count, WORDS.tests) : 'Нет тестов');
-
-function filtered() {
-  const query = state.query.trim().toLowerCase();
-  return state.companies.filter(
-    (company) =>
-      (state.industry === 'all' || company.industry === state.industry) &&
-      (!query ||
-        `${company.name} ${company.description} ${company.city} ${company.industry}`.toLowerCase().includes(query)),
-  );
-}
 
 function card(company) {
   const meta = [company.industry, company.city].filter(Boolean).join(' · ');
@@ -49,21 +40,8 @@ function card(company) {
     </a>`;
 }
 
-function renderGrid() {
-  const list = filtered();
-  byId('co-count').textContent = list.length ? countOf(list.length, WORDS.companies) : '';
-  byId('co-grid').innerHTML = list.length
-    ? list.slice(0, state.shown).map(card).join('')
-    : `<div class="state-msg">${state.query ? `По запросу «${esc(state.query)}» ничего не нашлось` : 'Компаний пока нет'}</div>`;
-  byId('load-more-row').hidden = state.shown >= list.length;
-}
-
 function renderIndustries() {
-  const counts = new Map();
-  state.companies
-    .filter((company) => company.industry)
-    .forEach(({ industry }) => counts.set(industry, (counts.get(industry) ?? 0) + 1));
-  const names = [...counts].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+  const names = state.industries;
   const chip = (value, label) =>
     `<button class="cr-chip ${state.industry === value ? 'active' : ''}" data-industry="${esc(value)}">${esc(label)}</button>`;
   const container = byId('industries');
@@ -71,11 +49,7 @@ function renderIndustries() {
   container.insertAdjacentHTML('beforeend', chip('all', 'Все') + names.map((name) => chip(name, name)).join(''));
 }
 
-function renderTrending() {
-  const top = state.companies
-    .filter((company) => company.tests_count > 0)
-    .sort((a, b) => b.tests_count - a.tests_count)
-    .slice(0, 5);
+function renderTrending(top) {
   byId('trending-list').innerHTML = top.length
     ? top
         .map(
@@ -92,22 +66,36 @@ function renderTrending() {
     : '<div class="trending-empty">Пока никто не опубликовал тесты</div>';
 }
 
+const list = catalog({
+  url: '/api/v1/companies/',
+  key: 'companies',
+  perPage: PAGE_SIZE,
+  gridId: 'co-grid',
+  card,
+  empty: () => (state.query.trim() ? `По запросу «${state.query.trim()}» ничего не нашлось` : 'Компаний пока нет'),
+  params: () => ({ q: state.query.trim(), industry: state.industry }),
+  onTotal: (total) => {
+    byId('co-count').textContent = total ? countOf(total, WORDS.companies) : '';
+  },
+  // Отрасли и популярное — по всем компаниям, от поиска не зависят
+  onExtras: ({ industries, trending }) => {
+    state.industries = industries;
+    renderIndustries();
+    renderTrending(trending);
+  },
+});
+
 byId('industries').addEventListener('click', (event) => {
   const chip = event.target.closest('[data-industry]');
   if (!chip) return;
-  Object.assign(state, { industry: chip.dataset.industry, shown: PAGE_SIZE });
+  state.industry = chip.dataset.industry;
   renderIndustries();
-  renderGrid();
+  list.reload();
 });
 
 byId('search-input').addEventListener('input', (event) => {
-  Object.assign(state, { query: event.target.value, shown: PAGE_SIZE });
-  renderGrid();
-});
-
-byId('btn-load').addEventListener('click', () => {
-  state.shown += PAGE_SIZE;
-  renderGrid();
+  state.query = event.target.value;
+  list.reloadSoon();
 });
 
 // Кнопку «Стать компанией» показываем только тем, кто ещё не вошёл
@@ -118,11 +106,4 @@ api
   })
   .catch(() => null);
 
-try {
-  ({ companies: state.companies = [] } = await api.get('/api/v1/companies/'));
-  renderIndustries();
-  renderTrending();
-  renderGrid();
-} catch {
-  byId('co-grid').innerHTML = '<div class="state-msg">Не удалось загрузить компании</div>';
-}
+list.reload();

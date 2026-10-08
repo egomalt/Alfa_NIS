@@ -3,6 +3,9 @@
 Формат ответа единый для всех списков:
 
     {"ok": true, "items": [...], "page": 1, "per_page": 20, "total": 137, "pages": 7}
+
+Каталоги фильтруют на сервере (?q=, свои фильтры) и по ?extras=1 добавляют
+блоки, которые считаются по всему каталогу: теги, «популярное» и т. п.
 """
 
 from django.core.paginator import EmptyPage, Paginator
@@ -37,3 +40,13 @@ def paginate(request, queryset, per_page=DEFAULT_PER_PAGE):
         'pages': paginator.num_pages,
     }
     return list(page.object_list), meta
+
+
+def text_param(request, name):
+    """Строковый параметр запроса без пробелов по краям; «all» — то же, что пусто."""
+    value = (request.GET.get(name) or '').strip()
+    return '' if value == 'all' else value[:100]
+
+
+def wants_extras(request):
+    return request.GET.get('extras') == '1'

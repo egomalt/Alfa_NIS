@@ -47,6 +47,8 @@ def api_login_required(*roles):
             request.account = account
             return view(request, *args, **kwargs)
 
+        # По этой метке страница документации API показывает, кому доступен метод
+        wrapper.login_roles = roles
         return wrapper
 
     return decorator

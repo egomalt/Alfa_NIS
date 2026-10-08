@@ -1,36 +1,20 @@
+"""Общие настройки. Режим запуска задаёт dev.py (разработка) или prod.py (сервер)."""
+
 import os
+import subprocess
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 def env_flag(name, default):
     return os.getenv(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
 
 
-# Режим разработки. На сервере выключается переменной DJANGO_DEBUG=0.
-DEBUG = env_flag('DJANGO_DEBUG', True)
-
-# Ключ подписи сессий и токенов. Значение по умолчанию годится только для
-# разработки, поэтому с выключённым DEBUG запуск без своего ключа запрещён.
-SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
-if not DEBUG and SECRET_KEY == 'dev-secret-key-change-in-prod':
-    raise RuntimeError('Задайте переменную окружения SECRET_KEY: с отладочным ключом сервер запускать нельзя.')
-
 # Список доменов через запятую: ALLOWED_HOSTS=career.example.com,www.career.example.com
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
 
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
-
-# За обратным прокси схему запроса подсказывает заголовок, иначе Django
-# считает все запросы http и ломает защиту cookie
-if env_flag('BEHIND_PROXY', False):
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-if not DEBUG:
-    SESSION_COOKIE_SECURE = env_flag('COOKIE_SECURE', True)
-    CSRF_COOKIE_SECURE = env_flag('COOKIE_SECURE', True)
-    SECURE_CONTENT_TYPE_NOSNIFF = True
 
 INSTALLED_APPS = [
     'django.contrib.sessions',
@@ -111,9 +95,23 @@ TEMPLATES = [
     },
 ]
 
-# Версия статики: подставляется ко всем ссылкам на CSS/JS как ?v=.
-# Поменял статику — подними значение (или задай ASSET_VERSION в окружении).
-ASSET_VERSION = os.getenv('ASSET_VERSION', '20260929-1')
+
+def _asset_version():
+    """Версия статики в ссылках ?v=: коммит, из которого собран сайт.
+
+    Меняется с каждым обновлением сама, и браузер не держит старые CSS/JS.
+    В образе Docker папки .git нет — коммит передаётся при сборке (ASSET_VERSION)."""
+    if os.getenv('ASSET_VERSION'):
+        return os.environ['ASSET_VERSION']
+    try:
+        return subprocess.run(
+            ['git', 'rev-parse', '--short', 'HEAD'], cwd=BASE_DIR, capture_output=True, text=True, check=True
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return 'dev'
+
+
+ASSET_VERSION = _asset_version()
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
@@ -137,7 +135,8 @@ else:
     }
 
 LANGUAGE_CODE = 'ru-ru'
-TIME_ZONE = 'UTC'
+# Хранится всё в UTC, а показывается и считается по дням — по Москве
+TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_TZ = True
 

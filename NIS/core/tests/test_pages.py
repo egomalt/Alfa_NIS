@@ -130,3 +130,30 @@ class TemplateCommentTests(SimpleTestCase):
                     broken.append(f'{path.relative_to(settings.BASE_DIR)}:{text[: match.start()].count(chr(10)) + 1}')
 
         self.assertEqual(broken, [], 'многострочный {# #} выводится на страницу, нужен {% comment %}: ' + ', '.join(broken))
+
+
+class ApiDocsTests(SimpleTestCase):
+    """Страница /api/docs/ — список всех методов API."""
+
+    def test_every_route_is_described(self):
+        """Новый метод без описания провалит этот тест, а не останется пустой строкой в документации."""
+        from api.v1 import urls
+        from api.v1.docs import DESCRIPTIONS
+
+        routes = {str(pattern.pattern) for pattern in urls.urlpatterns}
+        self.assertEqual(routes - set(DESCRIPTIONS), set(), 'нет описания')
+        self.assertEqual(set(DESCRIPTIONS) - routes, set(), 'описание метода, которого нет')
+
+    def test_methods_and_access_come_from_the_views(self):
+        from api.v1.docs import endpoints
+
+        rows = {row['path']: row for _, group in endpoints() for row in group}
+        self.assertEqual(rows['/api/v1/tests/<int:test_id>/']['methods'], ['GET', 'PUT', 'DELETE'])
+        self.assertEqual(rows['/api/v1/admin/users/']['access'], 'модератор')
+        self.assertEqual(rows['/api/v1/tests/catalog/']['access'], 'все')
+        self.assertEqual(rows['/api/v1/articles/my/']['access'], 'вход')
+
+    def test_page_lists_the_api(self):
+        body = Client().get('/api/docs/').content.decode()
+        self.assertIn('/api/v1/auth/signin/', body)
+        self.assertIn('Вход по имени пользователя и паролю', body)

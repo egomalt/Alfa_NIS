@@ -22,6 +22,7 @@ RESERVED_USERNAMES = {
     'contests',
     'django-admin',
     'export',
+    'healthz',
     'help',
     'media',
     'profiles',

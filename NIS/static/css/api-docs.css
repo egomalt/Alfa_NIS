@@ -1,0 +1,86 @@
+/* Страница документации API (/api/docs/) */
+.hp-hero code,
+.api-path {
+  font-family: 'JetBrains Mono', monospace;
+}
+.hp-hero code {
+  font-size: 0.85em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+.api-table {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.api-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1.3fr) minmax(0, 1.6fr) 130px;
+  gap: 8px 16px;
+  align-items: baseline;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.api-row:last-child {
+  border-bottom: none;
+}
+.api-methods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.api-method {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.api-method-get {
+  background: var(--green-soft);
+  color: var(--green-text);
+}
+.api-method-post,
+.api-method-put,
+.api-method-patch {
+  background: var(--amber-soft);
+  color: var(--amber-text);
+}
+.api-method-delete {
+  background: var(--red-soft);
+  color: var(--red-text);
+}
+.api-path {
+  font-size: 13px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.api-description {
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.api-access {
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: right;
+}
+@media (max-width: 860px) {
+  .api-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .api-path,
+  .api-description {
+    grid-column: 1 / -1;
+  }
+  .api-methods {
+    order: -2;
+  }
+  .api-access {
+    order: -1;
+  }
+}

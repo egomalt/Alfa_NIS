@@ -15,13 +15,14 @@ services:
       retries: 10
 
   web:
-    build: ./NIS
+    build:
+      context: ./NIS
+      args:
+        ASSET_VERSION: ${ASSET_VERSION:-dev}
     restart: unless-stopped
     env_file: .env
     environment:
-      DJANGO_DEBUG: "0"
       POSTGRES_HOST: db
-      BEHIND_PROXY: "1"
     volumes:
       - media_data:/app/media
       - private_media:/app/private_media
@@ -31,6 +32,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   caddy:
     image: caddy:2
@@ -44,7 +51,8 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - web
+      web:
+        condition: service_healthy
 
 volumes:
   pg_data:

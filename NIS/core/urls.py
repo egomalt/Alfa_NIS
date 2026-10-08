@@ -4,9 +4,14 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.static import serve
 
+from api.v1.docs import api_docs
+from core.health import healthz
+
 urlpatterns = [
+    path('healthz/', healthz, name='healthz'),
     # Служебная админка Django (не путать с /administration/ — собственной панелью модератора)
     path('django-admin/', admin.site.urls),
+    path('api/docs/', api_docs, name='api_docs'),
     path('api/v1/', include('api.v1.urls')),
     path('', include('home.urls')),
     path('', include('authorization.urls')),

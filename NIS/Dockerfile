@@ -1,7 +1,8 @@
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=core.settings.prod
 
 # Клиент Docker нужен для проверки задач на код: решение запускается
 # соседним контейнером через сокет хоста, смонтированный в compose.
@@ -18,6 +19,10 @@ WORKDIR /app
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
+
+# Коммит, из которого собран образ: по нему меняются ссылки ?v= на статику
+ARG ASSET_VERSION=dev
+ENV ASSET_VERSION=$ASSET_VERSION
 
 # Миграции и статика — при каждом старте: после обновления кода ничего не нужно делать руками.
 # Таймаут с запасом: проверка задачи на код прогоняет решение на всех тест-кейсах

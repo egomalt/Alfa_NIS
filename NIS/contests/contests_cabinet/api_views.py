@@ -12,7 +12,7 @@ from authorization.models import ROLE_COMPANY, ROLE_USER, Account
 from authorization.views import get_current_account
 from companies.models import Company
 from core.auth import api_login_required, ban_block
-from core.pagination import paginate
+from core.pagination import paginate, text_param, wants_extras
 from core.uploads import UploadError, human_size, validate_attachment
 from core.utils import load_json_body
 from users.models import UserProfile
@@ -22,6 +22,7 @@ from .models import Contest, ContestAttachment, ContestSubmission
 
 MAX_ATTACHMENTS = 10
 CATALOG_PER_PAGE = 100
+CLOSING_SOON_SIZE = 5
 MAX_SUBMISSION_ATTEMPTS = 1
 MAX_TEXT_LENGTH = 20000
 MAX_COMMENT_LENGTH = 2000
@@ -364,26 +365,44 @@ def api_submission_winner(request, contest_id, sub_id):
     return JsonResponse({'ok': True, 'winner': s.winner})
 
 
-@require_http_methods(['GET'])
-def api_contests_catalog(request):
-    qs = Contest.objects.filter(status__in=PUBLIC_STATUSES).exclude(company_username__in=bans.banned_usernames())
-    if request.GET.get('status'):
-        qs = qs.filter(status=request.GET['status'])
-    if request.GET.get('category'):
-        qs = qs.filter(category__iexact=request.GET['category'])
-
-    contests, page_meta = paginate(request, _with_counts(qs).order_by('-created_at'), CATALOG_PER_PAGE)
-
+def _catalog_cards(contests):
     company_names = {
         co.username: co.name or co.username for co in Company.objects.filter(username__in=[c.company_username for c in contests])
     }
-
     result = []
     for c in contests:
         d = _contest_to_dict(c, submissions_count=c.subs)
         d['company_name'] = company_names.get(c.company_username, c.company_username)
         result.append(d)
-    return JsonResponse({'ok': True, 'contests': result, **page_meta})
+    return result
+
+
+@require_http_methods(['GET'])
+def api_contests_catalog(request):
+    """Каталог: ?q= ищет по названию, описанию, призу и компании; ?status= и ?category= — точные фильтры."""
+    public = Contest.objects.filter(status__in=PUBLIC_STATUSES).exclude(company_username__in=bans.banned_usernames())
+    qs = public
+    if status := text_param(request, 'status'):
+        qs = qs.filter(status=status)
+    if category := text_param(request, 'category'):
+        qs = qs.filter(category__iexact=category)
+    if query := text_param(request, 'q').casefold():
+        # Регистр кириллицы LIKE в SQLite не различает — сверяем в Python
+        rows = list(qs.values_list('id', 'title', 'excerpt', 'prize', 'company_username'))
+        names = dict(Company.objects.filter(username__in={row[4] for row in rows}).values_list('username', 'name'))
+        matching = [
+            contest_id
+            for contest_id, title, excerpt, prize, company in rows
+            if query in f'{title} {excerpt} {prize} {company} {names.get(company, "")}'.casefold()
+        ]
+        qs = qs.filter(id__in=matching)
+
+    contests, page_meta = paginate(request, _with_counts(qs).order_by('-created_at'), CATALOG_PER_PAGE)
+    response = {'ok': True, 'contests': _catalog_cards(contests), **page_meta}
+    if wants_extras(request):
+        closing = _with_counts(public.filter(status=Contest.STATUS_ACTIVE, deadline__gte=timezone.now())).order_by('deadline')
+        response['extras'] = {'closing': _catalog_cards(list(closing[:CLOSING_SOON_SIZE]))}
+    return JsonResponse(response)
 
 
 @require_http_methods(['POST'])
