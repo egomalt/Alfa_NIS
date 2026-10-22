@@ -203,6 +203,14 @@ class ContestsCatalogTests(BaseCase):
         titles = [c['title'] for c in Client().get('/api/v1/contests/catalog/').json()['contests']]
         self.assertIn('Завершённый', titles)
 
+    def test_open_contests_come_before_closed_ones(self):
+        self.make_contest(owner='firma', status='active', title='Открытый')
+        self.make_contest(owner='firma', status='active', deadline='past', title='Срок вышел')
+        self.make_contest(owner='firma', status='finished', title='Завершённый')
+        titles = [c['title'] for c in Client().get('/api/v1/contests/catalog/').json()['contests']]
+        self.assertEqual(titles[0], 'Открытый')
+        self.assertEqual(set(titles[1:]), {'Срок вышел', 'Завершённый'})
+
     def test_catalog_page_opens(self):
         self.assertEqual(Client().get('/contests/').status_code, 200)
 

@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -399,7 +399,9 @@ def api_contests_catalog(request):
         ]
         qs = qs.filter(id__in=matching)
 
-    contests, page_meta = paginate(request, _with_counts(qs).order_by('-created_at'), CATALOG_PER_PAGE)
+    accepting = Q(status=Contest.STATUS_ACTIVE) & (Q(deadline__isnull=True) | Q(deadline__gte=timezone.now()))
+    qs = qs.annotate(closed=Case(When(accepting, then=Value(0)), default=Value(1), output_field=IntegerField()))
+    contests, page_meta = paginate(request, _with_counts(qs).order_by('closed', '-created_at'), CATALOG_PER_PAGE)
     response = {'ok': True, 'contests': _catalog_cards(contests), **page_meta}
     if wants_extras(request):
         closing = _with_counts(public.filter(status=Contest.STATUS_ACTIVE, deadline__gte=timezone.now())).order_by('deadline')
