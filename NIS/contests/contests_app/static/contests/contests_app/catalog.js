@@ -1,19 +1,7 @@
-/* Каталог конкурсов. Полоса слева показывает срочность,
-   вместо даты выводится обратный отсчёт до дедлайна. */
+/* Каталог конкурсов. Карточка — билет: сверху приз, ниже кейс
+   и шкала времени до дедлайна, цвет которой показывает срочность. */
 import { catalog, syncUrl } from 'alfa/catalog';
-import {
-  api,
-  byId,
-  CONTEST_CATEGORIES,
-  CONTEST_STATUSES,
-  countOf,
-  esc,
-  formatDateShort,
-  initial,
-  pluralForm,
-  statusPill,
-  WORDS,
-} from 'alfa/core';
+import { api, byId, CONTEST_CATEGORIES, countOf, esc, formatDateShort, initial, pluralForm, WORDS } from 'alfa/core';
 
 const PAGE_SIZE = 9;
 const DAY_MS = 86400000;
@@ -61,33 +49,63 @@ const state = {
   query: params.get('q') || '',
 };
 
+function timeline(contest) {
+  if (contest.status === 'review') return { label: 'Идёт проверка решений', progress: 100 };
+  if (contest.status !== 'active') {
+    return { label: contest.deadline ? `Завершён ${formatDateShort(contest.deadline)}` : 'Завершён', progress: 100 };
+  }
+  if (!contest.deadline) return { label: 'Без срока', progress: null };
+  const left = daysLeft(contest.deadline);
+  if (left < 0) return { label: 'Приём решений закрыт', progress: 100 };
+  const start = new Date(contest.created_at).getTime();
+  const end = new Date(contest.deadline).getTime();
+  const passed = end > start ? ((Date.now() - start) / (end - start)) * 100 : 100;
+  return {
+    label:
+      left === 0
+        ? 'Последний день'
+        : `${pluralForm(left, ['Остался', 'Осталось', 'Осталось'])} ${countOf(left, WORDS.days)}`,
+    progress: Math.min(100, Math.max(4, passed)),
+  };
+}
+
 function card(contest) {
   const urgency = urgencyOf(contest);
   const company = contest.company_name || contest.company_username || '';
   const category = CONTEST_CATEGORIES[(contest.category ?? '').toLowerCase()] ?? contest.category ?? '';
-  const status = CONTEST_STATUSES[contest.status] ? contest.status : 'finished';
   const participants = contest.participants_count
     ? countOf(contest.participants_count, WORDS.participants)
     : 'пока никого';
   const open = isOpen(contest);
+  const time = timeline(contest);
   return `
     <article class="card cn-card" data-urgency="${urgency}">
-      <div class="cn-head">
-        <span class="cn-company-av">${esc(initial(company))}</span>
-        <span class="cn-company">${esc(company)}</span>
-        ${statusPill(CONTEST_STATUSES, status, 'cn-status')}
+      <div class="cn-prize${contest.prize ? '' : ' is-empty'}">
+        <div class="cn-prize-top">
+          <span class="cn-prize-label"><span class="cn-prize-icon">${ICONS.cup}</span>Приз</span>
+          ${category ? `<span class="cn-cat">${esc(category)}</span>` : ''}
+        </div>
+        <div class="cn-prize-value">${esc(contest.prize || 'Не объявлен')}</div>
       </div>
-      <div class="card-title">${esc(contest.title || 'Конкурс')}</div>
-      <div class="card-excerpt">${esc(contest.excerpt || 'Компания не добавила краткое описание кейса.')}</div>
-      ${contest.prize ? `<div class="cn-prize">${ICONS.cup}${esc(contest.prize)}</div>` : ''}
-      <div class="cn-meta">
-        <span class="cn-deadline ${urgency === 'urgent' ? 'urgent' : ''}">${ICONS.clock}${esc(deadlineLabel(contest))}</span>
-        <span class="cn-deadline">${ICONS.people}${participants}</span>
-        ${category ? `<span class="cn-cat">${esc(category)}</span>` : ''}
+      <div class="cn-cut"></div>
+      <div class="cn-body">
+        <div class="cn-company">
+          <span class="cn-company-av">${esc(initial(company))}</span>
+          <span class="cn-company-name">${esc(company)}</span>
+        </div>
+        <div class="card-title">${esc(contest.title || 'Конкурс')}</div>
+        <div class="card-excerpt">${esc(contest.excerpt || 'Компания не добавила краткое описание кейса.')}</div>
+        <div class="cn-time">
+          <div class="cn-time-row">
+            <span class="cn-time-label">${ICONS.clock}${esc(time.label)}</span>
+            <span class="cn-people">${ICONS.people}${participants}</span>
+          </div>
+          ${time.progress === null ? '' : `<div class="cn-track"><span style="width: ${time.progress.toFixed(0)}%"></span></div>`}
+        </div>
+        <button class="cn-start${open ? ' is-open' : ''}" data-join="${contest.id}" data-open="${open}">
+          ${open ? 'Участвовать' : 'Смотреть конкурс'}${ICONS.arrow}
+        </button>
       </div>
-      <button class="cn-start" data-join="${contest.id}" data-open="${open}">
-        ${open ? 'Участвовать' : 'Смотреть конкурс'}${ICONS.arrow}
-      </button>
     </article>`;
 }
 

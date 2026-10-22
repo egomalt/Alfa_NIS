@@ -812,9 +812,9 @@ main {
   flex-shrink: 0;
 }
 
-/* У конкурса есть то, чего нет больше нигде на сайте, — срок. Поэтому полоса
-   слева показывает не тип задания, а срочность: чем меньше времени осталось,
-   тем тревожнее цвет. Просматривая колонку, сразу видно, что скоро закроется. */
+/* Конкурс — событие с призом и сроком, поэтому карточка похожа на билет:
+   сверху приз, ниже линия отрыва и сам кейс. Шкала внизу показывает, сколько
+   времени уже прошло, а её цвет — насколько срочно нужно успеть. */
 .cn-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -833,110 +833,192 @@ main {
 }
 
 .cn-card {
-  padding: 20px;
-  border-left: 3px solid var(--line-2);
   cursor: default;
-}
-.cn-card[data-urgency='calm'] {
-  border-left-color: var(--green-text);
+  --cn-accent: var(--green-text);
 }
 .cn-card[data-urgency='soon'] {
-  border-left-color: var(--amber-text);
+  --cn-accent: var(--amber-text);
 }
 .cn-card[data-urgency='urgent'] {
-  border-left-color: var(--red-text);
+  --cn-accent: var(--red-text);
 }
 .cn-card[data-urgency='closed'] {
-  border-left-color: var(--line-2);
+  --cn-accent: var(--faint);
 }
 
-.cn-head {
+.cn-prize {
+  padding: 16px 20px 18px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.cn-prize.is-empty,
+.cn-card[data-urgency='closed'] .cn-prize {
+  color: var(--muted);
+}
+.cn-prize-top {
   display: flex;
   align-items: center;
-  gap: 9px;
-  margin-bottom: 14px;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.cn-prize-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cn-prize-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--brand);
+  color: var(--on-brand);
+}
+.cn-card[data-urgency='closed'] .cn-prize-icon {
+  background: var(--surface-3);
+  color: var(--muted);
+}
+.cn-prize-value {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cn-prize.is-empty .cn-prize-value {
+  font-size: 15px;
+  font-weight: 600;
+}
+.cn-cat {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.cn-cut {
+  position: relative;
+  height: 0;
+  border-top: 1.5px dashed var(--line-2);
+}
+.cn-cut::before,
+.cn-cut::after {
+  content: '';
+  position: absolute;
+  top: -11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+.cn-cut::before {
+  left: -12px;
+}
+.cn-cut::after {
+  right: -12px;
+}
+
+.cn-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 16px 20px 20px;
+}
+.cn-company {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  min-width: 0;
 }
 .cn-company-av {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--surface-2);
   color: var(--text-2);
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.cn-company {
+.cn-company-name {
   min-width: 0;
   font-size: 12.5px;
-  color: var(--muted);
+  font-weight: 600;
+  color: var(--text-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cn-status {
-  margin-left: auto;
-  flex-shrink: 0;
-}
 
-/* Приз — главная приманка конкурса, поэтому отдельной выделенной строкой */
-.cn-prize {
+.cn-time {
+  margin-bottom: 16px;
+}
+.cn-time-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  border-radius: 10px;
-  background: var(--amber-soft);
-  color: var(--amber-text);
-  font-size: 13.5px;
-  font-weight: 700;
-}
-.cn-prize svg {
-  flex-shrink: 0;
-}
-
-.cn-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  justify-content: space-between;
   flex-wrap: wrap;
-  padding-top: 12px;
-  margin-bottom: 14px;
-  border-top: 1px solid var(--line);
+  gap: 4px 12px;
+  margin-bottom: 8px;
 }
-.cn-deadline {
-  display: flex;
+.cn-time-label,
+.cn-people {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11.5px;
+  gap: 5px;
+  font-size: 12.5px;
+}
+.cn-time-label {
+  font-weight: 700;
+  color: var(--cn-accent);
+}
+.cn-card[data-urgency='calm'] .cn-time-label,
+.cn-card[data-urgency='closed'] .cn-time-label {
+  color: var(--text-2);
+}
+.cn-people {
   color: var(--muted);
 }
-.cn-deadline svg {
+.cn-time-label svg,
+.cn-people svg {
   flex-shrink: 0;
+}
+.cn-people svg {
   color: var(--faint);
 }
-.cn-deadline.urgent {
-  color: var(--red-text);
-  font-weight: 700;
-}
-.cn-deadline.urgent svg {
-  color: var(--red-text);
-}
-.cn-cat {
-  margin-left: auto;
-  padding: 3px 9px;
-  border: 1px solid var(--line);
+.cn-track {
+  height: 6px;
   border-radius: 999px;
-  background: var(--bg);
-  color: var(--text-2);
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.cn-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--cn-accent);
 }
 
 .cn-start {
@@ -945,25 +1027,31 @@ main {
   justify-content: center;
   gap: 7px;
   width: 100%;
-  height: 38px;
+  height: 40px;
+  margin-top: auto;
   border: 1px solid var(--line-2);
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--surface);
   color: var(--text);
   font-size: 13.5px;
   font-weight: 600;
   font-family: var(--font);
   cursor: pointer;
-  text-decoration: none;
   transition:
     background 0.15s,
     border-color 0.15s,
     color 0.15s;
 }
 .cn-start:hover {
-  background: var(--brand);
+  background: var(--surface-2);
+}
+.cn-start.is-open {
   border-color: transparent;
+  background: var(--brand);
   color: var(--on-brand);
+}
+.cn-start.is-open:hover {
+  background: var(--brand-strong);
 }
 .cn-start svg {
   flex-shrink: 0;

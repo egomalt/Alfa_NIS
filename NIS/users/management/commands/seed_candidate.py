@@ -443,7 +443,7 @@ class Command(BaseCommand):
                 liked=winner,
             )
             # Решение прислано до дедлайна, а не «только что»
-            sent = (contest.deadline or timezone.now()) - timedelta(days=2, hours=3)
+            sent = min(contest.deadline or timezone.now(), timezone.now()) - timedelta(days=2, hours=3)
             ContestSubmission.objects.filter(pk=submission.pk).update(created_at=sent)
             # Иначе в воронке конкурса решений окажется больше, чем участников
             Contest.objects.filter(pk=contest.pk).update(participants_count=contest.participants_count + 1)

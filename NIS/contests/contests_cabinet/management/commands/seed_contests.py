@@ -2,12 +2,14 @@
 
 Нужны, чтобы профиль компании и каталог конкурсов можно было посмотреть
 заполненными, не заводя всё руками. Набор намеренно разный: три формата
-решения, разная срочность дедлайна, конкурс без приза и завершённый конкурс —
-чтобы сразу было видно, как ведёт себя вёрстка на краевых случаях.
+решения, разные сроки, конкурс без приза и завершённый конкурс — чтобы сразу
+было видно, как ведёт себя вёрстка на краевых случаях. Сроки длинные, чтобы
+данные не устаревали за пару недель; повторный запуск продлевает их заново.
 
     manage.py seed_contests                  # для компании alfa
     manage.py seed_contests --company vk-demo
     manage.py seed_contests --clear          # удалить созданное этой командой
+    manage.py seed_contests                  # повторно — продлить сроки активных
 """
 
 import random
@@ -39,7 +41,7 @@ CONTESTS = [
         'Сервис коротких ссылок',
         'Backend',
         'Junior',
-        5,
+        40,
         'Оффер на стажировку',
         'link',
         'Ссылка на публичный репозиторий с README',
@@ -57,7 +59,7 @@ CONTESTS = [
         'Дашборд продаж за квартал',
         'Аналитика',
         'Middle',
-        21,
+        90,
         '60 000 ₽',
         'file',
         'PDF или архив с ноутбуком и выгрузкой',
@@ -74,7 +76,7 @@ CONTESTS = [
         'Разбор инцидента в проде',
         'DevOps',
         'Senior',
-        2,
+        60,
         '',
         'text',
         'Текст разбора: что случилось, почему и что менять',
@@ -185,11 +187,15 @@ class Command(BaseCommand):
             return self._clear(username)
 
         now = timezone.now()
-        contests = tests = 0
+        contests = tests = refreshed = 0
 
         with transaction.atomic():
             for title, category, level, days, prize, sub_type, hint, excerpt, case in CONTESTS:
-                if Contest.objects.filter(company_username=username, title=title).exists():
+                existing = Contest.objects.filter(company_username=username, title=title)
+                if existing.exists():
+                    refreshed += existing.filter(case_text__contains=MARK, status=Contest.STATUS_ACTIVE).update(
+                        deadline=now + timedelta(days=days)
+                    )
                     continue
                 # Дедлайн в прошлом означает завершённый конкурс: активный конкурс
                 # с истёкшим сроком — состояние, которого в бою быть не должно
@@ -227,7 +233,11 @@ class Command(BaseCommand):
                 build_pages(test, questions)
                 tests += 1
 
-        self.stdout.write(self.style.SUCCESS(f'Компания «{company.name}»: создано конкурсов {contests}, тестов {tests}.'))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Компания «{company.name}»: создано конкурсов {contests}, тестов {tests}, продлено сроков {refreshed}.'
+            )
+        )
         self.stdout.write(f'Профиль: /{username}/   Удалить: manage.py seed_contests --company {username} --clear')
 
     def _make_submissions(self, contest, finished):
@@ -260,7 +270,7 @@ class Command(BaseCommand):
             # Решения кучнее к дедлайну — так это и выглядит в жизни,
             # и график подачи по дням показывает разгон, а не пустое поле
             days_before = int(rng.triangular(0, 12, 1))
-            sent = contest.deadline - timedelta(days=days_before, hours=rng.randint(0, 23))
+            sent = min(contest.deadline, timezone.now()) - timedelta(days=days_before, hours=rng.randint(0, 23))
             ContestSubmission.objects.filter(pk=submission.pk).update(created_at=sent)
 
     def _clear(self, username):
