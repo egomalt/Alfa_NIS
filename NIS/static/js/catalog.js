@@ -11,6 +11,7 @@ export function catalog({ url, key, perPage, gridId, card, empty, params, onTota
   const grid = byId(gridId);
   const loadMoreRow = byId('load-more-row');
   const loadMoreButton = byId('btn-load');
+  const searchWrap = document.querySelector('.search-wrap');
   let items = [];
   let page = 0;
   let request = 0;
@@ -24,6 +25,12 @@ export function catalog({ url, key, perPage, gridId, card, empty, params, onTota
     }
     if (!extrasLoaded) query.set('extras', '1');
     loadMoreButton.disabled = true;
+    if (reset) {
+      searchWrap?.classList.add('is-busy');
+      grid.classList.toggle('is-refreshing', items.length > 0);
+    } else {
+      loadMoreButton.classList.add('cr-busy');
+    }
     try {
       const data = await api.get(`${url}?${query}`);
       // Ответ на старый запрос пришёл позже нового — например, человек дописал поиск
@@ -42,7 +49,12 @@ export function catalog({ url, key, perPage, gridId, card, empty, params, onTota
       if (reset) grid.innerHTML = `<div class="state-msg">${esc(error.message)}</div>`;
       else toast(error.message);
     } finally {
-      loadMoreButton.disabled = false;
+      if (ticket === request) {
+        loadMoreButton.disabled = false;
+        loadMoreButton.classList.remove('cr-busy');
+        searchWrap?.classList.remove('is-busy');
+        grid.classList.remove('is-refreshing');
+      }
     }
   }
 

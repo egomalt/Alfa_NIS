@@ -66,11 +66,24 @@ loadList(
 );
 
 const searchInput = byId('hero-search');
+const searchButton = byId('hero-search-btn');
+const SEARCH_LABEL = searchButton?.textContent;
 const runSearch = () => {
+  if (searchButton.classList.contains('cr-busy')) return;
+  searchButton.classList.add('cr-busy');
+  searchButton.textContent = 'Ищем…';
   const query = searchInput.value.trim();
   location.href = query ? `/tests/?q=${encodeURIComponent(query)}` : '/tests/';
 };
-byId('hero-search-btn')?.addEventListener('click', runSearch);
+searchButton?.addEventListener('click', runSearch);
 searchInput?.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') runSearch();
+});
+document.querySelectorAll('.cr-hero .cr-chip').forEach((chip) => {
+  chip.addEventListener('click', () => chip.classList.add('cr-busy'));
+});
+window.addEventListener('pageshow', (event) => {
+  if (!event.persisted) return;
+  document.querySelectorAll('.cr-busy').forEach((node) => node.classList.remove('cr-busy'));
+  if (searchButton) searchButton.textContent = SEARCH_LABEL;
 });

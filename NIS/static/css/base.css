@@ -101,6 +101,29 @@
   }
 }
 
+@keyframes cr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.cr-busy {
+  cursor: progress;
+  pointer-events: none;
+}
+.cr-busy::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: cr-spin 0.7s linear infinite;
+}
+.cr-busy:not(.cr-chip)::before {
+  margin-right: 8px;
+}
+
 .cr-pill {
   display: inline-flex;
   align-items: center;
