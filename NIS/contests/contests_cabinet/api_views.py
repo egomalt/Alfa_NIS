@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -28,6 +28,7 @@ MAX_TEXT_LENGTH = 20000
 MAX_COMMENT_LENGTH = 2000
 
 PUBLIC_STATUSES = [Contest.STATUS_ACTIVE, Contest.STATUS_FINISHED, Contest.STATUS_REVIEW]
+CATEGORY_NAMES = {'analytics': 'Аналитика', 'design': 'Дизайн', 'career': 'Карьера'}
 
 EDITABLE_FIELDS = (
     'title',
@@ -385,7 +386,8 @@ def api_contests_catalog(request):
     if status := text_param(request, 'status'):
         qs = qs.filter(status=status)
     if category := text_param(request, 'category'):
-        qs = qs.filter(category__iexact=category)
+        name = CATEGORY_NAMES.get(category.lower(), category)
+        qs = qs.filter(Q(category__iexact=category) | Q(category=name))
     if query := text_param(request, 'q').casefold():
         # Регистр кириллицы LIKE в SQLite не различает — сверяем в Python
         rows = list(qs.values_list('id', 'title', 'excerpt', 'prize', 'company_username'))

@@ -7,6 +7,7 @@
     manage.py seed_all
     manage.py seed_all --user egor --company alfa
     manage.py seed_all --clear     # снять всё в обратном порядке
+    manage.py refresh_demo         # перед показом: перенести даты на сегодня
 """
 
 from django.core.management import call_command
@@ -22,6 +23,7 @@ STEPS = [
     ('seed_companies', {}),
     ('seed_articles', {}),
     ('seed_contests', {'company': 'company'}),
+    ('seed_contest_catalog', {}),
     ('seed_code_tests', {'owner': 'company'}),
     ('seed_candidate', {'user': 'user'}),
     ('seed_moderation', {}),

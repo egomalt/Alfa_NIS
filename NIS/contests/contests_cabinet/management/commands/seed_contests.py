@@ -12,7 +12,6 @@
     manage.py seed_contests                  # повторно — продлить сроки активных
 """
 
-import random
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
@@ -21,8 +20,8 @@ from django.utils import timezone
 
 from authorization.models import Account
 from companies.models import Company
-from contests.contests_cabinet.models import Contest, ContestSubmission
-from core.demo import MARK, TAKER_PREFIX, build_pages, ensure_takers, make_attempts
+from contests.contests_cabinet.models import Contest
+from core.demo import MARK, TAKER_PREFIX, build_pages, make_attempts, make_submissions
 from tests.constructor.models import Test
 from users.models import UserProfile
 
@@ -216,7 +215,7 @@ class Command(BaseCommand):
                     # У завершённого конкурса участники тоже были — просто приём закрыт
                     participants_count=(abs(days) % 7) + 2,
                 )
-                self._make_submissions(contest, finished)
+                make_submissions(contest, finished)
                 contests += 1
 
             for title, level, category, submissions, questions in TESTS:
@@ -239,39 +238,6 @@ class Command(BaseCommand):
             )
         )
         self.stdout.write(f'Профиль: /{username}/   Удалить: manage.py seed_contests --company {username} --clear')
-
-    def _make_submissions(self, contest, finished):
-        """Решения на конкурс: часть проверена, часть ждёт, у завершённого — победитель."""
-        takers = ensure_takers()
-        rng = random.Random(contest.id)
-        # До отправки решения доходят не все зарегистрировавшиеся — иначе
-        # воронка «зарегистрировался → прислал» всегда показывала бы 100%
-        reached = round(contest.participants_count * rng.uniform(0.45, 0.8))
-        count = min(max(reached, 1), len(takers))
-        if not count:
-            return
-
-        for i in range(count):
-            # Завершённый конкурс уже разобран, активный — частично
-            if finished:
-                status = ContestSubmission.STATUS_ACCEPTED if i == 0 else ContestSubmission.STATUS_REJECTED
-            else:
-                status = rng.choice(
-                    [ContestSubmission.STATUS_PENDING, ContestSubmission.STATUS_PENDING, ContestSubmission.STATUS_ACCEPTED]
-                )
-            submission = ContestSubmission.objects.create(
-                contest=contest,
-                candidate_username=takers[i],
-                candidate_name=f'Кандидат {i + 1}',
-                text='Демонстрационное решение.',
-                status=status,
-                winner=finished and i == 0,
-            )
-            # Решения кучнее к дедлайну — так это и выглядит в жизни,
-            # и график подачи по дням показывает разгон, а не пустое поле
-            days_before = int(rng.triangular(0, 12, 1))
-            sent = min(contest.deadline, timezone.now()) - timedelta(days=days_before, hours=rng.randint(0, 23))
-            ContestSubmission.objects.filter(pk=submission.pk).update(created_at=sent)
 
     def _clear(self, username):
         contests = Contest.objects.filter(company_username=username, case_text__contains=MARK).delete()[0]

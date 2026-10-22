@@ -10,6 +10,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from authorization.models import ROLE_USER, Account
+from contests.contests_cabinet.models import ContestSubmission
 from tests.constructor.models import TestAnswer, TestAttempt, TestPage
 from users.models import UserProfile
 
@@ -82,6 +83,40 @@ def make_attempts(test, finished, max_score):
     # Примерно каждый пятый открывает тест и не доходит до конца
     for i in range(max(1, finished // 5)):
         add(finished + i, now - timedelta(days=rng.randint(1, 45)), None, 0)
+
+
+def make_submissions(contest, finished):
+    """Решения на конкурс: часть проверена, часть ждёт, у завершённого — победитель."""
+    takers = ensure_takers()
+    rng = random.Random(contest.id)
+    # До отправки решения доходят не все зарегистрировавшиеся — иначе
+    # воронка «зарегистрировался → прислал» всегда показывала бы 100%
+    reached = round(contest.participants_count * rng.uniform(0.45, 0.8))
+    count = min(max(reached, 1), len(takers))
+    if not count:
+        return
+
+    for i in range(count):
+        # Завершённый конкурс уже разобран, активный — частично
+        if finished:
+            status = ContestSubmission.STATUS_ACCEPTED if i == 0 else ContestSubmission.STATUS_REJECTED
+        else:
+            status = rng.choice(
+                [ContestSubmission.STATUS_PENDING, ContestSubmission.STATUS_PENDING, ContestSubmission.STATUS_ACCEPTED]
+            )
+        submission = ContestSubmission.objects.create(
+            contest=contest,
+            candidate_username=takers[i],
+            candidate_name=f'Кандидат {i + 1}',
+            text='Демонстрационное решение.',
+            status=status,
+            winner=finished and i == 0,
+        )
+        # Решения кучнее к дедлайну — так это и выглядит в жизни,
+        # и график подачи по дням показывает разгон, а не пустое поле
+        days_before = int(rng.triangular(0, 12, 1))
+        sent = min(contest.deadline, timezone.now()) - timedelta(days=days_before, hours=rng.randint(0, 23))
+        ContestSubmission.objects.filter(pk=submission.pk).update(created_at=sent)
 
 
 PAGE_TYPES = {
