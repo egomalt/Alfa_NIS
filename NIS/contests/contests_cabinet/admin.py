@@ -1,6 +1,27 @@
+from dataclasses import dataclass
+
 from django.contrib import admin
+from django.contrib.admin.widgets import AdminFileWidget
+from django.db import models
+from django.urls import reverse
 
 from .models import Contest, ContestAttachment, ContestSubmission
+
+
+@dataclass
+class SubmissionFileLink:
+    name: str
+    url: str
+
+    def __str__(self):
+        return self.name
+
+
+class SubmissionFileWidget(AdminFileWidget):
+    def get_context(self, name, value, attrs):
+        if value:
+            value = SubmissionFileLink(value.name, reverse('contest_submission_file', args=[value.instance.pk]))
+        return super().get_context(name, value, attrs)
 
 
 class ContestAttachmentInline(admin.TabularInline):
@@ -19,6 +40,7 @@ class ContestAdmin(admin.ModelAdmin):
 
 @admin.register(ContestSubmission)
 class ContestSubmissionAdmin(admin.ModelAdmin):
+    formfield_overrides = {models.FileField: {'widget': SubmissionFileWidget}}
     list_display = ('contest', 'candidate_username', 'status', 'attempt', 'winner', 'created_at')
     list_filter = ('status', 'winner', 'liked')
     search_fields = ('candidate_username', 'candidate_name')

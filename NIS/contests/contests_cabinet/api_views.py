@@ -3,6 +3,7 @@ from django.core.validators import URLValidator
 from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.http import JsonResponse
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_http_methods
@@ -140,7 +141,7 @@ def _sub_to_dict(s, cards=None):
         'candidate_phone': card['phone'],
         'candidate_skills': skills,
         'candidate_bio': bio,
-        'file_url': s.file.url if s.file else None,
+        'file_url': reverse('contest_submission_file', args=[s.id]) if s.file else None,
         'file_name': s.file.name.split('/')[-1] if s.file else None,
         'link': s.link,
         'text': s.text,
@@ -524,7 +525,7 @@ def api_user_submission(request, sub_id):
                 'comment': submission.comment,
                 'text': submission.text,
                 'link': submission.link,
-                'file_url': submission.file.url if submission.file else '',
+                'file_url': reverse('contest_submission_file', args=[submission.id]) if submission.file else '',
                 'file_name': submission.file.name.split('/')[-1] if submission.file else '',
                 'submitted_at': submission.created_at.isoformat(),
             },

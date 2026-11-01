@@ -156,7 +156,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 SERVE_MEDIA = env_flag('SERVE_MEDIA', True)
 
 # Файлы вне раздаваемой папки: доступ к ним даёт только вьюха с проверкой прав
-# (core.storage). Сюда складываются регистрационные документы компаний.
+# (core.storage). Здесь документы компаний и решения конкурсов.
 PRIVATE_MEDIA_ROOT = BASE_DIR / 'private_media'
 
 # Тесты пишут загрузки во временные папки, а не в media/ и private_media/

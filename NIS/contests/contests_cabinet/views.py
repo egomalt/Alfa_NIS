@@ -1,13 +1,39 @@
-from django.http import Http404
-from django.shortcuts import redirect, render
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_safe
 
-from authorization.models import ROLE_COMPANY, ROLE_USER
+from authorization.models import ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER
 from companies.models import ensure_company
 from core.auth import page_login_required
 from core.uploads import MAX_DOCUMENT_SIZE
 
 from .models import ContestSubmission
+
+
+@require_safe
+@page_login_required()
+def submission_file(request, sub_id):
+    submission = get_object_or_404(ContestSubmission.objects.select_related('contest'), id=sub_id)
+    account = request.account
+    is_author = account.role == ROLE_USER and account.username == submission.candidate_username
+    is_company = account.role == ROLE_COMPANY and account.username == submission.contest.company_username
+    if account.role != ROLE_MODERATOR and not is_author and not is_company:
+        raise Http404
+    if not submission.file:
+        raise Http404
+    try:
+        document = submission.file.open('rb')
+    except FileNotFoundError as error:
+        raise Http404 from error
+    response = FileResponse(
+        document,
+        as_attachment=True,
+        content_type='application/octet-stream',
+        filename=submission.file.name.split('/')[-1],
+    )
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @ensure_csrf_cookie

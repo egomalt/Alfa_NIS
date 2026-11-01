@@ -2,6 +2,7 @@
 
 import io
 import os
+from xml.sax.saxutils import escape
 
 from django.http import HttpResponse
 from django.utils import timezone
@@ -73,6 +74,12 @@ def _styles():
 
 
 CELL_PADDING = 16
+
+
+def _paragraph(text, style):
+    text = '' if text is None else str(text)
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    return Paragraph(escape(text).replace('\n', '<br/>'), style)
 
 
 def fit_column_widths(headers, widths):
@@ -263,10 +270,10 @@ class ReportBuilder:
         self.story.append(Spacer(1, h))
 
     def section(self, text):
-        self.story.append(Paragraph(text, self.styles['section']))
+        self.story.append(_paragraph(text, self.styles['section']))
 
     def note(self, text):
-        self.story.append(Paragraph(text, self.styles['note']))
+        self.story.append(_paragraph(text, self.styles['note']))
         self.spacer(4)
 
     def kpi(self, items):
@@ -275,7 +282,7 @@ class ReportBuilder:
         vs, ls = self.styles['kpi_value'], self.styles['kpi_label']
         for i in range(0, len(items), per_row):
             chunk = items[i : i + per_row]
-            row = [[Paragraph(str(v), vs), Paragraph(str(label), ls)] for v, label in chunk]
+            row = [[_paragraph(v, vs), _paragraph(label, ls)] for v, label in chunk]
             # добиваем пустыми ячейками до per_row, чтобы ширина колонок была ровной
             while len(row) < per_row:
                 row.append('')
@@ -298,9 +305,9 @@ class ReportBuilder:
     def table(self, headers, rows, col_ratios=None):
         """headers: список заголовков; rows: список списков строк-значений."""
         head_style, cell_style = self.styles['cell_head'], self.styles['cell']
-        data = [[Paragraph(str(h).upper(), head_style) for h in headers]]
+        data = [[_paragraph(str(h).upper(), head_style) for h in headers]]
         for r in rows:
-            data.append([Paragraph('' if v is None else str(v), cell_style) for v in r])
+            data.append([_paragraph(v, cell_style) for v in r])
 
         if col_ratios:
             total = sum(col_ratios)
@@ -335,9 +342,9 @@ class ReportBuilder:
         """
         group = []
         if title:
-            group.append(Paragraph(title, self.styles['section']))
+            group.append(_paragraph(title, self.styles['section']))
         if note:
-            group.append(Paragraph(note, self.styles['note']))
+            group.append(_paragraph(note, self.styles['note']))
             group.append(Spacer(1, 6))
         group.append(flowable)
         self.story.append(KeepTogether(group))
@@ -399,9 +406,9 @@ class ReportBuilder:
         # Титульный блок отчёта
         title_style = ParagraphStyle('rt', fontName=FONT_BOLD, fontSize=20, textColor=TEXT, leading=24, spaceAfter=2)
         sub_style = ParagraphStyle('rs', fontName=FONT, fontSize=10.5, textColor=MUTED, leading=14, spaceAfter=14)
-        head = [Paragraph(self.title, title_style)]
+        head = [_paragraph(self.title, title_style)]
         if self.subtitle:
-            head.append(Paragraph(self.subtitle, sub_style))
+            head.append(_paragraph(self.subtitle, sub_style))
         else:
             head.append(Spacer(1, 10))
         self.story = head + self.story

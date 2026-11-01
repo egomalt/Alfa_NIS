@@ -2,10 +2,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path, re_path
-from django.views.static import serve
 
 from api.v1.docs import api_docs
 from core.health import healthz
+from core.media import public_media
 
 urlpatterns = [
     path('healthz/', healthz, name='healthz'),
@@ -38,8 +38,8 @@ urlpatterns = [
 # нет. На боевом сервере эту раздачу лучше перенести на nginx и выставить
 # SERVE_MEDIA=0.
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, view=public_media)
 elif settings.SERVE_MEDIA:
     urlpatterns += [
-        re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+        re_path(r'^media/(?P<path>.*)$', public_media),
     ]

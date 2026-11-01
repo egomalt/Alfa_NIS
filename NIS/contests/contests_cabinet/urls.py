@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('cabinet/contests/submissions/<int:sub_id>/file/', views.submission_file, name='contest_submission_file'),
     path('cabinet/user/contests/', views.my_contests_user, name='user_contests'),
     path('cabinet/user/contests/<int:sub_id>/', views.my_contest_submission, name='user_submission'),
     path('cabinet/company/contests/', views.company_contests, name='company_contests'),

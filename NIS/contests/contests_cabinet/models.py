@@ -1,5 +1,7 @@
 from django.db import models
 
+from core.storage import private_storage
+
 
 class Contest(models.Model):
     STATUS_DRAFT = 'draft'
@@ -62,7 +64,7 @@ class ContestSubmission(models.Model):
     contest = models.ForeignKey(Contest, on_delete=models.CASCADE, related_name='submissions')
     candidate_username = models.SlugField(max_length=50, db_index=True)
     candidate_name = models.CharField(max_length=100, blank=True)
-    file = models.FileField(upload_to='contest_submissions/', blank=True)
+    file = models.FileField(upload_to='contest_submissions/', storage=private_storage, blank=True)
     link = models.URLField(blank=True)
     text = models.TextField(blank=True)
     comment = models.TextField(blank=True)
