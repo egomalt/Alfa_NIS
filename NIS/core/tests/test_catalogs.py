@@ -6,7 +6,8 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from articles.constructor.models import Article
-from authorization.models import ROLE_USER, Account
+from authorization.models import ROLE_USER, STATUS_BANNED, Account
+from companies.models import Company, CompanyRating
 from contests.contests_cabinet.models import ContestSubmission
 from tests.constructor.models import TestAttempt
 from users.models import UserProfile
@@ -108,6 +109,68 @@ class QueryCountTests(BaseCase):
 
 class CompanyCatalogTests(BaseCase):
     """Каталог компаний: порядок и поля, которые читает страница."""
+
+    def rated_company(self, username, ratings, **kwargs):
+        kwargs.setdefault('name', username)
+        kwargs.setdefault('verification_status', Company.VERIF_APPROVED)
+        company = Company.objects.create(username=username, **kwargs)
+        CompanyRating.objects.bulk_create(
+            [
+                CompanyRating(company=company, user_username=f'voter-{index}', rating=rating)
+                for index, rating in enumerate(ratings)
+            ]
+        )
+        return company
+
+    def test_rating_order_is_applied_before_pagination(self):
+        for index, ratings in enumerate(([1], [2], [3], [4], [4, 4], [5], [5, 5])):
+            self.rated_company(f'rank-{index}', ratings)
+        self.make_test(owner='rank-0')
+        self.make_test(owner='rank-0')
+
+        data = Client().get('/api/v1/companies/?sort=rating&per_page=5').json()
+        self.assertEqual(data['total'], 7)
+        self.assertEqual([c['username'] for c in data['companies']], ['rank-6', 'rank-5', 'rank-4', 'rank-3', 'rank-2'])
+        second = Client().get('/api/v1/companies/?sort=rating&per_page=5&page=2').json()
+        self.assertEqual([c['username'] for c in second['companies']], ['rank-1', 'rank-0'])
+
+    def test_rating_order_excludes_companies_without_votes(self):
+        data = Client().get('/api/v1/companies/?sort=rating&per_page=5').json()
+        self.assertEqual(data['companies'], [])
+        self.assertEqual(data['total'], 0)
+        self.rated_company('rated', [4])
+        companies = Client().get('/api/v1/companies/?sort=rating&per_page=5').json()['companies']
+        self.assertEqual([c['username'] for c in companies], ['rated'])
+
+    def test_rating_ties_use_vote_count_then_username(self):
+        self.rated_company('rank-a', [5, 5])
+        self.rated_company('rank-b', [5, 5])
+        self.rated_company('rank-c', [5])
+        companies = Client().get('/api/v1/companies/?sort=rating&per_page=5').json()['companies']
+        self.assertEqual([c['username'] for c in companies], ['rank-a', 'rank-b', 'rank-c'])
+        self.assertEqual([c['rating_count'] for c in companies], [2, 2, 1])
+
+    def test_rating_order_uses_unrounded_averages(self):
+        self.rated_company('precise-high', [5] * 5 + [4])
+        self.rated_company('precise-low', [5] * 8 + [4] * 2)
+        companies = Client().get('/api/v1/companies/?sort=rating&per_page=5').json()['companies']
+        self.assertEqual([c['username'] for c in companies], ['precise-high', 'precise-low'])
+        self.assertEqual([c['avg_rating'] for c in companies], [4.8, 4.8])
+
+    def test_rating_order_keeps_verification_and_ban_checks(self):
+        self.rated_company('visible', [4])
+        self.rated_company('pending', [5], verification_status=Company.VERIF_PENDING)
+        CompanyRating.objects.create(company=Company.objects.get(username='konkurent'), user_username='voter', rating=5)
+        self.rival.status = STATUS_BANNED
+        self.rival.save(update_fields=['status'])
+        companies = Client().get('/api/v1/companies/?sort=rating&per_page=5').json()['companies']
+        self.assertEqual([c['username'] for c in companies], ['visible'])
+
+    def test_rating_order_keeps_catalog_filters(self):
+        self.rated_company('matching', [3], industry='Финтех')
+        self.rated_company('other', [5], industry='IT')
+        data = Client().get('/api/v1/companies/', {'sort': 'rating', 'industry': 'Финтех', 'q': 'matching'}).json()
+        self.assertEqual([c['username'] for c in data['companies']], ['matching'])
 
     def test_companies_sorted_by_published_tests(self):
         """Каталог компаний сортируется по числу опубликованных тестов."""

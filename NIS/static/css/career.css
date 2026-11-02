@@ -460,13 +460,10 @@ select {
   color: var(--brand-text);
   text-decoration: none;
 }
-.cr-steps-grid,
-.cr-tests-grid {
+.cr-steps-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
-}
-.cr-steps-grid {
   grid-auto-rows: 1fr;
 }
 .cr-step-card {
@@ -500,6 +497,14 @@ select {
   border-radius: 16px;
   background: var(--surface);
   overflow: hidden;
+}
+.cr-company-section .cr-section-header {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.cr-company-section .cr-section-title {
+  margin: 0;
 }
 .cr-company-row {
   display: flex;
@@ -547,32 +552,19 @@ select {
   background: var(--brand);
   flex-shrink: 0;
 }
-.cr-tests-count {
+.cr-company-rating {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
   font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-2);
+  font-weight: 600;
+  color: var(--amber-text);
   padding: 4px 11px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--bg);
   white-space: nowrap;
-}
-.cr-test-card {
-  display: flex;
-  flex-direction: column;
-  padding: 22px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--surface);
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-  text-decoration: none;
-  color: var(--text);
-}
-.cr-test-card:hover {
-  border-color: var(--line-2);
-  box-shadow: var(--shadow);
 }
 .cr-search-icon {
   display: flex;
@@ -592,9 +584,6 @@ select {
 .cr-section-last {
   padding-bottom: 80px;
 }
-.cr-section-intro {
-  margin-bottom: 18px;
-}
 .cr-list-empty {
   grid-column: 1 / -1;
   padding: 32px;
@@ -613,38 +602,34 @@ select {
   font-size: 15px;
   font-weight: 600;
 }
+.cr-company-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .cr-company-meta {
   font-size: 13px;
   color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cr-row-arrow {
   display: flex;
   color: var(--faint);
 }
-.cr-test-card-tag {
-  align-self: flex-start;
-  margin-bottom: 14px;
-  padding: 3px 9px;
-  border-radius: 6px;
-  font-size: 11.5px;
-  font-weight: 600;
-  background: var(--brand-soft);
-  color: var(--brand-text);
-}
-.cr-test-card-title {
-  margin-bottom: 6px;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.3;
-}
-.cr-test-card-meta {
-  margin-bottom: 18px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: var(--faint);
-}
-.cr-test-card-action {
-  margin-top: auto;
+@media (max-width: 560px) {
+  .cr-company-row {
+    gap: 10px;
+    padding: 14px 12px;
+  }
+  .cr-company-rating {
+    padding: 4px 8px;
+  }
+  .cr-row-arrow {
+    display: none;
+  }
 }
 .cr-footer {
   border-top: 1px solid var(--line);
@@ -1364,19 +1349,9 @@ h4,
     padding: 0 10px;
   }
 }
-@media (max-width: 1000px) {
-  .cr-tests-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 @media (max-width: 800px) {
   .cr-steps-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-@media (max-width: 620px) {
-  .cr-tests-grid {
-    grid-template-columns: 1fr;
   }
 }
 /* ══════════════════════════════════════════════════════════════════════

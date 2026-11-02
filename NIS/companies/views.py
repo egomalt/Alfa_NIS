@@ -150,6 +150,13 @@ def api_companies_list(request):
         ]
         companies_qs = companies_qs.filter(username__in=matching)
 
+    if text_param(request, 'sort') == 'rating':
+        companies_qs = (
+            companies_qs.annotate(rating_average=Avg('ratings__rating'), rating_total=Count('ratings'))
+            .filter(rating_total__gt=0)
+            .order_by('-rating_average', '-rating_total', 'username')
+        )
+
     companies, page_meta = paginate(request, companies_qs, CATALOG_PER_PAGE)
     response = {'ok': True, 'companies': _catalog_cards(companies), **page_meta}
     if wants_extras(request):

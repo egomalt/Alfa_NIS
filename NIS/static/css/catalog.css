@@ -1,9 +1,4 @@
-/* Оформление страниц-каталогов: статьи и компании.
- *
- * Подключается ТОЛЬКО этими двумя страницами — имена вроде .card, .hero и .tag
- * заняты на других страницах своими стилями, поэтому в общий career.css
- * эти правила выносить нельзя.
- */
+/* Общие стили каталогов. */
 :root {
   --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.09), 0 12px 32px rgba(16, 24, 40, 0.11);
 }
@@ -35,31 +30,12 @@ main {
   text-align: center;
   margin-bottom: 48px;
 }
-.hero-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: var(--brand-soft);
-  color: var(--brand-text);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-bottom: 16px;
-}
 .hero-title {
   font-size: 40px;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.15;
-  margin-bottom: 12px;
-}
-.hero-sub {
-  font-size: 16px;
-  color: var(--muted);
-  line-height: 1.6;
+  margin: 0;
 }
 .search-row {
   display: flex;
@@ -1095,9 +1071,6 @@ main {
   .hero-title {
     font-size: 30px;
   }
-  .hero-sub {
-    font-size: 14.5px;
-  }
 
   /* Кнопка не помещается рядом с полем — переносим её под поиск на всю ширину */
   .search-row {
@@ -1128,8 +1101,5 @@ main {
   }
   .hero-title {
     font-size: 26px;
-  }
-  .hero-sub {
-    font-size: 14px;
   }
 }
