@@ -1,4 +1,4 @@
-/* Страница помощи: карта сайта, путь кандидата и компании, частые вопросы */
+/* Помощь и общие блоки документации API. */
 
 html {
   scroll-behavior: smooth;
@@ -48,8 +48,11 @@ html {
 .hp-section-last {
   padding-bottom: 48px;
 }
-.hp-section > .cr-section-sub {
-  margin-bottom: 18px;
+.hp-help .hp-hero h1 {
+  margin-bottom: 24px;
+}
+.hp-help .hp-section > .cr-section-title {
+  margin-bottom: 20px;
 }
 
 /* Подсказка для вошедшего: с чего начать именно ему */
@@ -92,20 +95,12 @@ html {
   margin-top: 26px;
 }
 .hp-group-head {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 12px;
   margin-bottom: 12px;
 }
 .hp-group-title {
   font-size: 16px;
   font-weight: 700;
   margin: 0;
-}
-.hp-group-sub {
-  font-size: 13px;
-  color: var(--faint);
 }
 
 .hp-map {
