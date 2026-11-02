@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static alfa %}
-{% block title %}{{ article.title|default:"Статья" }} — Career{% endblock %}
+{% block title %}{{ article.title|default:"Статья" }}{% endblock %}
 {% block page_data %}
   {% page_data articleId=article.id isLoggedIn=is_logged_in modType="article" modId=article.id modAuthor=article.author_username modTitle=article.title %}
 {% endblock %}

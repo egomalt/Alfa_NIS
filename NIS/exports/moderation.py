@@ -82,4 +82,4 @@ def build_admin_pdf():
 
 
 def admin_filename():
-    return f'career-moderation-{timezone.localtime(timezone.now()):%Y%m%d}.pdf'
+    return f'glowdy-moderation-{timezone.localtime(timezone.now()):%Y%m%d}.pdf'

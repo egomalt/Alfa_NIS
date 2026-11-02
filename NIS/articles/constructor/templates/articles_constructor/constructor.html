@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static alfa %}
-{% block title %}Редактор статей — Career{% endblock %}
+{% block title %}Редактор статьи{% endblock %}
 {% block page_data %}
   {% page_data username=username articleId=article_id articleData=article_data covers=covers %}
 {% endblock %}
@@ -20,7 +20,7 @@
             <rect x="3.5" y="13" width="4.3" height="8" rx="1.4" /><rect x="9.85" y="8" width="4.3" height="13" rx="1.4" /><rect x="16.2" y="3" width="4.3" height="18" rx="1.4" />
           </svg>
         </span>
-        <span class="logo-text">Career</span>
+        <span class="logo-text">glowdy</span>
       </a>
       <a href="{% url 'user_articles' %}" class="btn-back">
         <svg width="14"

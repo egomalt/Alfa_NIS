@@ -49,7 +49,7 @@ async function loadContest() {
   const { contest } = await api.get(`${BASE_URL}/`);
   const title = `${contest.title || 'Конкурс'} — решения`;
   byId('cs-title').textContent = title;
-  document.title = `${title} — Career`;
+  document.title = 'Решения конкурса';
   byId('cs-status-chip').outerHTML = statusPill(CONTEST_STATUSES, contest.status);
   if (contest.deadline) byId('cs-deadline-text').textContent = `Дедлайн ${formatDate(contest.deadline)}`;
 }

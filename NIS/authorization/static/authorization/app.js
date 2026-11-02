@@ -139,7 +139,7 @@ const ROLES = {
   },
   company: {
     nameLabel: 'Название компании',
-    namePlaceholder: 'Например, Alfa Career',
+    namePlaceholder: 'Например, glowdy',
     emailLabel: 'Рабочий email',
     emailPlaceholder: 'team@company.com',
     submit: 'Создать кабинет компании',

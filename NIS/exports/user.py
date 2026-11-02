@@ -139,4 +139,4 @@ def build_user_pdf(account):
 
 
 def user_filename(account):
-    return f'career-profile-{account.username}.pdf'
+    return f'glowdy-profile-{account.username}.pdf'

@@ -51,7 +51,7 @@ function setTab(key) {
 function renderHero(contest) {
   const company = contest.company_name || contest.company_username || '';
   const tags = [contest.category, LEVELS[contest.level?.toLowerCase()] ?? contest.level].filter(Boolean);
-  document.title = `${contest.title || 'Конкурс'} — Career`;
+  document.title = contest.title || 'Конкурс';
   byId('cv-hero-inner').innerHTML = `
     <div class="cv-hero-top">
       <div class="cv-hero-main">

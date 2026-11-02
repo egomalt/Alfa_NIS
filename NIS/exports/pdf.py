@@ -1,4 +1,4 @@
-"""Общий построитель PDF-отчётов на ReportLab (брендинг Career, кириллица)."""
+"""Общий построитель PDF-отчётов glowdy на ReportLab."""
 
 import io
 import os
@@ -364,7 +364,7 @@ class ReportBuilder:
     # — сборка —
     def _draw_frame(self, canvas, doc):
         canvas.saveState()
-        # Шапка: красная иконка-логотип + Career + название отчёта
+        # Логотип и название отчёта
         top = PAGE_H - MARGIN
         x = MARGIN
         canvas.setFillColor(BRAND)
@@ -376,7 +376,7 @@ class ReportBuilder:
         canvas.rect(x + 10.3, top + 2.1, 2.2, 9, stroke=0, fill=1)
         canvas.setFillColor(TEXT)
         canvas.setFont(FONT_BOLD, 12)
-        canvas.drawString(x + 22, top, 'Career')
+        canvas.drawString(x + 22, top, 'glowdy')
         canvas.setFillColor(MUTED)
         canvas.setFont(FONT, 10)
         canvas.drawRightString(PAGE_W - MARGIN, top, self.title)
@@ -390,7 +390,7 @@ class ReportBuilder:
         canvas.line(MARGIN, fy + 10, PAGE_W - MARGIN, fy + 10)
         canvas.setFillColor(FAINT)
         canvas.setFont(FONT, 8)
-        canvas.drawString(MARGIN, fy, 'Career · сгенерировано ' + self.generated.strftime('%d.%m.%Y %H:%M'))
+        canvas.drawString(MARGIN, fy, 'glowdy · сгенерировано ' + self.generated.strftime('%d.%m.%Y %H:%M'))
         canvas.drawRightString(PAGE_W - MARGIN, fy, f'стр. {doc.page}')
         canvas.restoreState()
 

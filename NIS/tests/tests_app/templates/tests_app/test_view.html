@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static alfa %}
-{% block title %}{{ test_title|default:"Тест" }} — Career{% endblock %}
+{% block title %}{{ test_title|default:"Тест" }}{% endblock %}
 {% block styles %}
   <link rel="stylesheet"
         href="{% static 'main/test_view/test_view.css' %}?v={{ ASSET_V }}">

@@ -208,4 +208,4 @@ def build_company_pdf(company):
 
 
 def company_filename(company):
-    return f'career-company-{company.username}.pdf'
+    return f'glowdy-company-{company.username}.pdf'
