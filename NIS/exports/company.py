@@ -75,7 +75,7 @@ def _shown_of(total, limit):
     """Приписка под таблицей, если в отчёт попали не все записи."""
     if total <= limit:
         return None
-    return f'Показаны {limit} из {total} — полный список в кабинете.'
+    return f'Показаны {limit} из {total}. Полный список есть в кабинете.'
 
 
 def _activity(r, weekly):
@@ -121,7 +121,7 @@ def _rating(r, totals, dist):
         [(f'{star} ★', f'{dist.get(star, 0)}%', dist.get(star, 0) / 100) for star in (5, 4, 3, 2, 1)],
         title='Рейтинг компании',
         note=(
-            f'{totals["avg_rating"]:.1f} из 5 — средняя оценка по {count} '
+            f'{totals["avg_rating"]:.1f} из 5. Средняя оценка по {count} '
             f'{plural(count, ("отзыву", "отзывам", "отзывам"))} кандидатов.'
         ),
         label_w=40,
@@ -132,7 +132,7 @@ def build_company_pdf(company):
     data = statistics.collect(company)
     totals = data['totals']
     avg = totals['avg_rating']
-    rating_str = (f'{avg:.1f} ★') if avg is not None else '—'
+    rating_str = (f'{avg:.1f} ★') if avg is not None else '-'
 
     r = ReportBuilder('Статистика компании', company.name or company.username)
     r.note(f'@{company.username} · отчёт за всё время работы на платформе')
@@ -165,7 +165,7 @@ def build_company_pdf(company):
         rows = [
             [
                 c.title or f'Конкурс #{c.id}',
-                c.category or '—',
+                c.category or '-',
                 CONTEST_STATUS.get(c.status, c.status),
                 c.participants_count or 0,
                 c.submission_total,
@@ -192,7 +192,7 @@ def build_company_pdf(company):
                 t.title or f'Тест #{t.id}',
                 TEST_STATUS.get(t.status, t.status),
                 attempts.count_for(t),
-                f'{round(t.avg_percent)}%' if t.avg_percent is not None else '—',
+                f'{round(t.avg_percent)}%' if t.avg_percent is not None else '-',
                 fmt_date(t.created_at),
             ]
             for t in tests

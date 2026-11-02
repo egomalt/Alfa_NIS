@@ -25,7 +25,7 @@ const reportRow = (report) => `
       ${report.escalated ? `<span class="ap-escalation-pill">⚠ ${esc(countOf(report.total_reports, WORDS.reports))}</span>` : ''}
     </div>
     <div class="ap-report-reason">${esc(report.reason)}</div>
-    <div class="ap-report-meta">от ${esc(report.reporter_username || '—')} · ${esc(formatDate(report.created_at))}</div>
+    <div class="ap-report-meta">от ${esc(report.reporter_username || '-')} · ${esc(formatDate(report.created_at))}</div>
   </div>`;
 
 function render({ stats = {}, recent_verifications: verifications = [], recent_reports: reports = [] }) {
@@ -38,7 +38,7 @@ function render({ stats = {}, recent_verifications: verifications = [], recent_r
 
   el('ap-overview-verify').innerHTML = verifications.length
     ? verifications.map(verifyRow).join('')
-    : emptyState('Нет заявок', 'Очередь верификации пуста');
+    : emptyState('Нет заявок', 'Все заявки уже проверены');
   el('ap-overview-reports').innerHTML = reports.length
     ? reports.map(reportRow).join('')
     : emptyState('Нет новых жалоб', 'Очередь жалоб пуста');

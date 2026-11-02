@@ -211,7 +211,7 @@ def api_contest_detail(request, contest_id):
 
     account = get_current_account(request)
     if account is None or account.role != ROLE_COMPANY:
-        return JsonResponse({'ok': False, 'message': 'Требуется вход.'}, status=401)
+        return JsonResponse({'ok': False, 'message': 'Войдите в аккаунт.'}, status=401)
     if c.company_username != account.username:
         return JsonResponse({'ok': False, 'message': 'Нет доступа'}, status=403)
     # Вьюха проверяет доступ сама, поэтому и бан сверяет сама
@@ -304,7 +304,7 @@ def api_contest_publish(request, contest_id):
     if missing:
         return JsonResponse({'ok': False, 'message': 'Заполните перед публикацией: ' + ', '.join(missing) + '.'}, status=400)
     if c.deadline <= timezone.now():
-        return JsonResponse({'ok': False, 'message': 'Срок приёма работ должен быть в будущем.'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Выберите дату окончания приёма работ в будущем.'}, status=400)
 
     c.status = Contest.STATUS_ACTIVE
     c.save(update_fields=['status', 'updated_at'])
@@ -439,12 +439,14 @@ def api_contest_submit(request, contest_id):
         try:
             URLValidator()(link)
         except ValidationError:
-            return JsonResponse({'ok': False, 'message': 'Укажите корректную ссылку.'}, status=400)
+            return JsonResponse(
+                {'ok': False, 'message': 'Проверьте ссылку на решение. Она должна начинаться с http:// или https://.'}, status=400
+            )
         sub.link = link
     else:
         text = (request.POST.get('text') or '').strip()
         if not text:
-            return JsonResponse({'ok': False, 'message': 'Текст решения обязателен.'}, status=400)
+            return JsonResponse({'ok': False, 'message': 'Напишите текст решения.'}, status=400)
         sub.text = text[:MAX_TEXT_LENGTH]
 
     # Номер попытки считаем под блокировкой: иначе два одновременных

@@ -139,7 +139,7 @@ function render(container, candidate, articles, submissions) {
       <div class="pu-stat-card"><div class="pu-stat-label">Статей опубликовано</div><div class="pu-stat-value">${articles.length}</div></div>
       <div class="pu-stat-card"><div class="pu-stat-label">Конкурсов</div><div class="pu-stat-value">${submissions.length}</div></div>
       <div class="pu-stat-card"><div class="pu-stat-label">Побед</div><div class="pu-stat-value">${wins.length}</div></div>
-      <div class="pu-stat-card"><div class="pu-stat-label">На платформе с</div><div class="pu-stat-value pu-stat-value-sm">${joinYear || '—'}</div></div>
+      <div class="pu-stat-card"><div class="pu-stat-label">На платформе с</div><div class="pu-stat-value pu-stat-value-sm">${joinYear || '-'}</div></div>
     </div>
     ${strengthsHtml(candidate.strengths)}
     ${achievementsHtml(wins, articles.length)}

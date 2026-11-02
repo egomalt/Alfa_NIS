@@ -15,7 +15,7 @@ function row(test) {
     <td data-label="Статус">${statusPill(TEST_STATUSES, test.status)}</td>
     <td data-label="Страниц">${test.page_count || 0}</td>
     <td data-label="Прохождений">${test.submissions || 0}</td>
-    <td data-label="Создан">${formatDateMedium(test.created_at) || '—'}</td>
+    <td data-label="Создан">${formatDateMedium(test.created_at) || '-'}</td>
     <td><div class="action-row">
       ${statsLink}
       <a class="action-icon-btn" href="${esc(test.edit_url)}" title="Редактировать">${ICONS.edit}</a>
@@ -31,8 +31,8 @@ const renderTable = listPanel({
   matches: (test, filter) => test.status === filter,
   row,
   empty: {
-    filtered: ['Тестов не найдено', 'Под выбранный фильтр ничего не подходит'],
-    none: ['Тестов пока нет', 'Соберите первый тест — его смогут пройти все желающие'],
+    filtered: ['Тестов не найдено', 'Попробуйте другой фильтр'],
+    none: ['Тестов пока нет', 'Создайте тест, который смогут пройти другие участники'],
   },
 });
 

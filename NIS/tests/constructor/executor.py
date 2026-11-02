@@ -90,12 +90,12 @@ def run_in_docker(language, code, stdin_data='', time_limit=5):
         return {
             'ok': True,
             'stdout': '',
-            'stderr': 'Превышено ограничение времени',
+            'stderr': 'Решение не уложилось в отведённое время',
             'exit_code': -1,
             'timed_out': True,
         }
     except FileNotFoundError:
-        return {'ok': False, 'error': 'Docker не найден на сервере'}
+        return {'ok': False, 'error': 'Проверка кода временно недоступна. Попробуйте позже.'}
     except OSError:
         # Текст системной ошибки наружу не отдаём
         return {'ok': False, 'error': 'Не удалось запустить проверку'}

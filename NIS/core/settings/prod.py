@@ -12,7 +12,7 @@ if len(SECRET_KEY) < 32:
     raise RuntimeError('Задайте в окружении SECRET_KEY длиной от 32 символов.')
 
 if ALLOWED_HOSTS == ['*']:  # noqa: F405
-    raise RuntimeError('Задайте в окружении ALLOWED_HOSTS — домен сайта.')
+    raise RuntimeError('Укажите домен сайта в переменной ALLOWED_HOSTS.')
 # Проверку живости Docker делает изнутри контейнера, по адресу 127.0.0.1
 ALLOWED_HOSTS += ['127.0.0.1', 'localhost']  # noqa: F405
 

@@ -44,7 +44,7 @@ const setAvatar = (node, company) => {
   else node.textContent = initial(company.name || company.username);
 };
 
-const formatRating = (value) => (value ? `${value.toFixed(1)} ★` : '—');
+const formatRating = (value) => (value ? `${value.toFixed(1)} ★` : '-');
 
 function renderSidebar(company) {
   setAvatar(el('cp-sidebar-av'), company);
@@ -75,7 +75,7 @@ function renderTimeline(contests) {
   const timeline = el('cp-timeline');
   if (!timeline) return;
   if (!contests.length) {
-    timeline.innerHTML = '<div class="cp-tl-empty">Активность появится здесь по мере работы на платформе</div>';
+    timeline.innerHTML = '<div class="cp-tl-empty">Здесь появятся созданные вами конкурсы</div>';
     return;
   }
   timeline.innerHTML = contests
@@ -124,9 +124,9 @@ function showProfileContent(company) {
 const VERIFY_STATES = {
   none: {
     tone: 'amber',
-    status: 'Профиль не подтверждён',
-    title: 'Подтвердите, что компания реальна',
-    text: 'Загрузите документ, подтверждающий деятельность компании (выписка ЕГРЮЛ, свидетельство о регистрации и т.п.), чтобы открыть создание тестов, конкурсов и другие функции.',
+    status: 'Компания не подтверждена',
+    title: 'Подтвердите компанию',
+    text: 'Загрузите регистрационный документ, например выписку из ЕГРЮЛ. После одобрения вы сможете создавать тесты и конкурсы.',
     upload: true,
     button: 'Отправить на проверку',
   },
@@ -134,7 +134,7 @@ const VERIFY_STATES = {
     tone: 'amber',
     status: 'Документ на проверке',
     title: 'Документ отправлен на проверку',
-    text: 'Модератор проверит документ и подтвердит компанию. Обычно это занимает до 1–2 рабочих дней. После одобрения откроются создание тестов, конкурсов и другие функции.',
+    text: 'Модератор проверит документ. После одобрения вы сможете создавать тесты и конкурсы.',
     upload: false,
   },
   rejected: {
@@ -389,10 +389,7 @@ function renderDirections() {
   const full = directions.length >= MAX_DIRECTIONS;
   el('cp-dir-input').disabled = full;
   el('cp-dir-add').disabled = full;
-  setText(
-    'cp-dir-count',
-    full ? `— больше ${MAX_DIRECTIONS} не поместится` : `— ${directions.length} из ${MAX_DIRECTIONS}`,
-  );
+  setText('cp-dir-count', full ? `Можно добавить до ${MAX_DIRECTIONS}` : `${directions.length} из ${MAX_DIRECTIONS}`);
 }
 
 function addDirections(raw) {

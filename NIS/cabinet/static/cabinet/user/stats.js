@@ -39,8 +39,8 @@ function renderAttempts() {
   byId('ud-attempts-facts').innerHTML = [
     fact('Начато', attempts.started),
     fact('Завершено', attempts.finished),
-    fact('Средний результат', attempts.avg_percent === null ? '—' : `${attempts.avg_percent}%`),
-    fact('Пройдено', attempts.pass_rate === null ? '—' : `${attempts.passed} · ${attempts.pass_rate}%`),
+    fact('Средний результат', attempts.avg_percent === null ? '-' : `${attempts.avg_percent}%`),
+    fact('Пройдено', attempts.pass_rate === null ? '-' : `${attempts.passed} · ${attempts.pass_rate}%`),
   ].join('');
 
   // По среднему баллу не видно, растёт результат или падает, а по нескольким последним — видно
@@ -51,8 +51,8 @@ function renderAttempts() {
           const tone = result.percent === null ? 'muted' : result.percent >= attempts.pass_percent ? 'green' : 'red';
           return `<div class="ud-mini-row">
             <a class="ud-mini-title" href="/tests/${result.test_id}/">${esc(result.title || 'Тест')}</a>
-            <span class="ud-mini-date">${formatDateMedium(result.finished_at) || '—'}</span>
-            <span class="cr-pill cr-tone-${tone}">${result.percent === null ? '—' : `${result.percent}%`}</span>
+            <span class="ud-mini-date">${formatDateMedium(result.finished_at) || '-'}</span>
+            <span class="cr-pill cr-tone-${tone}">${result.percent === null ? '-' : `${result.percent}%`}</span>
           </div>`;
         })
         .join('')}</div>`
@@ -117,7 +117,7 @@ function renderActivity() {
         continue;
       }
       const n = Number(counts.get(dayKey(day)) || 0);
-      const label = `${formatDate(day)} — ${n ? countOf(n, WORDS.events) : 'нет активности'}`;
+      const label = `${formatDate(day)}: ${n ? countOf(n, WORDS.events) : 'нет активности'}`;
       cells += `<i class="ud-heat-cell lvl-${heatLevel(n)}" title="${esc(label)}"></i>`;
       pastDays += 1;
       total += n;
@@ -158,8 +158,8 @@ function renderStreak(counts, today, total, activeDays) {
     return `<div class="ud-week-day"><span class="ud-week-label">${name}</span><div class="${classes.join(' ')}"></div></div>`;
   }).join('');
 
-  let note = 'Серия прервана. Любое действие сегодня начнёт новую.';
-  if (todayCount) note = `Сегодня уже ${countOf(todayCount, WORDS.events)} — серия продолжается.`;
+  let note = 'Начните новую серию: завершите тест, отправьте решение, создайте тест или статью.';
+  if (todayCount) note = `Сегодня: ${countOf(todayCount, WORDS.events)}. Серия продолжается.`;
   else if (alive) note = 'Сегодня ещё нет активности. Пройдите тест или отправьте решение, чтобы серия не прервалась.';
 
   // Число набрано крупно отдельной строкой, поэтому слово к нему — отдельно
@@ -171,7 +171,7 @@ function renderStreak(counts, today, total, activeDays) {
           <span class="ud-streak-value">${current}</span>
           <span class="ud-streak-word">${alive ? `${pluralForm(current, WORDS.days)} подряд` : 'серия прервана'}</span>
         </div>
-        <div class="ud-streak-best">Лучшая серия — <b>${countOf(best, WORDS.days)}</b></div>
+        <div class="ud-streak-best">Лучшая серия: <b>${countOf(best, WORDS.days)}</b></div>
       </div>
     </div>
     <div class="ud-week">${week}</div>
@@ -191,7 +191,7 @@ function renderContestBars() {
   const history = state.contestHistory;
   if (!history.length) {
     byId('ud-contest-bars').innerHTML = '<div class="ud-note">Вы ещё не участвовали в конкурсах.</div>';
-    setText('ud-contests-note', 'Здесь появится разбор ваших участий');
+    setText('ud-contests-note', 'Здесь появятся результаты ваших конкурсов');
     return;
   }
   setText('ud-contests-note', `Всего участий: ${history.length}`);

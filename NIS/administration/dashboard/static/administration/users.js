@@ -13,15 +13,15 @@ const latest = latestOnly();
 // Коротко: слово «Забанен» дублирует и цвет плашки, и колонку «Статус»
 const banLabel = (user) => {
   if (user.status !== 'banned') return null;
-  return user.ban_until ? `Бан до ${formatDate(user.ban_until)}` : 'Бан навсегда';
+  return user.ban_until ? `До ${formatDate(user.ban_until)}` : 'Бессрочно';
 };
 
 function actionsHtml(user) {
-  if (user.role === 'moderator') return '<span class="ap-u-meta">—</span>';
+  if (user.role === 'moderator') return '<span class="ap-u-meta">-</span>';
   if (user.status === 'banned') {
-    return `<button class="ap-btn-mini" data-act="unban" data-user="${esc(user.username)}" data-name="${esc(user.name)}">Разбанить</button>`;
+    return `<button class="ap-btn-mini" data-act="unban" data-user="${esc(user.username)}" data-name="${esc(user.name)}">Разблокировать</button>`;
   }
-  return `<button class="ap-btn-mini ap-danger" data-act="ban" data-user="${esc(user.username)}" data-name="${esc(user.name)}">Бан</button>`;
+  return `<button class="ap-btn-mini ap-danger" data-act="ban" data-user="${esc(user.username)}" data-name="${esc(user.name)}">Заблокировать</button>`;
 }
 
 const rowHtml = (user) => `
@@ -101,7 +101,7 @@ function init() {
       act(`/api/v1/admin/users/${user}/unban/`, {}, `Блокировка с ${name} снята.`);
     } else {
       openReasonModal(
-        `Причина и срок бана — ${name}`,
+        `Блокировка: ${name}`,
         (reason, duration) =>
           act(
             `/api/v1/admin/users/${user}/ban/`,

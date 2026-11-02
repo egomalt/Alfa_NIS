@@ -444,4 +444,4 @@ def pdf_response(filename, data):
 
 def fmt_date(value):
     """Дата для отчётов."""
-    return value.strftime('%d.%m.%Y') if value else '—'
+    return value.strftime('%d.%m.%Y') if value else '-'

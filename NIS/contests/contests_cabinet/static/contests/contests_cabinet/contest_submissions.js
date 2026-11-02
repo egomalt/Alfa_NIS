@@ -47,7 +47,7 @@ const isWebLink = (url) => /^https?:\/\//i.test(url ?? '');
 
 async function loadContest() {
   const { contest } = await api.get(`${BASE_URL}/`);
-  const title = `${contest.title || 'Конкурс'} — решения`;
+  const title = `Решения: ${contest.title || 'Конкурс'}`;
   byId('cs-title').textContent = title;
   document.title = 'Решения конкурса';
   byId('cs-status-chip').outerHTML = statusPill(CONTEST_STATUSES, contest.status);
@@ -75,13 +75,13 @@ function renderStats() {
 function renderFunnel(funnel) {
   const base = funnel.participants || 0;
   if (!base) {
-    byId('cs-funnel').innerHTML = '<div class="cs-panel-empty">На конкурс ещё никто не зарегистрировался</div>';
+    byId('cs-funnel').innerHTML = '<div class="cs-panel-empty">У конкурса пока нет участников</div>';
     return;
   }
   const steps = [
-    { name: 'Зарегистрировались', value: funnel.participants },
+    { name: 'Участники', value: funnel.participants },
     { name: 'Прислали решение', value: funnel.submitted, percent: funnel.submit_rate },
-    { name: 'Работа разобрана', value: funnel.reviewed, percent: funnel.review_rate, done: true },
+    { name: 'Работы проверены', value: funnel.reviewed, percent: funnel.review_rate, done: true },
   ];
   byId('cs-funnel').innerHTML = steps
     .map(
@@ -109,8 +109,8 @@ function renderDaily({ daily = [], window_days: windowDays, before_window: befor
     return;
   }
   note.textContent = beforeWindow
-    ? `Последние ${windowDays} дней срока. Ещё ${beforeWindow} прислали раньше.`
-    : `Последние ${windowDays} дней срока, справа — день дедлайна.`;
+    ? `Решения за последние ${windowDays} дней. До этого отправлено: ${beforeWindow}.`
+    : `Решения за последние ${windowDays} дней. Справа указан крайний срок.`;
 
   const peak = Math.max(...daily.map((day) => day.count));
   box.innerHTML = peak
@@ -124,7 +124,7 @@ function renderDaily({ daily = [], window_days: windowDays, before_window: befor
         </div>`;
         })
         .join('')
-    : '<div class="cs-panel-empty">В этом окне решений не было</div>';
+    : '<div class="cs-panel-empty">За этот период решений пока нет</div>';
 }
 
 async function loadStatistics() {
@@ -211,7 +211,7 @@ function renderList() {
     : emptyHtml(
         'Решений не найдено',
         filter === 'liked'
-          ? 'Отмечайте ♥ у понравившихся решений, чтобы выбрать из них победителя'
+          ? 'Нажмите ♥ рядом с работой, чтобы добавить её в понравившиеся'
           : 'Попробуйте другой фильтр',
       );
 }

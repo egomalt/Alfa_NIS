@@ -19,11 +19,11 @@ function row(test) {
   // data-label подхватывает CSS на телефоне: шапка таблицы там скрыта
   return `
     <tr>
-      <td><a href="${esc(openUrl)}" target="_blank">${esc(test.title || '—')}</a></td>
+      <td><a href="${esc(openUrl)}" target="_blank">${esc(test.title || '-')}</a></td>
       <td data-label="Статус">${statusPill(TEST_STATUSES, test.status)}</td>
       <td data-label="Страниц">${test.page_count ?? 0}</td>
       <td data-label="Прохождений">${test.submissions ?? 0}</td>
-      <td data-label="Создан">${formatDateMedium(test.created_at) || '—'}</td>
+      <td data-label="Создан">${formatDateMedium(test.created_at) || '-'}</td>
       <td>
         <div class="action-row">
           ${test.status === 'published' ? `<a class="action-icon-btn" href="${esc(test.edit_url)}stats/" title="Как проходят тест">${ICONS.stats}</a>` : ''}
@@ -45,9 +45,7 @@ function renderTable() {
   byId('tests-empty').hidden = Boolean(shown.length);
   // Пусто из-за фильтра и пусто вообще — разные сообщения
   byId('tests-empty-title').textContent = tests.length ? 'Тестов не найдено' : 'Тестов пока нет';
-  byId('tests-empty-sub').textContent = tests.length
-    ? 'Под выбранный фильтр ничего не подходит'
-    : 'Создайте первый тест, чтобы начать оценку кандидатов';
+  byId('tests-empty-sub').textContent = tests.length ? 'Попробуйте другой фильтр' : 'Создайте тест для кандидатов';
   byId('tests-empty-create').hidden = Boolean(tests.length);
 }
 

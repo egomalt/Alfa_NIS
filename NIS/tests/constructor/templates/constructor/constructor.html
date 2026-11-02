@@ -85,7 +85,7 @@
          href="{% url 'help_page' %}"
          target="_blank"
          rel="noopener"
-         title="Помощь — откроется в новой вкладке"
+         title="Помощь (в новой вкладке)"
          aria-label="Помощь">
         <svg width="14"
              height="14"
@@ -166,7 +166,7 @@
                 <rect x="3" y="11" width="18" height="11" rx="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              Обязательная страница — нельзя удалить
+              Эта страница обязательна
             </span>
             <div class="field">
               <div class="field-label">Описание теста</div>
@@ -222,10 +222,10 @@
             <div class="field">
               <div class="field-label">
                 Варианты ответа
-                <span class="field-note">— можно отметить несколько правильных</span>
+                <span class="field-note">(можно выбрать несколько)</span>
               </div>
               <div class="options-list" id="options-list"></div>
-              <div class="field-hint">Нажмите на квадрат, чтобы отметить правильный(-е) ответ(-ы)</div>
+              <div class="field-hint">Отметьте правильные ответы галочками</div>
               <button type="button" class="btn-add-tc btn-add-option" id="btn-add-option">
                 <svg width="11"
                      height="11"
@@ -252,12 +252,12 @@
             <div class="field">
               <div class="field-label">
                 Правильный ответ
-                <span class="field-note">— для автоматической проверки</span>
+                <span class="field-note">(для проверки ответа)</span>
               </div>
               <input class="inp-answer"
                      id="p-answer"
                      placeholder="например: display: flex">
-              <div class="field-hint">Можно указать несколько вариантов через запятую. Если пусто — проверка ручная.</div>
+              <div class="field-hint">Укажите допустимые ответы через запятую. Без них ответ не засчитывается автоматически.</div>
             </div>
           </div>
           <!-- CODE -->

@@ -27,7 +27,7 @@ function detailHtml(report) {
       <div class="ap-action-group-title">Материал</div>
       <div class="ap-report-actions">
         ${report.target_url ? linkButton(report.target_url, 'Открыть материал') : ''}
-        <button class="ap-btn-accept" data-act="takedown" data-id="${report.id}" data-title="${esc(report.target_title)}">Снять материал</button>
+        <button class="ap-btn-accept" data-act="takedown" data-id="${report.id}" data-title="${esc(report.target_title)}">Удалить материал</button>
       </div>
     </div>`
       : '';
@@ -40,7 +40,7 @@ function detailHtml(report) {
       <div class="ap-action-group-title">${aboutAccount ? 'Пользователь' : 'Автор'}</div>
       <div class="ap-report-actions">
         ${linkButton(`/${report.author_username}/`, 'Открыть профиль')}
-        <button class="ap-btn-mini ap-danger" data-act="ban-author" data-id="${report.id}" data-user="${esc(report.author_username)}">Забанить</button>
+        <button class="ap-btn-mini ap-danger" data-act="ban-author" data-id="${report.id}" data-user="${esc(report.author_username)}">Заблокировать</button>
       </div>
     </div>`
       : '';
@@ -54,13 +54,13 @@ function detailHtml(report) {
     : `<span>${esc(report.target_title)}</span>`;
   const author = report.author_username
     ? `<a class="ap-detail-link" href="/${esc(report.author_username)}/" target="_blank" rel="noopener" data-stop>${esc(report.author_username)} →</a>`
-    : '<span>—</span>';
+    : '<span>-</span>';
 
   return `
     <div class="ap-report-detail">
       <div class="ap-detail-row"><span class="ap-detail-label">Материал</span>${target}</div>
       <div class="ap-detail-row"><span class="ap-detail-label">Автор</span>${author}</div>
-      <div class="ap-detail-row"><span class="ap-detail-label">Заявитель</span><span>${esc(report.reporter_username || '—')}</span></div>
+      <div class="ap-detail-row"><span class="ap-detail-label">Заявитель</span><span>${esc(report.reporter_username || '-')}</span></div>
       ${report.evidence ? `<div class="ap-detail-row"><span class="ap-detail-label">Подробности</span><span>${esc(report.evidence)}</span></div>` : ''}
       ${materialActions}${authorActions}${decision}
     </div>`;
@@ -69,7 +69,7 @@ function detailHtml(report) {
 function cardHtml(report) {
   const open = expandedId === report.id;
   const escalation = report.escalated
-    ? `<span class="ap-escalation-pill">⚠ ${esc(countOf(report.total_reports, WORDS.reports))} — приоритет</span>`
+    ? `<span class="ap-escalation-pill">⚠ ${esc(countOf(report.total_reports, WORDS.reports))} · приоритет</span>`
     : '';
   return `
     <div class="ap-report-card ${open ? 'ap-open' : ''} ${report.escalated ? 'ap-escalated' : ''}" data-id="${report.id}">
@@ -79,7 +79,7 @@ function cardHtml(report) {
         ${escalation}${pill(report.status)}${CHEVRON}
       </div>
       <div class="ap-report-reason">${esc(report.reason)}</div>
-      <div class="ap-report-meta">от ${esc(report.reporter_username || '—')} · ${esc(formatDate(report.created_at))}</div>
+      <div class="ap-report-meta">от ${esc(report.reporter_username || '-')} · ${esc(formatDate(report.created_at))}</div>
       ${open ? detailHtml(report) : ''}
     </div>`;
 }
@@ -124,8 +124,8 @@ async function handleAction(target) {
   const { act, id, user } = target.dataset;
   if (act === 'takedown') {
     const confirmed = await confirmDialog({
-      title: 'Снять материал?',
-      text: `«${target.dataset.title || 'материал'}» будет удалён безвозвратно, а все жалобы на него — закрыты.`,
+      title: 'Удалить материал?',
+      text: `Материал «${target.dataset.title || 'без названия'}» будет удалён навсегда. Все жалобы на него закроются.`,
       confirmLabel: 'Удалить',
     });
     if (confirmed) {
@@ -141,7 +141,7 @@ async function handleAction(target) {
     );
   } else if (act === 'ban-author') {
     openReasonModal(
-      `Причина и срок бана — ${user}`,
+      `Блокировка: ${user}`,
       (reason, duration) =>
         run(
           async () => {

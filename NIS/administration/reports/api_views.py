@@ -209,11 +209,14 @@ def api_report_takedown(request, report_id):
     model = models_by_type.get(report.target_type)
     if model is None:
         return JsonResponse(
-            {'ok': False, 'message': 'Снять можно только материал — для аккаунтов используйте бан.'},
+            {
+                'ok': False,
+                'message': 'Удалить можно только материал. Чтобы ограничить доступ пользователю, заблокируйте его аккаунт.',
+            },
             status=400,
         )
     if not report.target_id.isdigit():
-        return JsonResponse({'ok': False, 'message': 'Некорректная ссылка на материал.'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Не удалось найти материал по этой ссылке.'}, status=400)
 
     deleted, _ = model.objects.filter(id=int(report.target_id)).delete()
     closed = _close_target(report, Report.STATUS_RESOLVED)

@@ -82,7 +82,7 @@ export function listPanel({ key, source, items, matches, row, empty }) {
     // Пусто из-за фильтра и пусто вообще — разные сообщения
     const failed = state.failed.has(source);
     const [title, sub] = failed
-      ? ['Не удалось загрузить список', 'Обновите страницу. Если не поможет — попробуйте чуть позже.']
+      ? ['Не удалось загрузить список', 'Обновите страницу. Если список не появится, попробуйте чуть позже.']
       : list.length
         ? empty.filtered
         : empty.none;

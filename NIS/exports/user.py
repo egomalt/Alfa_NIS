@@ -24,7 +24,7 @@ SUB_STATUS = {
 
 
 def percent(value):
-    return '—' if value is None else f'{value}%'
+    return '-' if value is None else f'{value}%'
 
 
 def build_user_pdf(account):

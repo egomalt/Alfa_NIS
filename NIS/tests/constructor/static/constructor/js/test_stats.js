@@ -5,7 +5,7 @@ import { api, byId, countOf, esc, LEVELS, pageData, TEST_CATEGORIES, WORDS } fro
 const { testId } = pageData();
 
 /* Процент либо прочерк: 0% и «нет данных» — разные вещи */
-const percent = (value) => (value == null ? '—' : `${value}%`);
+const percent = (value) => (value == null ? '-' : `${value}%`);
 
 function renderMeta(test) {
   byId('ts-meta').innerHTML = [
@@ -24,7 +24,7 @@ const cardsHtml = (attempts) =>
     [attempts.finished, 'прошли до конца'],
     [percent(attempts.avg_percent), 'средний результат'],
     [percent(attempts.pass_rate), 'справились'],
-    [`${attempts.abandoned} (${attempts.abandon_rate}%)`, 'бросили на середине'],
+    [`${attempts.abandoned} (${attempts.abandon_rate}%)`, 'не завершили'],
   ]
     .map(
       ([value, label]) => `
@@ -36,7 +36,7 @@ const cardsHtml = (attempts) =>
    смысл появляется только в сравнении со средним по площадке */
 function verdict(own, platform) {
   if (own.pass_rate == null || platform.pass_rate == null) {
-    return 'Сравнить пока не с чем — на площадке слишком мало пройденных тестов.';
+    return 'Пока недостаточно результатов для сравнения.';
   }
   const diff = own.pass_rate - platform.pass_rate;
   if (diff <= -15) return 'Ваш тест заметно сложнее среднего по площадке.';
@@ -91,7 +91,7 @@ function render({ test, attempts, platform, distribution, pass_percent: passPerc
       <div class="ts-panel">
         <div class="ts-panel-title">Результаты участников</div>
         <div class="ts-panel-note">Сколько человек попало в каждый диапазон.
-          Зелёные столбики — те, кто набрал от ${passPercent}% и считается справившимся.</div>
+          Зелёным отмечены результаты от ${passPercent}%. С таким результатом тест считается пройденным.</div>
         ${histogramHtml(distribution, passPercent)}
       </div>
       <div class="ts-panel">

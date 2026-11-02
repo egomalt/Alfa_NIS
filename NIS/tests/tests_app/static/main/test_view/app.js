@@ -184,7 +184,7 @@ function renderPage() {
 function samplesHtml(samples = []) {
   if (!samples.length) return '';
   const cell = (label, value) =>
-    `<div class="tv-sample-cell"><div class="tv-sample-label">${label}</div><pre>${esc(value) || '—'}</pre></div>`;
+    `<div class="tv-sample-cell"><div class="tv-sample-label">${label}</div><pre>${esc(value) || '-'}</pre></div>`;
   return `
     <div class="tv-samples">
       <div class="tv-samples-head">Примеры</div>

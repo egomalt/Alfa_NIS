@@ -61,7 +61,7 @@ def _distribution(queryset):
         for low, high in BUCKETS
     }
     row = scored.aggregate(**filters)
-    return [{'label': f'{low}–{high}%', 'count': row[f'b{low}']} for low, high in BUCKETS]
+    return [{'label': f'{low}-{high}%', 'count': row[f'b{low}']} for low, high in BUCKETS]
 
 
 def platform_summary():

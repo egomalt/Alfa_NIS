@@ -291,7 +291,7 @@ def _publish_problem(test):
     if not pages:
         return 'Нельзя опубликовать тест без страниц.'
     if not any(page.type in TestPage.SCORED_TYPES for page in pages):
-        return 'Добавьте хотя бы один вопрос: тест из одних материалов нечего проходить.'
+        return 'Добавьте хотя бы один вопрос, чтобы участники могли пройти тест.'
 
     for number, page in enumerate(pages, start=1):
         where = f'Страница {number}'
@@ -341,9 +341,9 @@ def api_code_run(request, page_id):
     code = (body.get('code') or '').strip()
 
     if not code:
-        return JsonResponse({'ok': False, 'message': 'Код не может быть пустым.'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Напишите код решения.'}, status=400)
     if len(code) > MAX_CODE_LENGTH:
-        return JsonResponse({'ok': False, 'message': 'Код слишком длинный.'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Решение слишком длинное. Сократите код.'}, status=400)
 
     meta = page.page_meta or {}
     # Язык задаёт автор задачи, а не тот, кто её решает
@@ -355,7 +355,7 @@ def api_code_run(request, page_id):
     time_limit = _safe_time_limit(meta.get('time_limit'))
 
     if not test_cases:
-        return JsonResponse({'ok': False, 'message': 'Нет тест-кейсов для проверки'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Автор пока не добавил тест-кейсы для проверки решения.'}, status=400)
 
     results = []
     passed = 0
@@ -413,6 +413,6 @@ def api_code_run(request, page_id):
     if interrupted:
         response['message'] = (
             f'Проверка остановлена: на неё отводится {MAX_TOTAL_RUN_SECONDS} секунд. '
-            'Ускорьте решение — оставшиеся тесты не проверялись.'
+            'Попробуйте ускорить решение. Оставшиеся тесты не проверены.'
         )
     return JsonResponse(response)

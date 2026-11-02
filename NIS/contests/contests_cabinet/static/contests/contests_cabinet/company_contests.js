@@ -41,7 +41,7 @@ const row = (contest) => `
       <div class="cc-title">${esc(contest.title || 'Без названия')}</div>
       <div class="cc-sub">${esc(contest.category)}</div>
     </div>
-    <div class="cc-deadline ${isUrgent(contest) ? 'urgent' : ''}">${formatDate(contest.deadline) || '—'}</div>
+    <div class="cc-deadline ${isUrgent(contest) ? 'urgent' : ''}">${formatDate(contest.deadline) || '-'}</div>
     <div class="cc-num">${contest.participants_count || 0}</div>
     <div class="cc-num">${contest.submissions_count || 0}</div>
     <div>${statusPill(CONTEST_STATUSES, contest.status)}</div>

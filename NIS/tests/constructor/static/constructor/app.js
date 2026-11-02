@@ -136,7 +136,7 @@ function markDirty() {
    и предпросмотр по этому признаку решают, можно ли идти дальше */
 async function save() {
   if (state.loadFailed) {
-    setStatus('Тест не загрузился — обновите страницу, иначе сохранение сотрёт вопросы', 'error');
+    setStatus('Не удалось загрузить тест. Обновите страницу перед сохранением.', 'error');
     return false;
   }
   if (state.saving || !state.title.trim()) return false;
@@ -325,11 +325,11 @@ function renderTestCases() {
       <div class="tc-row">
         <div>
           <div class="tc-mini-label">Ввод (stdin)</div>
-          <input class="inp-sm" data-case="${index}" data-field="input" value="${esc(testCase.input)}" placeholder="пусто — если ввод не нужен">
+          <input class="inp-sm" data-case="${index}" data-field="input" value="${esc(testCase.input)}" placeholder="Оставьте пустым, если ввод не нужен">
         </div>
         <div>
           <div class="tc-mini-label">Ожидаемый вывод</div>
-          <input class="inp-sm" data-case="${index}" data-field="expected" value="${esc(testCase.expected)}" placeholder="ожидаемый stdout">
+          <input class="inp-sm" data-case="${index}" data-field="expected" value="${esc(testCase.expected)}" placeholder="Ожидаемый результат">
         </div>
         <button type="button" class="btn-remove-tc" data-delete-case="${index}" aria-label="Удалить тест-кейс">${ICONS.remove(13)}</button>
       </div>`,
@@ -551,7 +551,7 @@ if (state.testId) {
     setStatus(test.status === 'published' ? 'Опубликован' : 'Черновик');
   } catch {
     state.loadFailed = true;
-    setStatus('Не удалось загрузить тест. Обновите страницу — не сохраняйте.', 'error');
+    setStatus('Не удалось загрузить тест. Обновите страницу перед сохранением.', 'error');
   }
 } else {
   // Новый тест: страница «Информация» и название по порядку

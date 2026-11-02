@@ -167,7 +167,7 @@ async function openAuthorActions(username) {
     <div class="mb-modal-text">${esc(user.name)}${user.role ? ` · ${esc(ROLE_LABEL[user.role] ?? user.role)}` : ''}</div>
     <div class="mb-group-title">Блокировка</div>
     ${BAN_FIELDS}
-    <div class="mb-group-title">Удалить контент автора</div>
+    <div class="mb-group-title">Удалить материалы автора</div>
     ${categoryRows}
     <div class="mb-flash"></div>
     <div class="mb-actions">
@@ -184,7 +184,7 @@ async function openAuthorActions(username) {
     }
     const names = categories
       .filter(([key]) => chosen.includes(key))
-      .map(([, label, count]) => `${label.toLowerCase()} — ${count}`)
+      .map(([, label, count]) => `${label.toLowerCase()}: ${count}`)
       .join(', ');
     confirmPurge(username, names, chosen);
   });
@@ -194,7 +194,7 @@ async function openAuthorActions(username) {
    После удаления страница перезагружается */
 function confirmPurge(username, names, chosen) {
   const modal = openModal(`
-    <div class="mb-modal-title">Удалить контент автора?</div>
+    <div class="mb-modal-title">Удалить материалы автора?</div>
     <div class="mb-modal-text">Будет удалено безвозвратно: ${esc(names)}. Автор: <b>@${esc(username)}</b>.</div>
     <div class="mb-flash"></div>
     <div class="mb-actions">
@@ -207,7 +207,7 @@ function confirmPurge(username, names, chosen) {
     button.textContent = 'Удаление…';
     try {
       await api.post(`/api/v1/admin/users/${username}/purge/`, { categories: chosen });
-      flash(modal, 'Контент удалён.', true);
+      flash(modal, 'Материалы удалены.', true);
       setTimeout(() => location.reload(), 900);
     } catch (error) {
       flash(modal, error.message);

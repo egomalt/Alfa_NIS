@@ -41,7 +41,7 @@ function showBanNotice(account) {
   notice.innerHTML = `
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>
     <div><b>Аккаунт заблокирован.</b> ${esc(until)}${reason}<br>
-      <span>Профиль и материалы скрыты от других, публиковать и отправлять ничего нельзя.</span></div>`;
+      <span>Профиль и публикации скрыты от других. До разблокировки вы можете только читать сайт.</span></div>`;
   document.body.prepend(notice);
 }
 

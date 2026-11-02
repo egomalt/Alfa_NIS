@@ -133,29 +133,29 @@
           </div>
           <div class="ap-stats-row">
             <div class="ap-stat-card" data-goto="verify">
-              <div class="ap-stat-value" id="ap-ov-verify">—</div>
-              <div class="ap-stat-label">Заявок на верификацию</div>
+              <div class="ap-stat-value" id="ap-ov-verify">-</div>
+              <div class="ap-stat-label">Компаний на проверке</div>
             </div>
             <div class="ap-stat-card" data-goto="reports">
-              <div class="ap-stat-value" id="ap-ov-reports">—</div>
+              <div class="ap-stat-value" id="ap-ov-reports">-</div>
               <div class="ap-stat-label">Открытых жалоб</div>
             </div>
             <div class="ap-stat-card" data-goto="reports">
-              <div class="ap-stat-value ap-danger-text" id="ap-ov-escalated">—</div>
+              <div class="ap-stat-value ap-danger-text" id="ap-ov-escalated">-</div>
               <div class="ap-stat-label">Эскалировано (3+ жалоб)</div>
             </div>
             <div class="ap-stat-card" data-goto="users">
-              <div class="ap-stat-value" id="ap-ov-users">—</div>
+              <div class="ap-stat-value" id="ap-ov-users">-</div>
               <div class="ap-stat-label">Всего пользователей</div>
             </div>
             <div class="ap-stat-card" data-goto="users">
-              <div class="ap-stat-value" id="ap-ov-banned">—</div>
-              <div class="ap-stat-label">Забанено</div>
+              <div class="ap-stat-value" id="ap-ov-banned">-</div>
+              <div class="ap-stat-label">Заблокировано</div>
             </div>
           </div>
           <div class="ap-section">
             <div class="ap-section-head">
-              <div class="ap-section-title">Заявки на верификацию</div>
+              <div class="ap-section-title">Проверка компаний</div>
               <span class="ap-link-more" data-goto="verify">Все заявки →</span>
             </div>
             <div id="ap-overview-verify"></div>
@@ -172,7 +172,7 @@
           <div class="ap-page-header">
             <div>
               <div class="ap-page-title">Верификация компаний</div>
-              <div class="ap-page-sub">Проверка документов, подтверждающих деятельность компании</div>
+              <div class="ap-page-sub">Проверьте документы и подтвердите компанию</div>
             </div>
           </div>
           <div class="ap-filters" id="ap-verify-filters">
@@ -195,7 +195,7 @@
             <button type="button" class="ap-filter-btn active" data-uf="all">Все</button>
             <button type="button" class="ap-filter-btn" data-uf="user">Кандидаты</button>
             <button type="button" class="ap-filter-btn" data-uf="company">Компании</button>
-            <button type="button" class="ap-filter-btn" data-uf="banned">Забаненные</button>
+            <button type="button" class="ap-filter-btn" data-uf="banned">Заблокированные</button>
             <input class="ap-search-input"
                    id="ap-user-search"
                    placeholder="Поиск по имени…">
@@ -208,7 +208,7 @@
           <div class="ap-page-header">
             <div>
               <div class="ap-page-title">Жалобы</div>
-              <div class="ap-page-sub">Обращения пользователей на контент и других участников</div>
+              <div class="ap-page-sub">Жалобы на материалы и участников</div>
             </div>
           </div>
           <div class="ap-filters" id="ap-reports-filters">
@@ -226,7 +226,7 @@
       <div class="ap-modal">
         <div class="ap-modal-title" id="ap-reason-modal-title">Причина</div>
         <div id="ap-modal-duration-field" class="ap-duration-field" hidden>
-          <div class="ap-detail-label ap-duration-label">Срок бана</div>
+          <div class="ap-detail-label ap-duration-label">Срок блокировки</div>
           <div class="ap-duration-row">
             <input type="number"
                    id="ap-duration-days"
@@ -239,7 +239,7 @@
           </div>
         </div>
         <textarea id="ap-reason-text"
-                  placeholder="Опишите причину — заявитель / пользователь увидит этот текст"></textarea>
+                  placeholder="Опишите причину. Этот текст увидит пользователь."></textarea>
         <div class="ap-modal-actions">
           <button type="button" class="ap-btn-secondary" id="ap-reason-cancel">Отмена</button>
           <button type="button" class="ap-btn-primary" id="ap-reason-confirm">Подтвердить</button>

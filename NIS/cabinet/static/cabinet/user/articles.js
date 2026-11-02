@@ -13,7 +13,7 @@ function row(article) {
     <td data-label="Статус">${statusPill(ARTICLE_STATUSES, article.status)}</td>
     <td data-label="Просмотры">${shortNumber(article.views || 0)}</td>
     <td data-label="Рейтинг">${article.likes || 0}</td>
-    <td data-label="Дата">${formatDateMedium(date) || '—'}</td>
+    <td data-label="Дата">${formatDateMedium(date) || '-'}</td>
     <td><div class="action-row">
       <a class="action-icon-btn" href="/cabinet/user/articles/${article.id}/edit/" title="Редактировать">${ICONS.edit}</a>
       <button type="button" class="action-icon-btn danger" data-delete="${article.id}" title="Удалить">${ICONS.delete}</button>
@@ -28,8 +28,8 @@ const renderTable = listPanel({
   matches: (article, filter) => article.status === filter,
   row,
   empty: {
-    filtered: ['Статей не найдено', 'Под выбранный фильтр ничего не подходит'],
-    none: ['Статей пока нет', 'Расскажите о своём опыте — статьи видят все кандидаты и компании'],
+    filtered: ['Статей не найдено', 'Попробуйте другой фильтр'],
+    none: ['Статей пока нет', 'Поделитесь опытом с кандидатами и компаниями'],
   },
 });
 

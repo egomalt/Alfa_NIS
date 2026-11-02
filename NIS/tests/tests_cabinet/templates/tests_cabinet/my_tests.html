@@ -25,19 +25,19 @@
     </div>
     <div class="ud-stats-row">
       <div class="ud-stat-card">
-        <div class="ud-stat-value" id="tstat-total">—</div>
+        <div class="ud-stat-value" id="tstat-total">-</div>
         <div class="ud-stat-label">Всего тестов</div>
       </div>
       <div class="ud-stat-card">
-        <div class="ud-stat-value" id="tstat-published">—</div>
+        <div class="ud-stat-value" id="tstat-published">-</div>
         <div class="ud-stat-label">Опубликовано</div>
       </div>
       <div class="ud-stat-card">
-        <div class="ud-stat-value" id="tstat-subs">—</div>
+        <div class="ud-stat-value" id="tstat-subs">-</div>
         <div class="ud-stat-label">Прохождений</div>
       </div>
       <div class="ud-stat-card">
-        <div class="ud-stat-value" id="tstat-drafts">—</div>
+        <div class="ud-stat-value" id="tstat-drafts">-</div>
         <div class="ud-stat-label">Черновиков</div>
       </div>
     </div>
@@ -81,7 +81,7 @@
           </svg>
           {# Текст зависит от того, пусто из-за фильтра или тестов нет вовсе #}
           <div id="tests-empty-title">Тестов пока нет</div>
-          <div id="tests-empty-sub">Соберите первый тест — его смогут пройти все желающие</div>
+          <div id="tests-empty-sub">Создайте тест, который смогут пройти другие участники</div>
           <a id="tests-empty-create"
              href="{% url 'constructor_page' %}"
              class="ud-btn-create">Создать тест</a>

@@ -134,7 +134,7 @@ function renderSidebar(contest) {
   byId('cv-stats-rows').innerHTML = [
     ['Участников', contest.participants_count || 0],
     ['Решений прислано', contest.submissions_count || 0],
-    ['Формат решения', SUBMISSION_FORMATS[contest.submission_type] ?? '—'],
+    ['Формат решения', SUBMISSION_FORMATS[contest.submission_type] ?? '-'],
   ]
     .map(
       ([label, value]) =>
@@ -250,7 +250,7 @@ function renderSubmitArea() {
       ${ICONS.warning}
       <div>
         <div class="cv-banner-title">Добавьте контактные данные</div>
-        <div class="cv-banner-text">Для участия в конкурсе в профиле должен быть указан email.</div>
+        <div class="cv-banner-text">Укажите email в профиле, чтобы отправить решение.</div>
       </div>
       <button type="button" class="cv-banner-btn" data-open-contact>Добавить</button>
     </div>`;
@@ -258,7 +258,7 @@ function renderSubmitArea() {
   if (state.submissions.length >= MAX_ATTEMPTS) {
     formWrap.innerHTML = `
       <div class="cv-limit-note">${ICONS.done}
-        Вы уже отправили решение. На этот конкурс действует лимит — ${countOf(MAX_ATTEMPTS, ['попытка', 'попытки', 'попыток'])} на участника.
+        Решение уже отправлено. Лимит на участника: ${countOf(MAX_ATTEMPTS, ['попытка', 'попытки', 'попыток'])}.
       </div>`;
     return;
   }
@@ -266,10 +266,10 @@ function renderSubmitArea() {
   const type = state.contest.submission_type || 'file';
   formWrap.innerHTML = `
     ${inputHtml(type, state.contest.submission_hint)}
-    <div class="cv-submit-label">Комментарий <span class="cv-optional">— необязательно</span></div>
+    <div class="cv-submit-label">Комментарий <span class="cv-optional">(необязательно)</span></div>
     <textarea class="cv-submit-input" id="cv-sub-comment" placeholder="Кратко опишите подход"></textarea>
     <button type="button" class="cv-btn-submit" id="cv-btn-submit">Отправить решение</button>
-    <div class="cv-submit-note">Отправить решение можно только один раз — отправляйте, когда будете готовы.</div>`;
+    <div class="cv-submit-note">Решение можно отправить один раз. Перед отправкой проверьте свою работу.</div>`;
 
   if (type === 'file') setupFileInput();
   byId('cv-btn-submit').addEventListener('click', submitSolution);
@@ -425,7 +425,7 @@ if (state.contest) {
       ({ submissions: state.submissions = [] } = await api.get(`/api/v1/contests/${contestId}/my-submissions/`));
     } catch {
       // Форма всё равно покажется, а повторную отправку сервер отклонит сам
-      toast('Не удалось проверить ваши прошлые решения по этому конкурсу. Обновите страницу.');
+      toast('Не удалось проверить, отправляли ли вы решение. Обновите страницу.');
     }
   }
   renderMySubmissions();

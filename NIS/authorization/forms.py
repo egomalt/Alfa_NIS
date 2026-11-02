@@ -26,12 +26,12 @@ class AccountRegistrationForm(forms.ModelForm):
         # Без этого Django собирает сообщение из английских имён модели и поля:
         # «Account с таким Username уже существует».
         error_messages = {
-            'name': {'required': 'Укажите отображаемое имя.'},
+            'name': {'required': 'Укажите имя или название компании.'},
             'username': {
                 'required': 'Придумайте имя пользователя.',
                 'unique': 'Это имя пользователя уже занято.',
             },
-            'email': {'required': 'Укажите email.', 'invalid': 'Некорректный email.'},
+            'email': {'required': 'Укажите email.', 'invalid': 'Проверьте email. Например: name@example.com.'},
         }
 
     def clean_username(self):

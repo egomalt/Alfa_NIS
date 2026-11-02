@@ -8,7 +8,7 @@ const STATUSES = {
   approved: ['Одобрено', 'green'],
   rejected: ['Отклонено', 'red'],
   active: ['Активен', 'green'],
-  banned: ['Забанен', 'red'],
+  banned: ['Заблокирован', 'red'],
   new: ['Новая', 'amber'],
   resolved: ['Рассмотрена', 'green'],
   dismissed: ['Отклонена', 'muted'],

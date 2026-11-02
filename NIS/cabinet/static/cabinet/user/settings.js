@@ -30,7 +30,7 @@ function renderSkills() {
   const full = skills.length >= MAX_SKILLS;
   skillInput.disabled = full;
   byId('ud-skill-add').disabled = full;
-  setText('ud-skill-count', full ? `— больше ${MAX_SKILLS} не поместится` : `— ${skills.length} из ${MAX_SKILLS}`);
+  setText('ud-skill-count', full ? `Можно добавить до ${MAX_SKILLS}` : `${skills.length} из ${MAX_SKILLS}`);
 }
 
 /* Список навыков обычно вставляют целиком, через запятую */

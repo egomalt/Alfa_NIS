@@ -38,7 +38,7 @@ function verdict(submission, contest) {
       title: 'Решение принято',
       text: submission.liked
         ? 'Компания приняла работу и отметила её среди понравившихся.'
-        : 'Компания приняла работу. Победителя выбирают после дедлайна.',
+        : 'Компания приняла работу. Следите за итогами конкурса.',
     };
   }
   if (submission.status === 'rejected') {
@@ -46,7 +46,7 @@ function verdict(submission, contest) {
       icon: ICONS.no,
       tone: 'red',
       title: 'Решение отклонено',
-      text: 'Компания не приняла работу. Текстового отзыва она не оставляет — за разбором можно написать напрямую.',
+      text: 'Компания отклонила работу. За обратной связью можно обратиться к ней напрямую.',
     };
   }
   // Нейтрально: кандидату это значит «решения пока нет», а не «сделай что-то»
@@ -55,8 +55,8 @@ function verdict(submission, contest) {
     tone: 'muted',
     title: 'Решение на проверке',
     text: contest.deadline
-      ? `Компания разбирает работы. Обычно это происходит после дедлайна — ${formatDate(contest.deadline)}.`
-      : 'Компания ещё не вынесла решение.',
+      ? `Компания проверяет работы. Срок отправки решений: ${formatDate(contest.deadline)}.`
+      : 'Компания ещё не проверила работу.',
   };
 }
 
@@ -80,7 +80,7 @@ function answerHtml(submission, contest) {
 }
 
 const fact = (label, value) =>
-  `<div><div class="us-fact-label">${esc(label)}</div><div class="us-fact-value">${esc(value || '—')}</div></div>`;
+  `<div><div class="us-fact-label">${esc(label)}</div><div class="us-fact-value">${esc(value || '-')}</div></div>`;
 
 function render({ submission, contest }) {
   const result = verdict(submission, contest);

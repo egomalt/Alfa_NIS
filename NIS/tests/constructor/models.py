@@ -84,7 +84,7 @@ class TestAttempt(models.Model):
 
     def __str__(self):
         who = self.candidate_username or 'аноним'
-        return f'{who} — {self.test_id} ({self.score}/{self.max_score})'
+        return f'{who} - {self.test_id} ({self.score}/{self.max_score})'
 
     @property
     def is_finished(self):

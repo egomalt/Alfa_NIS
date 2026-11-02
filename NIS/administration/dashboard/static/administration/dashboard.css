@@ -412,6 +412,10 @@
   display: flex;
   gap: 6px;
 }
+.ap-row-actions .ap-btn-mini {
+  padding: 0 8px;
+  font-size: 12px;
+}
 .ap-btn-mini {
   height: 34px;
   padding: 0 14px;

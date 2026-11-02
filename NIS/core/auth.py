@@ -38,7 +38,7 @@ def api_login_required(*roles):
         def wrapper(request, *args, **kwargs):
             account = get_current_account(request)
             if account is None:
-                return JsonResponse({'ok': False, 'message': 'Требуется вход.'}, status=401)
+                return JsonResponse({'ok': False, 'message': 'Войдите в аккаунт.'}, status=401)
             if roles and account.role not in roles:
                 return JsonResponse({'ok': False, 'message': 'Нет доступа.'}, status=403)
             blocked = ban_block(account, request.method)

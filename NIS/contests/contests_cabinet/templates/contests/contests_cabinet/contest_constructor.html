@@ -68,7 +68,7 @@
            href="{% url 'help_page' %}"
            target="_blank"
            rel="noopener"
-           title="Помощь — откроется в новой вкладке"
+           title="Помощь (в новой вкладке)"
            aria-label="Помощь">
           <svg width="14"
                height="14"
@@ -111,7 +111,7 @@
       <aside class="ccon-sidebar">
         <div class="ccon-sidebar-label">Разделы</div>
         <div id="ccon-sec-list"></div>
-        <div class="ccon-hint-box">Конкурс — это один кейс с дедлайном. Участники регистрируются, изучают условия и присылают решение до указанной даты.</div>
+        <div class="ccon-hint-box">Опишите задачу и укажите срок. Кандидаты изучат условия и пришлют решения.</div>
       </aside>
       <div class="ccon-editor">
         <div class="ccon-editor-content">
@@ -173,7 +173,7 @@
                 <div class="ccon-field-hint">После этой даты приём решений закрывается автоматически</div>
               </div>
               <div>
-                <div class="ccon-field-label">Приз / вознаграждение <span class="ccon-optional">— необязательно</span></div>
+                <div class="ccon-field-label">Приз / вознаграждение <span class="ccon-optional">(необязательно)</span></div>
                 <input class="ccon-inp"
                        id="ccon-prize"
                        placeholder="например: офер на стажировку">
@@ -190,7 +190,7 @@
           <!-- Кейс и данные -->
           <div class="ccon-panel" data-panel="case">
             <div>
-              <div class="ccon-field-label">Стартовые файлы <span class="ccon-optional">— данные, шаблон, код для старта</span></div>
+              <div class="ccon-field-label">Стартовые файлы <span class="ccon-optional">(данные, шаблон или код)</span></div>
               <div class="ccon-file-drop" id="ccon-file-drop" role="button" tabindex="0">
                 <svg width="24"
                      height="24"
@@ -204,11 +204,11 @@
                   <path d="M12 12v6M9 15l3 3 3-3" />
                 </svg>
                 <div class="ccon-file-drop-title">Нажмите или перетащите файлы</div>
-                <div class="ccon-file-drop-hint">Датасеты, шаблон проекта, ТЗ — до {{ max_attachment_mb }} МБ на файл</div>
+                <div class="ccon-file-drop-hint">Данные, шаблон проекта или ТЗ, до {{ max_attachment_mb }} МБ на файл</div>
               </div>
               <input type="file" id="ccon-attach-input" multiple hidden>
               <div id="ccon-attach-list"></div>
-              <div class="ccon-field-hint">Эти файлы увидят и смогут скачать все зарегистрированные участники</div>
+              <div class="ccon-field-hint">Эти файлы смогут скачать все участники, вошедшие в аккаунт</div>
             </div>
             <div>
               <div class="ccon-field-label">Описание кейса</div>
@@ -242,7 +242,7 @@
             <div>
               <div class="ccon-field-label">Формат решения участника</div>
               <div class="ccon-type-cards" id="ccon-type-cards"></div>
-              <div class="ccon-field-hint">Как именно кандидаты будут присылать решение на этот кейс</div>
+              <div class="ccon-field-hint">Выберите, как участники будут отправлять решения</div>
             </div>
             <div>
               <div class="ccon-field-label">Инструкция к полю решения</div>

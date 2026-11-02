@@ -45,12 +45,12 @@ def human_size(size_bytes):
 def validate_upload(uploaded_file, allowed_extensions, max_size):
     """Бросает UploadError, если файл не подходит."""
     if uploaded_file is None:
-        raise UploadError('Файл не передан.')
+        raise UploadError('Выберите файл для загрузки.')
 
     extension = os.path.splitext(uploaded_file.name or '')[1].lower()
     if extension not in allowed_extensions:
         allowed = ', '.join(sorted(e.lstrip('.') for e in allowed_extensions))
-        raise UploadError(f'Недопустимый тип файла. Разрешены: {allowed}.')
+        raise UploadError(f'Этот формат не поддерживается. Подойдут: {allowed}.')
 
     if uploaded_file.size > max_size:
         raise UploadError(f'Файл больше {human_size(max_size)}.')

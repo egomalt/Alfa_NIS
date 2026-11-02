@@ -7,10 +7,10 @@ import { api, byId } from 'alfa/core';
 function validateUsername(value) {
   const username = value.trim().toLowerCase();
   if (!username) return 'Введите имя пользователя.';
-  if (username.length < 3 || username.length > 50) return 'Имя пользователя должно быть от 3 до 50 символов.';
+  if (username.length < 3 || username.length > 50) return 'В имени пользователя должно быть от 3 до 50 символов.';
   if (!/^[a-z0-9_-]+$/.test(username)) return 'Используйте только латинские буквы, цифры, дефис и подчёркивание.';
   if (!/^[a-z0-9](.*[a-z0-9])?$/.test(username))
-    return 'Имя пользователя должно начинаться и заканчиваться латинской буквой или цифрой.';
+    return 'Начните и закончите имя пользователя латинской буквой или цифрой.';
   return '';
 }
 
@@ -131,7 +131,7 @@ document.addEventListener('focusout', (event) => {
 
 const ROLES = {
   candidate: {
-    nameLabel: 'Отображаемое имя',
+    nameLabel: 'Ваше имя',
     namePlaceholder: 'Например, Иван Иванов',
     emailLabel: 'Email',
     emailPlaceholder: 'ivan@example.com',

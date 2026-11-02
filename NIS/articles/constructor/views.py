@@ -114,7 +114,7 @@ def api_article_publish(request, article_id):
     if not (article.title or '').strip():
         return JsonResponse({'ok': False, 'message': 'Укажите название статьи.'}, status=400)
     if not (article.content or '').strip():
-        return JsonResponse({'ok': False, 'message': 'Статья пустая — нечего публиковать.'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Добавьте текст статьи перед публикацией.'}, status=400)
     article.status = Article.STATUS_PUBLISHED
     article.published_at = article.published_at or timezone.now()
     article.save(update_fields=['status', 'published_at'])

@@ -330,7 +330,7 @@ def api_company_rate(request, username):
     try:
         rating = int(load_json_body(request).get('rating', 0))
     except (ValueError, TypeError):
-        return JsonResponse({'ok': False, 'message': 'Некорректные данные'}, status=400)
+        return JsonResponse({'ok': False, 'message': 'Не удалось прочитать оценку. Выберите от 1 до 5 звёзд.'}, status=400)
 
     if rating < 1 or rating > 5:
         return JsonResponse({'ok': False, 'message': 'Оценка должна быть от 1 до 5'}, status=400)

@@ -84,9 +84,7 @@ const list = catalog({
   gridId: 'grid',
   card,
   empty: () =>
-    state.query.trim()
-      ? `По запросу «${state.query.trim()}» ничего не нашлось`
-      : 'Под выбранные фильтры ничего не подходит',
+    state.query.trim() ? `По запросу «${state.query.trim()}» ничего не нашлось` : 'Попробуйте другие фильтры',
   params: () => ({ q: state.query.trim(), level: state.level, category: state.category }),
   onTotal: (total) => {
     byId('count').textContent = total ? countOf(total, WORDS.tests) : '';

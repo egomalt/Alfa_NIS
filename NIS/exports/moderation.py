@@ -27,21 +27,21 @@ def build_admin_pdf():
 
     r.kpi(
         [
-            (len(pending), 'Заявок на верификацию'),
+            (len(pending), 'Компаний на проверке'),
             (len(new_reports), 'Открытых жалоб'),
-            (escalated, 'Эскалировано (3+)'),
+            (escalated, 'Приоритетных жалоб (3+)'),
             (Account.objects.count(), 'Всего пользователей'),
         ]
     )
-    r.kpi([(len(banned), 'Забанено')])
+    r.kpi([(len(banned), 'Заблокировано')])
 
-    # Заявки на верификацию
-    r.section('Заявки на верификацию')
+    # Проверка компаний
+    r.section('Проверка компаний')
     if pending:
-        rows = [[c.name or c.username, c.industry or '—', c.city or '—', fmt_date(c.submitted_at)] for c in pending]
+        rows = [[c.name or c.username, c.industry or '-', c.city or '-', fmt_date(c.submitted_at)] for c in pending]
         r.table(['Компания', 'Индустрия', 'Город', 'Подано'], rows, col_ratios=[2.6, 2.0, 1.6, 1.4])
     else:
-        r.empty_note('Очередь верификации пуста.')
+        r.empty_note('Все заявки уже проверены.')
 
     # Новые жалобы
     r.section('Новые жалобы')
@@ -49,12 +49,12 @@ def build_admin_pdf():
         rows = []
         for rep in new_reports:
             total = new_counts.get((rep.target_type, rep.target_id), 0)
-            mark = ' (эскалация)' if total >= ESCALATION_THRESHOLD else ''
+            mark = ' (приоритет)' if total >= ESCALATION_THRESHOLD else ''
             rows.append(
                 [
                     TARGET_LABELS.get(rep.target_type, rep.target_type),
                     rep.target_title + mark,
-                    rep.reporter_username or '—',
+                    rep.reporter_username or '-',
                     fmt_date(rep.created_at),
                 ]
             )
@@ -63,20 +63,20 @@ def build_admin_pdf():
         r.empty_note('Новых жалоб нет.')
 
     # Забаненные
-    r.section('Забаненные пользователи')
+    r.section('Заблокированные пользователи')
     if banned:
         rows = [
             [
                 u.name or u.username,
                 ROLE_LABELS.get(u.role, u.role),
                 fmt_date(u.ban_until) if u.ban_until else 'навсегда',
-                (u.ban_reason or '—')[:80],
+                (u.ban_reason or '-')[:80],
             ]
             for u in banned
         ]
-        r.table(['Пользователь', 'Роль', 'Бан до', 'Причина'], rows, col_ratios=[2.0, 1.3, 1.4, 3.0])
+        r.table(['Пользователь', 'Роль', 'Блокировка до', 'Причина'], rows, col_ratios=[2.0, 1.3, 1.4, 3.0])
     else:
-        r.empty_note('Забаненных пользователей нет.')
+        r.empty_note('Заблокированных пользователей нет.')
 
     return r.build()
 
