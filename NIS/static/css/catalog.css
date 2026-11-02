@@ -913,26 +913,8 @@ main {
 }
 
 .cn-cut {
-  position: relative;
   height: 0;
   border-top: 1.5px dashed var(--line-2);
-}
-.cn-cut::before,
-.cn-cut::after {
-  content: '';
-  position: absolute;
-  top: -11px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--bg);
-  border: 1px solid var(--line);
-}
-.cn-cut::before {
-  left: -12px;
-}
-.cn-cut::after {
-  right: -12px;
 }
 
 .cn-body {
