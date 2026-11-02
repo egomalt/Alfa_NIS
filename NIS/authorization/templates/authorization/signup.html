@@ -4,13 +4,11 @@
 {% block navbar %}{% endblock %}
 {% block body %}
   <div class="cr-auth-page">
-    <a href="{% url 'home_page' %}" class="cr-auth-brand">
-      <span class="cr-brand-mark">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff">
-          <rect x="3.5" y="13" width="4.3" height="8" rx="1.4" /><rect x="9.85" y="8" width="4.3" height="13" rx="1.4" /><rect x="16.2" y="3" width="4.3" height="18" rx="1.4" />
-        </svg>
-      </span>
-      <span class="cr-auth-brand-name">glowdy</span>
+    <a href="{% url 'home_page' %}"
+       class="cr-auth-brand"
+       aria-label="glowdy">
+      <span class="cr-brand-mark">{% include "partials/brand_mark.html" %}</span>
+      <span class="cr-auth-brand-name">{% include "partials/brand_wordmark.html" %}</span>
     </a>
     <div class="cr-auth-card cr-auth-card-wide">
       <h1 class="cr-auth-title">Создать аккаунт</h1>

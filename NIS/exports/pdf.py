@@ -2,10 +2,16 @@
 
 import io
 import os
+from functools import lru_cache
+from pathlib import Path
+from xml.etree import ElementTree
 from xml.sax.saxutils import escape
 
 from django.http import HttpResponse
 from django.utils import timezone
+from reportlab.graphics import renderPDF
+from reportlab.graphics.shapes import Drawing, Group
+from reportlab.graphics.svgpath import SvgPath
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
@@ -74,6 +80,23 @@ def _styles():
 
 
 CELL_PADDING = 16
+
+
+@lru_cache(maxsize=2)
+def _brand_drawing(symbol_id, width):
+    source = Path(__file__).resolve().parent.parent / 'static' / 'brand' / 'glowdy.svg'
+    symbol = ElementTree.parse(source).find(f'{{http://www.w3.org/2000/svg}}symbol[@id="{symbol_id}"]')
+    _, _, source_width, source_height = map(float, symbol.attrib['viewBox'].split())
+    scale = width / source_width
+    drawing = Drawing(width, source_height * scale)
+    drawing.transform = (scale, 0, 0, -scale, 0, source_height * scale)
+    for element in symbol:
+        shape = SvgPath(element.attrib['d'], fillColor=WHITE if symbol_id == 'mark' else TEXT, strokeColor=None)
+        group = Group(shape)
+        if transform := element.get('transform'):
+            group.transform = tuple(map(float, transform.removeprefix('matrix(').removesuffix(')').split()))
+        drawing.add(group)
+    return drawing
 
 
 def _paragraph(text, style):
@@ -369,14 +392,9 @@ class ReportBuilder:
         x = MARGIN
         canvas.setFillColor(BRAND)
         canvas.roundRect(x, top - 4, 16, 16, 3, stroke=0, fill=1)
-        # три «столбика» внутри
-        canvas.setFillColor(WHITE)
-        canvas.rect(x + 3.5, top - 1.5, 2.2, 5, stroke=0, fill=1)
-        canvas.rect(x + 6.9, top + 0.3, 2.2, 7, stroke=0, fill=1)
-        canvas.rect(x + 10.3, top + 2.1, 2.2, 9, stroke=0, fill=1)
-        canvas.setFillColor(TEXT)
-        canvas.setFont(FONT_BOLD, 12)
-        canvas.drawString(x + 22, top, 'glowdy')
+        mark = _brand_drawing('mark', 12)
+        renderPDF.draw(mark, canvas, x + 2, top + 4 - mark.height / 2)
+        renderPDF.draw(_brand_drawing('wordmark', 54), canvas, x + 22, top - 3)
         canvas.setFillColor(MUTED)
         canvas.setFont(FONT, 10)
         canvas.drawRightString(PAGE_W - MARGIN, top, self.title)

@@ -63,6 +63,19 @@
   --shadow-lg: 0 16px 44px rgba(0, 0, 0, 0.52);
 }
 
+.glowdy-mark {
+  display: block;
+  flex-shrink: 0;
+  width: 72%;
+  height: auto;
+  color: var(--on-brand);
+}
+.glowdy-wordmark {
+  display: block;
+  width: 3.6em;
+  height: auto;
+}
+
 .cr-toasts {
   position: fixed;
   right: 18px;

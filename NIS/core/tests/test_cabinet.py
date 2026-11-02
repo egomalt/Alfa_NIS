@@ -464,9 +464,9 @@ class CabinetSidebarTests(BaseCase):
     def test_assets_carry_a_single_version(self):
         """Вся статика подключается с одной версией и ни одна — без неё."""
         body = self.login('firma').get('/cabinet/company/').content.decode()
-        versions = set(re.findall(r'\?v=([^"\']+)', body))
+        versions = set(re.findall(r'\?v=([^#"\']+)', body))
         self.assertEqual(versions, {settings.ASSET_VERSION})
-        for match in re.findall(r'(?:href|src)="(/static/[^"]+\.(?:css|js))"', body):
+        for match in re.findall(r'(?:href|src)="(/static/[^"]+\.(?:css|js|svg))"', body):
             self.fail(f'ссылка на статику без версии: {match}')
 
     def test_nothing_in_the_cabinet_forces_a_wide_page(self):

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#d62839"/>
+  <g fill="#fff" transform="translate(69.75 128.5) scale(2.5)">
+    <path d="M11 0H23Q34 0 34 11V57Q34 68 23 68H11Q0 68 0 57V11Q0 0 11 0Z" transform="matrix(1 0 -0.445229 1 30.2756 34)" />
+    <path d="M11 0H23Q34 0 34 11V57Q34 68 23 68H11Q0 68 0 57V11Q0 0 11 0Z" transform="matrix(1 0 -0.445229 1 87.413386 0)" />
+    <path d="M11 0H23Q34 0 34 11V57Q34 68 23 68H11Q0 68 0 57V11Q0 0 11 0Z" transform="matrix(1 0 -0.445229 1 114.2756 34)" />
+  </g>
+</svg>
