@@ -368,7 +368,7 @@ const TEXT_FIELDS = {
 };
 
 function renderLogoBox(company) {
-  const preview = el('pic-preview');
+  const preview = el('cp-logo-preview');
   if (!preview) return;
   setAvatar(preview, company);
   el('cp-logo-remove').hidden = !company.avatar_url;

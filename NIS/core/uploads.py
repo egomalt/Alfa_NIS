@@ -1,6 +1,7 @@
 """Проверка загружаемых файлов: расширение, размер и содержимое."""
 
 import os
+import warnings
 
 from PIL import Image, UnidentifiedImageError
 
@@ -67,9 +68,13 @@ def validate_image(uploaded_file, max_size=MAX_AVATAR_SIZE):
     файла или у чего похуже ещё не делает его изображением."""
     validate_upload(uploaded_file, IMAGE_EXTENSIONS, max_size)
     try:
-        with Image.open(uploaded_file) as image:
-            image_format = image.format
-            image.verify()
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', Image.DecompressionBombWarning)
+            with Image.open(uploaded_file) as image:
+                image_format = image.format
+                image.verify()
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning):
+        raise UploadError('У изображения слишком большое разрешение. Уменьшите ширину или высоту.') from None
     except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
         raise UploadError('Файл повреждён или не является изображением.') from None
     finally:
