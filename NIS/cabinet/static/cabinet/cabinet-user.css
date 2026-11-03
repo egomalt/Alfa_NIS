@@ -114,11 +114,6 @@
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  margin-bottom: 4px;
-}
-.ud-page-sub {
-  font-size: 14px;
-  color: var(--muted);
 }
 .ud-stats-row {
   display: grid;

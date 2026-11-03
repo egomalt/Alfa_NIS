@@ -60,7 +60,6 @@ function renderHero(company) {
 
   const since = company.created_at ? `с ${new Date(company.created_at).getFullYear()} г.` : '';
   setText('cp-hero-role', [company.industry, company.city, since].filter(Boolean).join(' · ') || 'Компания');
-  setText('cp-page-sub', company.contact_email || '');
 }
 
 function unlockSidebarLinks() {
@@ -546,7 +545,7 @@ async function init() {
     if (state.company.is_verified) unlockSidebarLinks();
     if (ownsPanel) renderPanel(state.company);
   } catch (error) {
-    setText('cp-page-sub', `Ошибка загрузки: ${error.message}`);
+    toast(`Не удалось загрузить данные компании. ${error.message}`);
   }
 }
 
