@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -60,8 +61,9 @@ def _pending_or_error(company):
 
 @require_POST
 @moderator_required
+@transaction.atomic
 def api_verification_approve(request, username):
-    company = get_object_or_404(Company, username=username)
+    company = get_object_or_404(Company.objects.select_for_update(), username=username)
     error = _pending_or_error(company)
     if error is not None:
         return error
@@ -74,10 +76,11 @@ def api_verification_approve(request, username):
 
 @require_POST
 @moderator_required
+@transaction.atomic
 def api_verification_reject(request, username):
     data = load_json_body(request)
     reason = (data.get('reason') or '').strip()
-    company = get_object_or_404(Company, username=username)
+    company = get_object_or_404(Company.objects.select_for_update(), username=username)
     error = _pending_or_error(company)
     if error is not None:
         return error

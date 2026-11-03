@@ -9,6 +9,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from authorization import bans
 from authorization.models import ROLE_COMPANY, ROLE_USER
+from companies.models import Company
 from core.auth import api_login_required, page_login_required
 from core.utils import load_json_body
 from tests import attempts, code_results, statistics
@@ -316,6 +317,11 @@ def api_test_publish(request, test_id):
     test, error = _owned_test_or_error(request, test_id)
     if error:
         return error
+    if (
+        request.account.role == ROLE_COMPANY
+        and not Company.objects.filter(username=request.account.username, verification_status=Company.VERIF_APPROVED).exists()
+    ):
+        return JsonResponse({'ok': False, 'message': 'Сначала подтвердите компанию.'}, status=403)
 
     problem = _publish_problem(test)
     if problem:

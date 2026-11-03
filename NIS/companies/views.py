@@ -1,5 +1,8 @@
+import logging
 from collections import Counter
+from functools import partial
 
+from django.db import DatabaseError, transaction
 from django.db.models import Avg, Count, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
@@ -25,6 +28,9 @@ from .models import Company, CompanyRating, ensure_company
 # Каталог фильтруется в браузере, поэтому страница крупная
 CATALOG_PER_PAGE = 100
 TRENDING_SIZE = 5
+
+logger = logging.getLogger(__name__)
+READONLY_COMPANY_FIELDS = {'username', 'verification_status', 'verification_reason', 'verified_at', 'submitted_at'}
 
 
 def _own_company_or_error(request, username):
@@ -191,7 +197,7 @@ def _profile_form_data(request, company):
     """
     data = request.POST.copy()
     for name in CompanyProfileForm.Meta.fields:
-        if name in ('avatar', 'registration_document') or name in data:
+        if name == 'avatar' or name in data:
             continue
         data[name] = getattr(company, name) or ''
     return data
@@ -203,18 +209,33 @@ def api_company_profile(request, username):
     company, error = _own_company_or_error(request, username)
     if error:
         return error
+    protected = READONLY_COMPANY_FIELDS | {'registration_document', 'registration_document-clear'}
+    if protected & (request.POST.keys() | request.FILES.keys()):
+        return JsonResponse(
+            {'ok': False, 'message': 'Логин и данные проверки компании нельзя менять через настройки профиля.'}, status=400
+        )
     form = CompanyProfileForm(_profile_form_data(request, company), request.FILES, instance=company)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
 
     company = form.save(commit=False)
+    fields = list(CompanyProfileForm.Meta.fields)
     if 'directions' in request.POST:
         company.directions = clean_directions(request.POST.getlist('directions'))
+        fields.append('directions')
     # Снять логотип можно только явной командой и только если не загружают новый
     if request.POST.get('remove_avatar') == '1' and 'avatar' not in request.FILES:
         company.avatar.delete(save=False)
-    company.save()
+    company.save(update_fields=[*fields, 'updated_at'])
+    company.refresh_from_db()
     return JsonResponse({'ok': True, 'company': _serialize_company(company, include_private=True)})
+
+
+def _delete_verification_file(storage, name):
+    try:
+        storage.delete(name)
+    except OSError:
+        logger.exception('Could not remove verification file %s', name)
 
 
 @require_http_methods(['POST'])
@@ -223,20 +244,43 @@ def api_company_verification(request, username):
     company, error = _own_company_or_error(request, username)
     if error:
         return error
-    previous = company.registration_document.name if company.registration_document else ''
-    form = CompanyVerificationForm(request.POST, request.FILES, instance=company)
-    if not form.is_valid():
-        return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
-    company = form.save(commit=False)
-    # Прежний документ убираем с диска, иначе он останется лежать навсегда
-    if previous and company.registration_document.name != previous:
-        company.registration_document.storage.delete(previous)
-    # Загрузка документа отправляет компанию на ручную модерацию
-    company.verification_status = Company.VERIF_PENDING
-    company.verification_reason = ''
-    company.submitted_at = timezone.now()
-    company.verified_at = None
-    company.save()
+    if READONLY_COMPANY_FIELDS & (request.POST.keys() | request.FILES.keys()):
+        return JsonResponse({'ok': False, 'message': 'Решение о подтверждении компании принимает модератор.'}, status=400)
+
+    storage = company.registration_document.storage
+    previous = saved = ''
+    try:
+        with transaction.atomic():
+            company = Company.objects.select_for_update().get(pk=company.pk)
+            previous = company.registration_document.name
+            form = CompanyVerificationForm(request.POST, request.FILES, instance=company)
+            if not form.is_valid():
+                return JsonResponse({'ok': False, 'errors': serialize_form_errors(form)}, status=400)
+            company = form.save(commit=False)
+            uploaded = form.cleaned_data['registration_document']
+            company.registration_document.save(uploaded.name, uploaded, save=False)
+            saved = company.registration_document.name
+            company.verification_status = Company.VERIF_PENDING
+            company.verification_reason = ''
+            company.submitted_at = timezone.now()
+            company.verified_at = None
+            company.save(
+                update_fields=[
+                    'registration_document',
+                    'verification_status',
+                    'verification_reason',
+                    'submitted_at',
+                    'verified_at',
+                    'updated_at',
+                ]
+            )
+            if previous and previous != saved:
+                transaction.on_commit(partial(_delete_verification_file, storage, previous), robust=True)
+    except (OSError, DatabaseError):
+        logger.exception('Could not save verification document for %s', username)
+        if saved and saved != previous:
+            _delete_verification_file(storage, saved)
+        return JsonResponse({'ok': False, 'message': 'Не удалось сохранить документ. Попробуйте ещё раз чуть позже.'}, status=503)
     return JsonResponse(
         {
             'ok': True,

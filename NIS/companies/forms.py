@@ -1,9 +1,9 @@
 import re
 
 from django import forms
+from django.core.files.uploadedfile import UploadedFile
 
 from core.uploads import UploadError, validate_image, validate_pdf
-from core.utils import validate_username
 
 from .models import Company
 
@@ -31,24 +31,11 @@ def clean_directions(values):
     return result
 
 
-class PDFValidationMixin:
-    def clean_registration_document(self):
-        document = self.cleaned_data.get('registration_document')
-        # Проверяем только новый файл: уже сохранённый документ не перечитываем
-        if document and hasattr(document, 'content_type'):
-            try:
-                validate_pdf(document)
-            except UploadError as error:
-                raise forms.ValidationError(str(error)) from None
-        return document
-
-
-class CompanyProfileForm(PDFValidationMixin, forms.ModelForm):
+class CompanyProfileForm(forms.ModelForm):
     class Meta:
         model = Company
         # directions сюда не входит: список разбирает clean_directions() во вьюхе
         fields = [
-            'username',
             'name',
             'description',
             'contact_email',
@@ -59,11 +46,7 @@ class CompanyProfileForm(PDFValidationMixin, forms.ModelForm):
             'company_size',
             'industry',
             'avatar',
-            'registration_document',
         ]
-
-    def clean_username(self):
-        return validate_username(self.cleaned_data.get('username'))
 
     def clean_avatar(self):
         avatar = self.cleaned_data.get('avatar')
@@ -99,7 +82,17 @@ class CompanyProfileForm(PDFValidationMixin, forms.ModelForm):
         return value
 
 
-class CompanyVerificationForm(PDFValidationMixin, forms.ModelForm):
+class CompanyVerificationForm(forms.ModelForm):
     class Meta:
         model = Company
         fields = ['registration_document']
+
+    def clean_registration_document(self):
+        document = self.cleaned_data.get('registration_document')
+        if not isinstance(document, UploadedFile):
+            raise forms.ValidationError('Выберите новый PDF-документ для проверки.')
+        try:
+            validate_pdf(document)
+        except UploadError as error:
+            raise forms.ValidationError(str(error)) from None
+        return document
