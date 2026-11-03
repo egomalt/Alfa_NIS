@@ -8,6 +8,7 @@ from django.views.decorators.http import require_GET
 from articles.constructor.models import Article
 from articles.serializers import author_names_for, serialize_article
 from authorization import bans
+from authorization.views import get_current_account
 from core.pagination import paginate, text_param, wants_extras
 
 # Сколько отдавать без ?per_page= — каталог и профиль просят меньше сами
@@ -62,11 +63,9 @@ def api_articles_catalog(request):
 
 @require_GET
 def api_user_articles(request, username):
-    articles_qs = (
-        Article.objects.filter(author_username=username, status=Article.STATUS_PUBLISHED)
-        .exclude(author_username__in=bans.banned_usernames())
-        .order_by('-published_at')
-    )
+    if not bans.visible_to(get_current_account(request), username):
+        return JsonResponse({'ok': False, 'message': 'Кандидат не найден.'}, status=404)
+    articles_qs = Article.objects.filter(author_username=username, status=Article.STATUS_PUBLISHED).order_by('-published_at')
     articles, page_meta = paginate(request, articles_qs, CATALOG_PER_PAGE)
     names = author_names_for(articles)
     return JsonResponse(

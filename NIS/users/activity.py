@@ -8,7 +8,7 @@
 не то, чем стоит закрашивать день.
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.db.models import Count
 from django.db.models.functions import TruncDate
@@ -22,7 +22,9 @@ from tests.constructor.models import Test, TestAttempt
 WINDOW_DAYS = 182
 
 
-def _add(counts, queryset, field):
+def _add(counts, queryset, field, since):
+    if since is not None:
+        queryset = queryset.filter(**{f'{field}__gte': since})
     rows = queryset.annotate(day=TruncDate(field)).values('day').annotate(n=Count('id')).values_list('day', 'n')
     for day, n in rows:
         if day is not None:
@@ -31,13 +33,15 @@ def _add(counts, queryset, field):
 
 
 def daily(username, days=WINDOW_DAYS):
-    """{'2026-09-17': 3, …} — сколько событий в каждый день окна."""
-    since = timezone.now() - timedelta(days=days)
+    """События по дням. days=None возвращает всю историю."""
+    since = None
+    if days is not None:
+        since = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
     counts = {}
-    _add(counts, TestAttempt.objects.filter(candidate_username=username, finished_at__gte=since), 'finished_at')
-    _add(counts, ContestSubmission.objects.filter(candidate_username=username, created_at__gte=since), 'created_at')
-    _add(counts, Article.objects.filter(author_username=username, created_at__gte=since), 'created_at')
-    _add(counts, Test.objects.filter(owner_username=username, created_at__gte=since), 'created_at')
+    _add(counts, TestAttempt.objects.filter(candidate_username=username, finished_at__isnull=False), 'finished_at', since)
+    _add(counts, ContestSubmission.objects.filter(candidate_username=username), 'created_at', since)
+    _add(counts, Article.objects.filter(author_username=username), 'created_at', since)
+    _add(counts, Test.objects.filter(owner_username=username), 'created_at', since)
     return counts
 
 
@@ -49,19 +53,24 @@ def streaks(counts):
     сутки прошли без событий.
     """
     today = timezone.localdate()
-    days = [counts.get((today - timedelta(days=back)).isoformat(), 0) for back in range(WINDOW_DAYS - 1, -1, -1)]
+    days = sorted(date.fromisoformat(day) for day, count in counts.items() if count > 0 and day <= today.isoformat())
 
     best = run = 0
-    for n in days:
-        run = run + 1 if n else 0
+    previous = None
+    for day in days:
+        run = run + 1 if previous is not None and (day - previous).days == 1 else 1
         best = max(best, run)
+        previous = day
 
-    index = len(days) - 1
-    if days[index] == 0:
-        index -= 1
-    current = 0
-    while index >= 0 and days[index] > 0:
-        current += 1
-        index -= 1
+    current = run if previous in (today, today - timedelta(days=1)) else 0
+    return {'current': current, 'best': best, 'today': counts.get(today.isoformat(), 0)}
 
-    return {'current': current, 'best': best, 'today': days[-1]}
+
+def summary(username):
+    counts = daily(username, days=None)
+    today = timezone.localdate()
+    first = (today - timedelta(days=WINDOW_DAYS - 1)).isoformat()
+    return {
+        'daily': {day: count for day, count in counts.items() if first <= day <= today.isoformat()},
+        'streak': streaks(counts),
+    }

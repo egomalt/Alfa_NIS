@@ -172,6 +172,8 @@ def api_companies_list(request):
 def api_company_detail(request, username):
     company = get_object_or_404(Company, username=username)
     current = get_current_account(request)
+    if not bans.visible_to(current, username):
+        return JsonResponse({'ok': False, 'message': 'Компания не найдена.'}, status=404)
     is_owner = current is not None and current.username == username
     return JsonResponse(
         {
@@ -248,6 +250,8 @@ def api_company_verification(request, username):
 def api_company_tests(request, username):
     company = get_object_or_404(Company, username=username)
     current = get_current_account(request)
+    if not bans.visible_to(current, username):
+        return JsonResponse({'ok': False, 'message': 'Компания не найдена.'}, status=404)
     is_owner = current is not None and current.username == username
 
     if not company.is_verified:
@@ -336,6 +340,8 @@ def api_company_rate(request, username):
         return JsonResponse({'ok': False, 'message': 'Оценка должна быть от 1 до 5'}, status=400)
 
     company = get_object_or_404(Company, username=username)
+    if not bans.visible_to(request.account, username):
+        return JsonResponse({'ok': False, 'message': 'Компания не найдена.'}, status=404)
     CompanyRating.objects.update_or_create(
         company=company,
         user_username=request.account.username,

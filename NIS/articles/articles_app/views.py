@@ -76,7 +76,10 @@ def article_read(request, article_id):
         for tag in article.tags[:10]:
             tag_filter |= Q(tags__icontains=tag)
         candidates = (
-            Article.objects.filter(tag_filter, status=Article.STATUS_PUBLISHED).exclude(id=article_id).order_by('-views')[:60]
+            Article.objects.filter(tag_filter, status=Article.STATUS_PUBLISHED)
+            .exclude(id=article_id)
+            .exclude(author_username__in=bans.banned_usernames())
+            .order_by('-views')[:60]
         )
         wanted = set(article.tags)
         for a in candidates:
@@ -123,7 +126,7 @@ def api_article_vote(request, article_id):
     account = request.account
 
     article = Article.objects.filter(id=article_id, status=Article.STATUS_PUBLISHED).first()
-    if not article:
+    if not article or not bans.visible_to(account, article.author_username):
         return JsonResponse({'ok': False, 'message': 'Статья не найдена'}, status=404)
 
     try:

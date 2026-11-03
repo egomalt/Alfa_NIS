@@ -12,6 +12,7 @@ from authorization import bans
 from authorization.models import ROLE_COMPANY, ROLE_USER, Account
 from authorization.views import get_current_account
 from companies.models import Company
+from contests.access import can_view_contest
 from core.auth import api_login_required, ban_block
 from core.pagination import paginate, text_param, wants_extras
 from core.uploads import UploadError, human_size, validate_attachment
@@ -198,12 +199,8 @@ def api_contest_detail(request, contest_id):
         return _not_found()
 
     if request.method == 'GET':
-        # Черновик виден только владельцу: иначе перебором id читаются условия
-        # ещё не стартовавших конкурсов
-        if c.status == Contest.STATUS_DRAFT:
-            account = get_current_account(request)
-            if account is None or account.username != c.company_username:
-                return _not_found()
+        if not can_view_contest(get_current_account(request), c):
+            return _not_found()
         company = Company.objects.filter(username=c.company_username).first()
         data = _contest_to_dict(c, full=True)
         data['company_name'] = (company.name if company else '') or c.company_username
@@ -415,7 +412,7 @@ def api_contests_catalog(request):
 def api_contest_submit(request, contest_id):
     account = request.account
     c = Contest.objects.filter(id=contest_id, status=Contest.STATUS_ACTIVE).first()
-    if c is None:
+    if c is None or not can_view_contest(account, c):
         return _not_found('Конкурс не найден или не активен')
 
     if c.deadline and timezone.now() > c.deadline:
@@ -549,7 +546,14 @@ def api_user_submission(request, sub_id):
 
 @require_http_methods(['GET'])
 def api_user_public_contests(request, username):
-    subs = ContestSubmission.objects.filter(candidate_username=username).select_related('contest').order_by('-created_at')
+    if not bans.visible_to(get_current_account(request), username):
+        return _not_found('Кандидат не найден')
+    subs = (
+        ContestSubmission.objects.filter(candidate_username=username)
+        .exclude(contest__company_username__in=bans.banned_usernames())
+        .select_related('contest')
+        .order_by('-created_at')
+    )
     result = []
     for s in subs:
         c = s.contest
@@ -569,6 +573,8 @@ def api_user_public_contests(request, username):
 
 @require_http_methods(['GET'])
 def api_company_public_contests(request, username):
+    if not bans.visible_to(get_current_account(request), username):
+        return _not_found('Компания не найдена')
     qs = _with_counts(Contest.objects.filter(company_username=username, status__in=PUBLIC_STATUSES)).order_by('-created_at')
     return JsonResponse(
         {

@@ -3,7 +3,9 @@ from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
+from authorization import bans
 from authorization.views import get_current_account
+from core.auth import ban_block
 from core.utils import load_json_body
 from tests import attempts, code_results
 from tests.constructor.models import Test, TestPage
@@ -21,6 +23,8 @@ def _get_visible_test(request, test_id):
         return None, False
 
     account = get_current_account(request)
+    if not bans.visible_to(account, test.owner_username):
+        return None, False
     is_owner = account is not None and account.username == test.owner_username
     is_preview = request.GET.get('preview') == '1' and is_owner
 
@@ -96,6 +100,11 @@ def api_test_view(request, test_id):
 
 @require_http_methods(['POST'])
 def api_test_submit(request, test_id):
+    account = get_current_account(request)
+    if account is not None:
+        blocked = ban_block(account, request.method)
+        if blocked is not None:
+            return blocked
     test, is_preview = _get_visible_test(request, test_id)
     if test is None:
         return JsonResponse({'ok': False, 'message': 'Тест не найден.'}, status=404)

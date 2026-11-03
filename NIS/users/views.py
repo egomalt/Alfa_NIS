@@ -60,7 +60,7 @@ def api_candidate_detail(request, username):
 
     candidate = _serialize_candidate(account, profile, include_private=_sees_contacts(current, account))
     candidate['strengths'] = statistics.strengths(account.username)
-    candidate['streak'] = activity.streaks(activity.daily(account.username))
+    candidate['streak'] = activity.summary(account.username)['streak']
 
     return JsonResponse(
         {

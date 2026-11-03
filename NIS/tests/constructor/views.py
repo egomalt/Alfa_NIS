@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
+from authorization import bans
 from authorization.models import ROLE_COMPANY, ROLE_USER
 from core.auth import api_login_required, page_login_required
 from core.utils import load_json_body
@@ -169,13 +170,11 @@ def api_tests_list(request):
 def api_my_attempts(request):
     """Прохождения, активность по дням и серии — для кабинета кандидата."""
     username = request.account.username
-    daily = activity.daily(username)
     return JsonResponse(
         {
             'ok': True,
             **statistics.for_candidate(username),
-            'daily': daily,
-            'streak': activity.streaks(daily),
+            **activity.summary(username),
         }
     )
 
@@ -334,6 +333,8 @@ def api_code_run(request, page_id):
     # Чужой черновик запускать нельзя: иначе по id страницы можно
     # прощупать задачу из ещё не опубликованного теста
     if page is None or (page.test.status != Test.STATUS_PUBLISHED and page.test.owner_username != request.account.username):
+        return JsonResponse({'ok': False, 'message': 'Страница не найдена.'}, status=404)
+    if not bans.visible_to(request.account, page.test.owner_username):
         return JsonResponse({'ok': False, 'message': 'Страница не найдена.'}, status=404)
 
     body = load_json_body(request)
