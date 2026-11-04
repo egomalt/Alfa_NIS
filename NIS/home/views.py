@@ -5,6 +5,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from authorization.models import ROLE_COMPANY, ROLE_MODERATOR, ROLE_USER
 from authorization.views import get_current_account
 
+from .help_content import HELP_GUIDES
+
 ACCESS_LABELS = {
     'all': 'Открыто всем',
     'user': 'Кандидат',
@@ -94,6 +96,7 @@ def help_page(request):
         'home/help.html',
         {
             'site_map': site_map,
+            'guides': HELP_GUIDES,
             'hint': hint and (*hint[:2], reverse(hint[2]), hint[3]),
         },
     )

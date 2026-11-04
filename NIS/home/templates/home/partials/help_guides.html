@@ -1,0 +1,51 @@
+<section class="hp-section" id="guides">
+  <h2 class="cr-section-title">Инструкции</h2>
+  <nav class="hp-guide-nav" aria-label="Темы инструкций">
+    {% for group in guides %}<a href="#{{ group.id }}" class="hp-guide-link">{{ group.title }}</a>{% endfor %}
+  </nav>
+  {% for group in guides %}
+    <div class="hp-guide-group" id="{{ group.id }}">
+      <h3 class="hp-group-title">{{ group.title }}</h3>
+      <div class="hp-faq">
+        {% for guide in group.items %}
+          <details class="hp-faq-item hp-guide" id="{{ guide.id }}">
+            <summary>{{ guide.title }}</summary>
+            <div class="hp-guide-body">
+              <ol>
+                {% for step in guide.steps %}<li>{{ step }}</li>{% endfor %}
+              </ol>
+              {% if guide.example %}
+                <div class="hp-example">
+                  <div class="hp-example-pair">
+                    <div>
+                      <h4>Входные данные</h4>
+                      <pre><code>{{ guide.example.input }}</code></pre>
+                    </div>
+                    <div>
+                      <h4>Ожидаемый вывод</h4>
+                      <pre><code>{{ guide.example.output }}</code></pre>
+                    </div>
+                  </div>
+                  <h4>Решение на Python</h4>
+                  <pre><code>{{ guide.example.code }}</code></pre>
+                  <h4>Файл для «Загрузить JSON»</h4>
+                  <pre><code>{{ guide.example.json }}</code></pre>
+                </div>
+              {% endif %}
+              {% if guide.notes %}
+                <ul class="hp-guide-notes">
+                  {% for note in guide.notes %}<li>{{ note }}</li>{% endfor %}
+                </ul>
+              {% endif %}
+              {% if guide.links %}
+                <nav class="hp-guide-actions" aria-label="Переходы: {{ guide.title }}">
+                  {% for label, route in guide.links %}<a href="{% url route %}">{{ label }}</a>{% endfor %}
+                </nav>
+              {% endif %}
+            </div>
+          </details>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+</section>

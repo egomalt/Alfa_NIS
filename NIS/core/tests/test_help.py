@@ -1,12 +1,32 @@
 """Страница помощи: карта сайта должна вести туда, куда обещает."""
 
+import subprocess
+import sys
+from html.parser import HTMLParser
+from urllib.parse import urlsplit
+
 from django.test import Client
 from django.urls import NoReverseMatch, Resolver404, resolve, reverse
 
+from home.help_content import HELP_GUIDES
 from home.views import SITE_MAP
 from profiles.views import profile_view
 
 from .base import BaseCase
+
+
+class HelpLinks(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.ids = []
+        self.links = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if 'id' in attrs:
+            self.ids.append(attrs['id'])
+        if tag == 'a' and attrs.get('href'):
+            self.links.append(attrs['href'])
 
 
 class HelpPageTests(BaseCase):
@@ -54,3 +74,57 @@ class HelpPageTests(BaseCase):
             },
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_guides_and_links_work_for_every_role(self):
+        for username in (None, 'kandidat', 'firma', 'moder'):
+            with self.subTest(username=username):
+                response = self.login(username).get(self.URL)
+                self.assertEqual(response.status_code, 200)
+                page = HelpLinks()
+                page.feed(response.content.decode())
+                self.assertEqual(len(page.ids), len(set(page.ids)), 'Повторяющиеся якоря в помощи')
+                for group in HELP_GUIDES:
+                    self.assertIn(group['id'], page.ids)
+                    for guide in group['items']:
+                        self.assertIn(guide['id'], page.ids)
+                for href in page.links:
+                    link = urlsplit(href)
+                    if link.scheme or link.netloc:
+                        continue
+                    if link.fragment and link.path in ('', self.URL):
+                        self.assertIn(link.fragment, page.ids, href)
+                    if link.path:
+                        match = resolve(link.path)
+                        self.assertIsNot(match.func, profile_view, href)
+                if username == 'moder':
+                    self.assertContains(response, 'Вы вошли как модератор')
+
+    def test_editors_link_to_their_instructions(self):
+        cases = (
+            ('kandidat', 'constructor_page', 'test-create'),
+            ('firma', 'constructor_page', 'test-create'),
+            ('kandidat', 'article_constructor_new', 'article-create'),
+            ('firma', 'contest_constructor_new', 'contest-create'),
+            ('moder', 'admin_dashboard', 'moderation-guide'),
+        )
+        for username, route, anchor in cases:
+            with self.subTest(route=route, username=username):
+                response = self.login(username).get(reverse(route))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, f'href="{self.URL}#{anchor}"')
+                if route == 'constructor_page':
+                    self.assertContains(response, f'href="{self.URL}#test-cases"')
+
+    def test_documented_code_example_matches_its_test_case(self):
+        examples = [guide['example'] for group in HELP_GUIDES for guide in group['items'] if 'example' in guide]
+        self.assertTrue(examples)
+        for example in examples:
+            result = subprocess.run(
+                [sys.executable, '-c', example['code']],
+                input=example['input'],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=True,
+            )
+            self.assertEqual(result.stdout.rstrip('\n'), example['output'])

@@ -82,7 +82,7 @@
         <button type="button" class="btn-publish" id="cst-publish-btn" disabled>Опубликовать</button>
       </div>
       <a class="btn-theme btn-help"
-         href="{% url 'help_page' %}"
+         href="{% url 'help_page' %}#test-create"
          target="_blank"
          rel="noopener"
          title="Помощь (в новой вкладке)"
@@ -308,6 +308,10 @@
                   <input type="file" id="ed-tc-file" accept=".json" hidden>
                 </div>
               </div>
+              <a class="test-cases-help"
+                 href="{% url 'help_page' %}#test-cases"
+                 target="_blank"
+                 rel="noopener">Как настроить тест-кейсы</a>
               <div class="tc-list" id="tc-list"></div>
             </div>
           </div>

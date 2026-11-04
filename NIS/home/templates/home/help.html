@@ -15,6 +15,7 @@
         <a class="cr-chip" href="#map">Карта сайта</a>
         <a class="cr-chip" href="#candidate">Кандидату</a>
         <a class="cr-chip" href="#company">Компании</a>
+        <a class="cr-chip" href="#guides">Инструкции</a>
         <a class="cr-chip" href="#faq">FAQ</a>
       </nav>
     </section>
@@ -65,26 +66,32 @@
         <li class="hp-step">
           <div class="hp-step-title">Зарегистрируйтесь</div>
           <div class="hp-step-text">Выберите роль «Кандидат». После регистрации вход выполнится сразу, откроется личный кабинет.</div>
+          <a class="hp-step-link" href="#account-signup">Регистрация и вход</a>
         </li>
         <li class="hp-step">
           <div class="hp-step-title">Заполните профиль</div>
           <div class="hp-step-text">Добавьте фото, пару слов о себе, навыки и ссылки на GitHub, Telegram или свой сайт.</div>
+          <a class="hp-step-link" href="#account-profile">Настройка профиля</a>
         </li>
         <li class="hp-step">
           <div class="hp-step-title">Проходите тесты</div>
           <div class="hp-step-text">В каталоге тестов есть вопросы и задачи на код. Тест считается пройденным при результате от 60%.</div>
+          <a class="hp-step-link" href="#test-answering">Как отвечать на вопросы</a>
         </li>
         <li class="hp-step">
           <div class="hp-step-title">Участвуйте в конкурсах</div>
           <div class="hp-step-text">Отправьте решение кейса до окончания срока. Вердикт компании появится в кабинете, в разделе «Конкурсы».</div>
+          <a class="hp-step-link" href="#contest-submit">Отправка работы</a>
         </li>
         <li class="hp-step">
           <div class="hp-step-title">Делитесь опытом</div>
           <div class="hp-step-text">Напишите статью о собеседовании или подготовке, соберите свой тест для других кандидатов.</div>
+          <a class="hp-step-link" href="#article-create">Публикация статьи</a>
         </li>
         <li class="hp-step">
           <div class="hp-step-title">Следите за прогрессом</div>
           <div class="hp-step-text">В статистике собраны результаты, активность и серия дней. Отчёт можно скачать в PDF.</div>
+          <a class="hp-step-link" href="#candidate-statistics">Статистика и серия</a>
         </li>
       </ol>
     </section>
@@ -94,29 +101,36 @@
         <li class="hp-step">
           <div class="hp-step-title">Зарегистрируйтесь</div>
           <div class="hp-step-text">Выберите роль «Компания». Кабинет откроется сразу, но тесты и конкурсы будут закрыты до проверки.</div>
+          <a class="hp-step-link" href="#account-signup">Регистрация компании</a>
         </li>
         <li class="hp-step">
           <div class="hp-step-title">Подтвердите компанию</div>
           <div class="hp-step-text">Загрузите в профиле регистрационный документ в PDF, например выписку из ЕГРЮЛ. Модератор его проверит.</div>
+          <a class="hp-step-link" href="#company-verification">Проверка компании</a>
         </li>
         <li class="hp-step">
           <div class="hp-step-title">Оформите профиль</div>
           <div class="hp-step-text">Добавьте описание, логотип, отрасль, город и направления работы. Это поможет кандидатам узнать вас.</div>
+          <a class="hp-step-link" href="#account-profile">Настройка профиля</a>
         </li>
         <li class="hp-step">
           <div class="hp-step-title">Публикуйте тесты</div>
           <div class="hp-step-text">Соберите тест из вопросов и задач на код. На странице «Как проходят тест» видно, насколько он сложный.</div>
+          <a class="hp-step-link" href="#test-create">Создание теста</a>
         </li>
         <li class="hp-step">
           <div class="hp-step-title">Проводите конкурсы</div>
           <div class="hp-step-text">Опишите кейс, приложите файлы, задайте срок. Присланные работы принимайте, отклоняйте и выбирайте победителя.</div>
+          <a class="hp-step-link" href="#contest-create">Создание конкурса</a>
         </li>
         <li class="hp-step">
           <div class="hp-step-title">Анализируйте результаты</div>
           <div class="hp-step-text">Статистика компании собирает тесты, конкурсы и оценки кандидатов. Отчёт выгружается в PDF.</div>
+          <a class="hp-step-link" href="#company-statistics">Показатели и отчёт</a>
         </li>
       </ol>
     </section>
+    {% include "home/partials/help_guides.html" %}
     <section class="hp-section hp-section-last" id="faq">
       <h2 class="cr-section-title">FAQ</h2>
       <div class="hp-faq">
@@ -126,7 +140,7 @@
         </details>
         <details class="hp-faq-item">
           <summary>Как проверить код?</summary>
-          <p>Нажмите «Проверить решение». Сайт запустит код на тестах, включая скрытые, и покажет результат. Интернет во время проверки недоступен. На всю проверку отводится до минуты.</p>
+          <p>Нажмите «Проверить решение» и дождитесь результата. Для этого нужно войти в аккаунт. <a href="#test-code">Подробнее о проверке кода</a>.</p>
         </details>
         <details class="hp-faq-item">
           <summary>Сколько нужно набрать, чтобы пройти тест?</summary>
@@ -146,7 +160,7 @@
         </details>
         <details class="hp-faq-item">
           <summary>Как пожаловаться на материал?</summary>
-          <p>Нажмите «Пожаловаться» на странице статьи или конкурса и напишите, что не так. Модератор рассмотрит жалобу. На свой материал и повторно на тот же пожаловаться нельзя.</p>
+          <p>Нажмите «Пожаловаться» на странице материала или профиля и напишите, что не так. На свой материал и повторно на тот же пожаловаться нельзя. <a href="#moderation-reports">Как рассматриваются жалобы</a>.</p>
         </details>
         <details class="hp-faq-item">
           <summary>Что будет при блокировке?</summary>
@@ -160,4 +174,7 @@
     </section>
   </main>
   {% include "partials/footer.html" %}
+{% endblock %}
+{% block scripts %}
+  <script type="module" src="{% static 'home/help.js' %}?v={{ ASSET_V }}"></script>
 {% endblock %}

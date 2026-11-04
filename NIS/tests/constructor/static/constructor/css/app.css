@@ -494,6 +494,13 @@ textarea {
   justify-content: space-between;
   margin-bottom: 10px;
 }
+.test-cases-help {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--brand-text);
+  font-size: 13px;
+  text-underline-offset: 3px;
+}
 .btn-add-tc {
   display: inline-flex;
   align-items: center;

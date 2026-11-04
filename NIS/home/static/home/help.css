@@ -219,6 +219,135 @@ a.hp-map-card:hover {
   color: var(--muted);
 }
 
+.hp-step-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--brand-text);
+  font-size: 13.5px;
+  text-underline-offset: 3px;
+}
+
+.hp-guide-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.hp-guide-link {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.hp-guide-link:hover {
+  border-color: var(--brand-text);
+}
+
+.hp-guide-group {
+  scroll-margin-top: 84px;
+}
+
+.hp-guide-group + .hp-guide-group {
+  margin-top: 28px;
+}
+
+.hp-guide-group > .hp-group-title {
+  margin-bottom: 12px;
+}
+
+.hp-guide {
+  scroll-margin-top: 84px;
+}
+
+.hp-guide:target > summary {
+  background: var(--brand-soft);
+}
+
+.hp-help a:focus-visible,
+.hp-help summary:focus-visible {
+  outline: 2px solid var(--brand-text);
+  outline-offset: 3px;
+}
+
+.hp-guide-body {
+  padding: 0 20px 20px;
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.hp-guide-body ol,
+.hp-guide-body ul {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.hp-guide-body li + li {
+  margin-top: 8px;
+}
+
+.hp-guide-body .hp-guide-notes {
+  margin-top: 16px;
+  color: var(--muted);
+}
+
+.hp-guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 16px;
+}
+
+.hp-guide-actions a,
+.hp-faq-item p a {
+  color: var(--brand-text);
+  text-underline-offset: 3px;
+}
+
+.hp-example {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.hp-example-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.hp-example h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hp-example pre {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  overflow-x: auto;
+}
+
+.hp-example > pre:last-child {
+  margin-bottom: 0;
+}
+
+.hp-example code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+}
+
 /* Частые вопросы */
 .hp-faq {
   display: flex;
@@ -271,7 +400,8 @@ a.hp-map-card:hover {
 
 @media (max-width: 860px) {
   .hp-map,
-  .hp-steps {
+  .hp-steps,
+  .hp-guide-nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -287,7 +417,9 @@ a.hp-map-card:hover {
     padding: 20px 16px 12px;
   }
   .hp-map,
-  .hp-steps {
+  .hp-steps,
+  .hp-guide-nav,
+  .hp-example-pair {
     grid-template-columns: minmax(0, 1fr);
   }
   .hp-hint {
@@ -303,5 +435,11 @@ a.hp-map-card:hover {
   }
   .hp-faq-item p {
     padding: 0 16px 16px;
+  }
+  .hp-guide-body {
+    padding: 0 16px 16px;
+  }
+  .hp-example {
+    padding: 12px;
   }
 }
