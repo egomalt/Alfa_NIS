@@ -1,0 +1,53 @@
+@startuml
+!include style.iuml
+title glowdy: объекты конкурса после проверки работы
+
+object "candidate : Account" as candidate {
+  id = 101
+  username = "candidate-demo"
+  role = "user"
+  status = "active"
+}
+object "profile : UserProfile" as profile {
+  username = "candidate-demo"
+  skills = ["Python"]
+}
+object "employer : Account" as employer {
+  id = 201
+  username = "company-demo"
+  role = "company"
+  status = "active"
+}
+object "company : Company" as company {
+  id = 21
+  username = "company-demo"
+  verification_status = "approved"
+}
+object "contest : Contest" as contest {
+  id = 301
+  company_username = "company-demo"
+  status = "active"
+  submission_type = "text"
+}
+object "submission : ContestSubmission" as submission {
+  id = 401
+  contest_id = 301
+  candidate_username = "candidate-demo"
+  text = "Описание решения"
+  status = "accepted"
+  winner = true
+  attempt = 1
+}
+
+candidate .. profile : username
+employer .. company : username
+company .. contest : company_username
+candidate .. submission : candidate_username
+contest -- submission : contest_id = 301
+
+legend bottom
+  Учебный пример, а не выгрузка пользовательских данных.
+  Сплошная линия: ForeignKey. Пунктир: совпадение логинов.
+  Победитель отмечается флагом winner, а не отдельным значением status.
+endlegend
+@enduml

@@ -1,0 +1,72 @@
+@startuml
+!include style.iuml
+hide footbox
+autonumber
+title glowdy: отправка текстового решения и проверка компанией
+
+actor "Кандидат" as candidate
+participant "Интерфейс сайта" as web
+participant "Django API" as api
+database "PostgreSQL" as database
+actor "Компания" as employer
+
+candidate -> web : Ввести текст и отправить работу
+web -> api : POST /api/v1/contests/{id}/submit/
+api -> api : Проверить сессию, роль user и блокировку
+break Пользователь не вошёл, роль не подходит или аккаунт заблокирован
+  api --> web : 401 / 403
+  web --> candidate : Показать причину отказа
+end
+api -> database : Найти активный Contest
+database --> api : Конкурс или отсутствие записи
+api -> api : Проверить доступ, дедлайн и текст решения
+break Конкурс недоступен, срок истёк или текст пустой
+  api --> web : 404 / 400
+  web --> candidate : Показать ошибку
+end
+group transaction.atomic()
+  api -> database : Заблокировать Contest через select_for_update()
+  database --> api : Заблокированная запись
+  api -> database : Посчитать работы этого кандидата в конкурсе
+  database --> api : Число использованных попыток
+  break Решение уже отправлено
+    api --> web : 409, новая работа не создаётся
+    web --> candidate : Сообщить об одной допустимой попытке
+  end
+  api -> database : Создать ContestSubmission, status = pending
+  api -> database : Пересчитать participants_count конкурса
+end
+api --> web : 201, данные сохранённой работы
+web --> candidate : Подтвердить отправку
+
+employer -> web : Открыть работы собственного конкурса
+web -> api : GET /api/v1/contests/{id}/submissions/
+api -> api : Проверить роль company
+api -> database : Найти собственный конкурс и его решения
+database --> api : Работы и сведения о кандидатах
+api --> web : 200, список работ
+web --> employer : Показать присланные решения
+
+employer -> web : Принять работу
+web -> api : PATCH /api/v1/contests/{id}/submissions/{subId}/
+api -> api : Проверить роль и блокировку
+api -> database : Найти работу своего конкурса, сохранить status = accepted
+database --> api : Обновлённая работа
+api --> web : 200, работа принята
+
+opt Компания выбирает эту работу победителем
+  employer -> web : Отметить победителя
+  web -> api : POST /api/v1/contests/{id}/submissions/{subId}/winner/
+  api -> api : Проверить роль и блокировку
+  api -> database : Найти работу своего конкурса, переключить winner
+  database --> api : Значение winner
+  api --> web : 200, winner = true
+end
+
+candidate -> web : Открыть результат в своём кабинете
+web -> api : GET /api/v1/contests/my-submissions/{subId}/
+api -> database : Найти работу по id и логину текущего кандидата
+database --> api : status и winner
+api --> web : 200, данные решения
+web --> candidate : Показать статус, при winner = true показать победу
+@enduml

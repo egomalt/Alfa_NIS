@@ -1,0 +1,133 @@
+@startuml
+!include style.iuml
+hide circle
+hide methods
+left to right direction
+title glowdy: классы предметной области
+
+package "Аккаунты и компании" {
+  class Account {
+    username : SlugField, unique
+    role : user / company / moderator
+    status : active / banned
+    email : EmailField
+  }
+  class UserProfile {
+    username : SlugField, unique
+    skills : JSONField
+    links : JSONField
+  }
+  class Company {
+    username : SlugField, unique
+    verification_status : none / pending / approved / rejected
+    registration_document : FileField, private
+  }
+  class CompanyRating {
+    company : ForeignKey
+    user_username : SlugField
+    rating : SmallIntegerField
+  }
+}
+
+package "Статьи" {
+  class Article {
+    author_username : SlugField
+    status : draft / published
+    content : TextField, HTML
+    tags : JSONField
+  }
+  class ArticleVote {
+    article : ForeignKey
+    voter_username : SlugField
+    direction : SmallIntegerField
+  }
+}
+
+package "Тесты" {
+  class Test {
+    owner_username : SlugField
+    status : draft / published
+    stats : JSONField
+  }
+  class TestPage {
+    test : ForeignKey
+    type : text / quiz / input / code
+    order : PositiveIntegerField
+    page_meta : JSONField
+  }
+  class TestAnswer {
+    page : ForeignKey
+    text : CharField
+    is_correct : BooleanField
+  }
+  class TestAttempt {
+    test : ForeignKey
+    candidate_username : SlugField, может быть пустым
+    session_key : CharField
+    score : IntegerField
+    max_score : IntegerField
+    finished_at : DateTimeField, nullable
+  }
+}
+
+package "Конкурсы" {
+  class Contest {
+    company_username : SlugField
+    status : draft / active / review / finished
+    deadline : DateTimeField, nullable
+    rules : JSONField
+    submission_type : file / link / text
+  }
+  class ContestAttachment {
+    contest : ForeignKey
+    file : FileField
+    name : CharField
+  }
+  class ContestSubmission {
+    contest : ForeignKey
+    candidate_username : SlugField
+    status : pending / accepted / rejected
+    winner : BooleanField
+    file : FileField, private
+    link : URLField
+    text : TextField
+  }
+}
+
+package "Модерация" {
+  class Report {
+    reporter_username : SlugField
+    author_username : SlugField
+    target_type : article / test / contest / user / company
+    target_id : CharField
+    status : new / resolved / dismissed
+  }
+}
+
+Company "1" -- "0..*" CompanyRating : company
+Article "1" -- "0..*" ArticleVote : article
+Test "1" -- "0..*" TestPage : test
+TestPage "1" -- "0..*" TestAnswer : page
+Test "1" -- "0..*" TestAttempt : test
+Contest "1" -- "0..*" ContestAttachment : contest
+Contest "1" -- "0..*" ContestSubmission : contest
+
+UserProfile ..> Account : username
+Company ..> Account : username
+CompanyRating ..> Account : user_username
+Article ..> Account : author_username
+ArticleVote ..> Account : voter_username
+Test ..> Account : owner_username
+TestAttempt ..> Account : candidate_username
+Contest ..> Company : company_username
+ContestSubmission ..> Account : candidate_username
+Report ..> Account : reporter_username
+Report ..> Account : author_username
+
+legend bottom
+  Сплошная линия: ForeignKey, удаление связанных записей через CASCADE.
+  Пунктирная стрелка: поиск связанной записи по строковому логину.
+  Кратности сплошных связей: 1 - одна запись, 0..* - любое число.
+  Показаны ключевые поля 14 прикладных моделей.
+endlegend
+@enduml
