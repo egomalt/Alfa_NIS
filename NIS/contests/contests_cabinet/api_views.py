@@ -1,3 +1,5 @@
+from ast import literal_eval
+
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import transaction
@@ -36,7 +38,6 @@ EDITABLE_FIELDS = (
     'title',
     'excerpt',
     'case_text',
-    'rules',
     'category',
     'level',
     'prize',
@@ -53,17 +54,43 @@ def _parse_deadline(raw_value):
     if not raw_value:
         return None
     try:
-        return parse_datetime(raw_value)
+        deadline = parse_datetime(raw_value)
+        return timezone.make_aware(deadline) if deadline and timezone.is_naive(deadline) else deadline
     except ValueError:
         return None
 
 
 def _apply_fields(contest, body):
+    if 'rules' in body:
+        rules = body['rules']
+        if not isinstance(rules, list) or any(not isinstance(rule, str) for rule in rules):
+            return JsonResponse({'ok': False, 'message': 'Передайте правила списком строк.'}, status=400)
+        contest.rules = rules
     for field in EDITABLE_FIELDS:
         if field in body:
             setattr(contest, field, str(body[field] or ''))
     if 'deadline' in body:
         contest.deadline = _parse_deadline(body['deadline'])
+
+
+def _rules_to_list(value):
+    for _ in range(2):
+        if isinstance(value, str):
+            text = value
+        elif isinstance(value, list) and value and all(isinstance(rule, str) and len(rule) == 1 for rule in value):
+            text = ''.join(value)
+        else:
+            break
+        try:
+            parsed = literal_eval(text)
+        except (ValueError, SyntaxError, RecursionError):
+            break
+        if not isinstance(parsed, list):
+            break
+        value = parsed
+    if isinstance(value, str):
+        return value.splitlines()
+    return [rule for rule in value if isinstance(rule, str)] if isinstance(value, list) else []
 
 
 def _with_counts(queryset):
@@ -88,7 +115,7 @@ def _contest_to_dict(c, full=False, submissions_count=None):
         'category': c.category,
         'level': c.level,
         'status': c.status,
-        'deadline': c.deadline.isoformat() if c.deadline else None,
+        'deadline': timezone.localtime(c.deadline).isoformat() if c.deadline else None,
         'prize': c.prize,
         'submission_type': c.submission_type,
         'participants_count': c.participants_count,
@@ -98,7 +125,7 @@ def _contest_to_dict(c, full=False, submissions_count=None):
     }
     if full:
         d['case_text'] = c.case_text
-        d['rules'] = c.rules
+        d['rules'] = _rules_to_list(c.rules)
         d['submission_hint'] = c.submission_hint
         d['attachments'] = [_attachment_to_dict(a) for a in c.attachments.all()]
     return d
@@ -187,7 +214,9 @@ def api_contest_create(request):
     body = load_json_body(request)
 
     c = Contest(company_username=account.username)
-    _apply_fields(c, body)
+    error = _apply_fields(c, body)
+    if error is not None:
+        return error
     c.save()
     return JsonResponse({'ok': True, 'contest': _contest_to_dict(c)}, status=201)
 
@@ -220,7 +249,9 @@ def api_contest_detail(request, contest_id):
         c.delete()
         return JsonResponse({'ok': True})
 
-    _apply_fields(c, load_json_body(request))
+    error = _apply_fields(c, load_json_body(request))
+    if error is not None:
+        return error
     c.save()
     return JsonResponse({'ok': True, 'contest': _contest_to_dict(c)})
 

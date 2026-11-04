@@ -150,7 +150,7 @@ function fillForm(contest) {
   byId('ccon-excerpt').value = contest.excerpt || '';
   byId('ccon-case').value = contest.case_text || '';
   byId('ccon-sub-hint').value = contest.submission_hint || '';
-  if (contest.rules?.length) rules = [...contest.rules];
+  rules = Array.isArray(contest.rules) ? [...contest.rules] : [];
   if (contest.submission_type) activeSubType = contest.submission_type;
   attachments = (contest.attachments || []).map((a) => ({ id: a.id, name: a.name, size: a.size_display || '' }));
   currentStatus = contest.status || 'draft';
