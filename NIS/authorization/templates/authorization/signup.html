@@ -24,7 +24,8 @@
       <form id="signup-form"
             method="post"
             action="{% url 'v1_api_signup' %}"
-            data-api-form="register">
+            data-api-form="register"
+            novalidate>
         {% csrf_token %}
         <input type="hidden" name="role" id="role-input" value="candidate">
         <div class="cr-auth-fields">

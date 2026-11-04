@@ -20,7 +20,8 @@
       <form id="signin-form"
             method="post"
             action="{% url 'v1_api_signin' %}"
-            data-api-form="login">
+            data-api-form="login"
+            novalidate>
         {% csrf_token %}
         <div class="cr-auth-fields">
           <div data-field="username">

@@ -14,6 +14,23 @@ function validateUsername(value) {
   return '';
 }
 
+function validateField(input) {
+  if (input.validity.valueMissing) {
+    if (input.name === 'username') return 'Введите имя пользователя.';
+    if (input.name === 'password')
+      return input.form.dataset.apiForm === 'register' ? 'Придумайте пароль.' : 'Введите пароль.';
+    const messages = {
+      name: 'Укажите имя или название компании.',
+      email: 'Укажите email.',
+      password_confirm: 'Повторите пароль.',
+    };
+    return messages[input.name] || 'Заполните это поле.';
+  }
+  if (input.id === 'register-username') return validateUsername(input.value);
+  if (input.type === 'email' && input.validity.typeMismatch) return 'Проверьте email. Например: name@example.com.';
+  return '';
+}
+
 function setFieldError(block, messages = []) {
   const list = block.querySelector('.errorlist');
   list?.replaceChildren(
@@ -77,12 +94,14 @@ document.addEventListener('submit', async (event) => {
   showFlash();
 
   const isRegister = form.dataset.apiForm === 'register';
-  if (isRegister) {
-    const usernameError = validateUsername(form.elements.username.value);
-    if (usernameError) {
-      showFieldErrors(form, { username: [usernameError] });
-      return;
-    }
+  const errors = {};
+  form.querySelectorAll('[data-field] input').forEach((input) => {
+    const message = validateField(input);
+    if (message) errors[input.name] = [message];
+  });
+  if (Object.keys(errors).length) {
+    showFieldErrors(form, errors);
+    return;
   }
 
   setBusy(form, true);
@@ -120,13 +139,12 @@ document.addEventListener('input', (event) => {
   if (block) setFieldError(block);
 });
 
-// Имя пользователя проверяем сразу при уходе из поля. Фокус не трогаем —
-// человек как раз уходит из поля
+// Проверяем формат при уходе из поля.
 document.addEventListener('focusout', (event) => {
-  const input = event.target.closest('#register-username');
+  const input = event.target.closest('[data-api-form] [data-field] input');
   if (!input?.value.trim()) return;
-  const usernameError = validateUsername(input.value);
-  if (usernameError) setFieldError(input.closest('[data-field]'), [usernameError]);
+  const message = validateField(input);
+  if (message) setFieldError(input.closest('[data-field]'), [message]);
 });
 
 const ROLES = {
